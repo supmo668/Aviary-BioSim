@@ -13,6 +13,8 @@ import math
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import yaml
+
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from aviary.core import Tool
 
@@ -37,7 +39,49 @@ def load_ceiling(path: str | Path) -> float:
     Raises ConfigError if the file is missing, is not a mapping, has no
     `max_spend_usd` key, or carries a value that is not a number.
     """
-    raise NotImplementedError("U-003")
+    # Every failure below surfaces as ConfigError: this is the message a user
+    # sees when their budget config is broken, so each one names the path and
+    # says what was wrong with it.
+
+    # 1. Missing, unreadable, a directory, or not decodable text.
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ConfigError(f"spend config {path!s}: cannot read file ({exc})") from exc
+    except UnicodeDecodeError as exc:
+        raise ConfigError(f"spend config {path!s}: not decodable as UTF-8 text") from exc
+
+    # 2. Parseable as YAML at all.
+    try:
+        document = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise ConfigError(f"spend config {path!s}: not valid YAML ({exc})") from exc
+
+    # 3. A mapping. An empty document parses to None, a bare scalar to a str or
+    #    number, a sequence to a list — none of which can carry a key.
+    if not isinstance(document, dict):
+        found = "an empty document" if document is None else f"a {type(document).__name__}"
+        raise ConfigError(f"spend config {path!s}: expected a YAML mapping, found {found}")
+
+    # 4. Carries the key.
+    if "max_spend_usd" not in document:
+        raise ConfigError(f"spend config {path!s}: no 'max_spend_usd' key")
+
+    # 5. Carries a number. bool is an int subclass but `true` is not a dollar
+    #    amount, and a quoted "10.0" is a string that merely looks like one.
+    #    NaN and the infinities are floats that cannot bound a budget.
+    ceiling = document["max_spend_usd"]
+    if isinstance(ceiling, bool) or not isinstance(ceiling, (int, float)):
+        raise ConfigError(
+            f"spend config {path!s}: 'max_spend_usd' must be a number, "
+            f"found {type(ceiling).__name__} {ceiling!r}"
+        )
+    if not math.isfinite(ceiling):
+        raise ConfigError(
+            f"spend config {path!s}: 'max_spend_usd' must be a finite number, found {ceiling!r}"
+        )
+
+    return float(ceiling)
 
 
 class SpendTracker:
