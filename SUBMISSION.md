@@ -1,7 +1,7 @@
 # AGI House submission — BioSim
 
 **Team:** BioSim
-**Member:** Mangyin Mo — [linkedin.com/in/matthew-mo](https://www.linkedin.com/in/matthew-mo)
+**Member:** Mangyin Mo — [linkedin.com/in/matthew-mo](https://www.linkedin.com/in/matthew-mo) · X [@mattmo_668](https://x.com/mattmo_668)
 **Repo:** https://github.com/supmo668/Aviary-BioSim (public)
 **Tracks:** Best Use of Weave · Best Use of marimo · Best Loop Design
 

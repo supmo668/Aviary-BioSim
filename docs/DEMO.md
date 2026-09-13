@@ -1,3 +1,33 @@
+# Shot list — 1:45 screen recording
+
+Record in this order. Everything below is a real screen; nothing is a slide except shot 1.
+
+**Before you hit record**
+```bash
+cd ~/github/personal/bioFM/projects/aviary-biosim
+export V2R_TRACE=1
+export WANDB_API_KEY=$(grep '^WANDB_API_KEY=' ../../.env | cut -d= -f2-)
+export WANDB_PROJECT=3m-m/Aviary-BioSim
+uv run --with pyyaml demo/gate_demo.py >/dev/null     # warm the cache — nothing installs on camera
+```
+Terminal at ~18 pt, cleared. Deck open at slide 1. Weave project open in a second tab.
+
+| # | Time | Screen | What you do | What you say |
+|---|---|---|---|---|
+| **1** | 0:00–0:12 | Deck, slide 1 | Nothing — let the three numbers sit | "An autonomous loop built its own tools, then used them to run a real experiment in protein biology. Two thousand substitutions scored. Sixty-six measurements the agent chose itself. Nothing fabricated." |
+| **2** | 0:12–0:24 | Deck, slide 2 → press `→` | One keypress | "Self-improving agents grade their own homework. Ours couldn't — and we know, because we caught ourselves." |
+| **3** | 0:24–0:52 | **Terminal** — run `demo/gate_demo.py` | Type it, hit enter, then **stop talking for three seconds** while the green and two reds land | "Three sealed tests. One genuinely passes. One is entirely skipped. One collects nothing. Only the first closes a unit — the other two halt. A test that never asserted anything is not a gate. And no agent reports this: the register re-runs the test itself." |
+| **4** | 0:52–1:08 | **Terminal** — `uv run science/run_experiment.py` (or scroll the finished output) | Let the device line and the result block show | "Same loop, pointed at biology. ESM-2 over real UniProt sequences on the GPU. Two thousand ninety substitutions in seven seconds." |
+| **5** | 1:08–1:22 | Deck, slide 4 | Press `→` to the sensitivity figure | "Six residues the model won't let you touch — minus thirteen against a background of minus six. Those are insulin's three disulfide bonds." |
+| **6** | 1:22–1:36 | Deck, slide 5 | Press `→` | "It found those by measuring. Then it probed the C-peptide — the part cleaved out of mature insulin — and got zero. That's the right negative control, and nobody asked for it." |
+| **7** | 1:36–1:45 | **Weave project** — traces list | Scroll once so calls are visible | "Every step traced. Weave, W&B Inference, MCP, marimo, aviary. Team BioSim — repo's public." |
+
+**If you overrun**, cut shot 4 and say "seven seconds on the GPU" over shot 5 instead. Never cut shot 3 or shot 6 — the gate and the control are the whole argument.
+
+**Press `n` at any point** to show speaker notes if a judge asks for depth mid-demo.
+
+---
+
 # Demo scripts — BioSim / v2r-loop
 
 Two different things, two different shapes:
