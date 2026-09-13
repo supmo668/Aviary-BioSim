@@ -1,8 +1,8 @@
 ---
 name: v2r-instinct-pin-drifts-under-hooks
-confidence: 0.900
+confidence: 0.950
 created: 2026-09-13T19:50:47Z
-last_reinforced: 2026-09-13T19:50:47Z
+last_reinforced: 2026-09-13T19:51:02Z
 ttl_days: 30
 triggers: [.aiadlc/instincts, .claude/skills/v2r-loop/scripts/register.py, docs/adr/0003-instincts-pinned-per-drain.md]
 tags: [v2r-loop, register, pin, defect]

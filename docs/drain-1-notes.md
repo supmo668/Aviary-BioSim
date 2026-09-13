@@ -12,6 +12,27 @@ Outcome: **6 closed, 0 parked**, every unit on attempt 0.
 | U-005 `persist`/`restore`, crash-atomic | R4 | attempt 0 |
 | U-006 `as_tool` → `aviary.core.Tool` | R5 | attempt 0 |
 
+## The shape all of these share
+
+Every finding below is one failure mode, and it is the honest limitation of this design:
+
+> **A mechanism reports success while the property it exists to guarantee is absent.**
+
+`weave.publish` succeeded and printed a confident URL while writing evidence nothing could
+read. The register pins the instinct set, the seed and the register digest, but not the two
+per-unit prompts where the difficulty actually lives. The instinct pin is computed exactly and
+does not identify what it names. In each case the mechanism ran, returned, and looked right.
+
+The sealed gate is built to catch a **build unit** that FAILS, and it is very good at that —
+`close` re-runs the test itself and refuses anything short of an observed pass. It is blind to
+a mechanism that PASSES FOR THE WRONG REASON, because passing is the only signal it reads.
+All three findings below were caught by hand; none of them would have parked a unit, and drain
+1 closed 6 of 6 with all three present.
+
+The practical rule: verify a mechanism by observing the property it promises, from the outside,
+not by confirming the mechanism ran. The Weave fix was verified by querying the trace back
+rather than by reading `emit_span`, and that is the only reason it is known to work.
+
 ## The park that didn't happen
 
 U-005 was chosen to be genuinely hard — crash-atomicity is difficult to implement and

@@ -10,11 +10,33 @@ hook against touched-file triggers, and is configured under `agency.yaml instinc
 parallel store would mean two sets of instincts, two confidence semantics and two SessionStart
 surfaces, with neither authoritative.
 
-Because that store is in-repo and not gitignored, the **pin needs no new machinery at all**:
+Because that store is in-repo and not gitignored, the pin was taken to need **no new
+machinery at all**:
 
     instinct_pin = $(git rev-parse HEAD:.aiadlc/instincts)
 
-an exact tree SHA, already versioned, already replayable.
+a tree SHA, already versioned.
+
+**Correction, after drain 1 — this decision was cheaper than it was correct, and the opening
+paragraph above overstates what happens.** The instinct set is read at drain start and written
+to the run record, but it does **not** "not change until the drain ends", because nothing
+enforces that. The same Stop hook named above rewrites `confidence` and `last_reinforced` on
+any instinct whose triggers match touched files, and `instinct decay` rewrites `confidence` on
+a timer. Both move the tree SHA. Therefore:
+
+- The pin changes when **nothing was learned**, so identical instinct sets can carry different
+  pins and a pin comparison cannot attribute a divergence to instincts.
+- `cmd_close` runs `git add -A`, so hook-mutated instinct files can be committed **inside a
+  drain**, against this ADR's central claim.
+
+Drain 1 was unaffected only because `.aiadlc/instincts` did not exist until its stage 4. Drain
+2 is the first drain with a non-null pin and the first that can drift.
+
+The decision itself stands — pinning per drain is still right, and the aiadlc store is still
+the correct substrate. What is withdrawn is "needs no new machinery". Ranked candidates: hash
+instinct *bodies* excluding volatile frontmatter; or snapshot the store at drain start and
+build against the snapshot; or have `close` stage explicit paths. Deferred to the gate, since
+the pin is computed inside the trusted component.
 
 A reader will assume continuous learning is the entire point of a self-improving loop and try
 to remove this. The reason it is here: ChipSim's **replay test** in its PoC form requires that

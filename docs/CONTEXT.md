@@ -86,10 +86,18 @@ the seed, and the resulting closed and parked lists. Written once per drain. It 
 the drain ran against, not a guarantee that re-running it lands identically.
 
 **Instinct pin**:
-The hash of the instinct set, frozen at the start of a **drain** and recorded in the **run
-record**. Learned behaviour accumulates continuously via hooks but is only ever *adopted*
-between drains, never during one.
-_Avoid_: treating the live instinct store as the builder's configuration
+The git tree SHA of `.aiadlc/instincts`, read at the start of a **drain** and recorded in the
+**run record**. The intent is that learned behaviour accumulates continuously via hooks but is
+only ever *adopted* between drains, never during one.
+
+**That intent is not enforced, and the pin is a weaker identifier than its name suggests.** The
+store is not inert: aiadlc's Stop hook reinforces any instinct whose triggers match the files
+just touched, rewriting `confidence` and `last_reinforced`, and `instinct decay` rewrites
+`confidence` on a timer. Both change the tree SHA. So **the pin moves when nothing was learned,
+and it can move during a drain.** Read it as an approximate label for "which store was in
+play", not as an identity for "which instincts were in play".
+_Avoid_: treating the live instinct store as the builder's configuration; treating a pin
+equality or inequality as evidence about the instinct set
 
 ### The gate
 
@@ -158,6 +166,24 @@ V2R Loop's register is *monotonic state progression* — a unit moves open → c
 open → parked and never moves back, with no comparison and no scalar. Both are called
 ratchets in ordinary speech and they share no mechanism. **Use "the register is monotonic"
 for this context and reserve "ratchet" for ChipSim.**
+
+**The instinct pin changes when nothing was learned.** `instinct_pin` is
+`git rev-parse HEAD:.aiadlc/instincts`, a tree SHA over a store whose frontmatter is rewritten
+by Stop-hook reinforcement and by `instinct decay`. Two consequences, both load-bearing.
+*First*, identical instinct **sets** can carry different pins, so comparing two drains' pins
+cannot attribute a divergence to instincts — which is the pin's only job, and it matters more
+now that the **drain**'s claim has been narrowed to attribution over three pinned inputs, one
+of which is noisy. *Second*, `cmd_close` runs `git add -A`, so hook-mutated instinct files can
+be swept into **build unit** commits mid-drain: the tracked store genuinely changes during a
+drain, and the pin read at drain start no longer describes the tree at drain end. Drain 1 was
+immune **by accident** — `.aiadlc/instincts` did not exist until its stage 4, so there was
+nothing to drift. **Drain 2 is the first drain that will not be immune**, and it is also the
+first to run with a non-null pin. Candidate fixes, cheapest first: hash the instinct *bodies*
+and exclude the volatile frontmatter (`confidence`, `last_reinforced`) from the pin; or
+snapshot the store at drain start and build against the snapshot, which enforces the rule
+rather than documenting it; or have `close` stage explicit paths instead of `git add -A`,
+which is narrower but touches how the implementer's work gets committed at all. None is made
+here: the pin is computed inside the trusted component, so changing it needs the gate.
 
 **The per-unit prompts are not pinned, and they are where the difficulty lives.** The
 **register** pins the **instinct pin**, the seed and the register digest. It does not pin the
