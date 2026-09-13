@@ -11,7 +11,7 @@ argument-hint: "<vision>"
 Spec: `docs/spec.md` · Glossary: `docs/CONTEXT.md` (use its vocabulary exactly) · Decisions: `docs/adr/0001`–`0004`.
 
 ```bash
-R="uv run --with pyyaml .claude/skills/v2r-loop/scripts/register.py"
+R="uv run --with pyyaml --with weave --with fhaviary .claude/skills/v2r-loop/scripts/register.py"
 ```
 
 ## Stage 0 — Preflight and unblock
@@ -26,6 +26,12 @@ resolve and **stop before the gate** — never work around one, never ask mid-dr
 | Trace read | `wandb` MCP server |
 
 Confirm you are **not** on the trunk branch. If you are, stop.
+
+`weave` must be in the register's own environment whenever `V2R_TRACE=1`. `emit_span`
+imports it lazily, so without it every span is dropped — one warning on stderr, then a
+drain that looks perfect and a stage 4 with nothing to read. Add `fhaviary` likewise once
+a sealed test imports `aviary.core`. Both belong in the `$R` invocation, not in a project
+requirements file: the gate runs under the interpreter `uv` builds for `register.py`.
 
 ## Stage 1 — Alignment (attended)
 
