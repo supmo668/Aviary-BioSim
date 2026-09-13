@@ -30,7 +30,32 @@ class BudgetExceeded(RuntimeError):
     """
 
     def __init__(self, total_usd: float, ceiling_usd: float) -> None:
-        raise NotImplementedError("U-005")
+        # A carrier, not a validator: the two numbers are recorded exactly as the
+        # caller passed them and never compared, so constructing one with a total
+        # at or below the ceiling is legitimate and must work.
+        self.total_usd = total_usd
+        self.ceiling_usd = ceiling_usd
+
+        def as_dollars(amount: float) -> str:
+            # Dollar amounts read naturally at two decimals, so an int ceiling of
+            # 10 shows as $10.00 — but never round a value out of the message: a
+            # sub-cent amount keeps whatever digits it actually has.
+            try:
+                value = float(amount)
+                text = f"{value:.2f}"
+                if float(text) != value:
+                    text = repr(value)
+            except (TypeError, ValueError):  # pragma: no cover - non-numeric carrier
+                return str(amount)
+            return f"${text}"
+
+        # One argument to the base class, so str(exc) is this sentence rather than
+        # an empty string or a tuple. It names both numbers: what was spent and
+        # what the ceiling was.
+        super().__init__(
+            f"budget exceeded: total spend of {as_dollars(total_usd)} "
+            f"against a ceiling of {as_dollars(ceiling_usd)}"
+        )
 
 
 def load_ceiling(path: str | Path) -> float:
