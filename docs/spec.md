@@ -252,7 +252,10 @@ outcome: completed          # completed | halted
 - `park` leaves the tree byte-identical to its pre-claim state.
 - `park` preserves the attempt on `park/U-nnn`.
 - Ceiling breach produces a halt, never a park.
-- A drain replays: same register, same instinct pin, same seed → same closed and parked sets.
+- A drain is attributable: the run record pins an exact register digest, instinct tree SHA
+  and seed, so a divergence traces to which of the three changed. Determinism of the
+  *record* is asserted; determinism of the *builder* is not, and must not be claimed —
+  see `docs/plan.md` Task 7 and the flagged ambiguity in `docs/CONTEXT.md`.
 
 The drain driver is tested against a fixture register with deliberately unsatisfiable units,
 asserting the parked list and the green-commit invariant.

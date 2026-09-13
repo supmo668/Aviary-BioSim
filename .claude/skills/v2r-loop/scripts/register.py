@@ -190,6 +190,29 @@ def run_sealed_test(path: str) -> tuple[str, str]:
 
 _SPAN_SINK = None  # tests install a callable here; production resolves weave lazily
 _SPAN_WARNED = False
+_SPAN_OPS: dict = {}  # span name -> @weave.op, built once per process
+
+
+def _span_op(name: str):
+    """One `@weave.op` per span name, so the traced CALL is named for the transition.
+
+    This must be an op, not `weave.publish`. `publish` writes a weave *object*,
+    which lives in a different store from calls and is invisible to
+    `query_weave_traces_tool` — stage 4's documented query returns zero against a
+    drain that published every span correctly. Drain 1 shipped that way and its
+    evidence is only reachable through the object API. Calling an op produces a
+    real trace, which is what stage 4 actually reads.
+    """
+    import weave
+
+    op = _SPAN_OPS.get(name)
+    if op is None:
+        @weave.op(name=name)
+        def span(**attrs):
+            return attrs
+
+        op = _SPAN_OPS[name] = span
+    return op
 
 
 def emit_span(name: str, **attrs) -> None:
@@ -212,7 +235,7 @@ def emit_span(name: str, **attrs) -> None:
         import weave
 
         weave.init(os.environ.get("WANDB_PROJECT", "3m-m/Aviary-BioSim"))
-        weave.publish(payload, name=name)
+        _span_op(name)(**attrs)
     except Exception as exc:  # noqa: BLE001 — telemetry is never load-bearing
         if not _SPAN_WARNED:
             print(f"weave span dropped ({type(exc).__name__}: {exc}); "

@@ -37,6 +37,15 @@ _Avoid_: task (spoken for by aviary's `TaskDataset` and aiadlc's plan decomposit
 (spoken for by the build plans, and implies the tracer-bullet model this loop rejects),
 obligation (ADR-0002 uses it for a standing duty, the opposite sense)
 
+**Standing rule — a build unit must be testable using ONLY the units ordered before it.**
+Its observable surface has to exist by the time its **sealed test** runs. A unit whose
+reader is filled by a *later* unit cannot be tested at all: it burns its whole attempt
+budget and **parks**, and in the **register** that park is indistinguishable from one
+earned by genuinely hard work. Two were caught at drain 1's gate — `record` had no reader
+until `total` closed, and `check raises BudgetExceeded` preceded the unit that filled
+`BudgetExceeded.__init__`. Merge the pair, or order the carrier before its raiser. Check
+this before approving a register, because afterwards the evidence lies.
+
 **Interface skeleton**:
 Real modules with real signatures and `NotImplementedError` bodies, committed before a
 **drain** starts. The one artifact both the sealed **test-author** and the implementer read,
@@ -61,16 +70,20 @@ test**, then **close** or **park** it.
 
 **Drain**:
 One complete pass over a **register** under a single pinned **instinct set** — every
-**iteration** from the first claim until no open **build unit** remains. The unit of replay:
-the same register, the same instinct pin and the same seed must reproduce the same closes and
-parks. Successive drains are how the loop improves; within a drain nothing about the builder
-changes.
+**iteration** from the first claim until no open **build unit** remains. The unit of
+**attribution**: a drain's closes and parks are pinned to an exact register digest, an exact
+instinct tree SHA and a seed, so a divergence between two drains can always be traced to
+which of the three changed. That is weaker than reproducibility and deliberately so — the
+work is done by LLM subagents and is not deterministic at the token level, so determinism of
+the *record* is assertable while determinism of the *builder* is not. Successive drains are
+how the loop improves; within a drain nothing about the pinned inputs changes.
 _Avoid_: run (ChipSim already uses "run" for a lung-on-chip run, the thing a curated chip
 record records), pass, cycle
 
 **Run record**:
-The artifact that makes a **drain** reproducible — the register hash, the **instinct pin**,
-the seed, and the resulting closed and parked lists. Written once per drain.
+The artifact that makes a **drain** attributable — the register hash, the **instinct pin**,
+the seed, and the resulting closed and parked lists. Written once per drain. It records what
+the drain ran against, not a guarantee that re-running it lands identically.
 
 **Instinct pin**:
 The hash of the instinct set, frozen at the start of a **drain** and recorded in the **run
@@ -129,7 +142,9 @@ and `close` re-runs the sealed test rather than trusting a report of it.
 **A drain is attributable to exactly one builder.**
 
 ChipSim's **replay test** in its PoC form — *same config and seed reproduces the same scores
-exactly* — has a build-layer analogue, and the **instinct pin** is what preserves it. A loop
+exactly* — has a build-layer analogue in *attribution*, and the **instinct pin** is what
+preserves it. The analogue is partial: ChipSim replays a deterministic scorer, whereas a
+drain's builder is not deterministic, so what carries over is the pinning, not the equality. A loop
 that adopted new instincts mid-drain would build `U-001` and `U-023` with materially
 different agents, so the same register replayed would produce different code and the
 incoherence would have no recoverable cause. This is the same discipline as the audit's R2,
@@ -143,6 +158,19 @@ V2R Loop's register is *monotonic state progression* — a unit moves open → c
 open → parked and never moves back, with no comparison and no scalar. Both are called
 ratchets in ordinary speech and they share no mechanism. **Use "the register is monotonic"
 for this context and reserve "ratchet" for ChipSim.**
+
+**The per-unit prompts are not pinned, and they are where the difficulty lives.** The
+**register** pins the **instinct pin**, the seed and the register digest. It does not pin the
+two prompts a drain issues per **build unit** — the one that briefs the sealed **test-author**
+and the one that briefs the implementer. Those carry most of the actual difficulty of a unit,
+so the same register replayed by a different orchestrator can produce different closes and
+parks with every declared input identical. Drain 1 demonstrated it: the unit chosen to be hard
+(crash-atomic `persist`) closed on attempt 0 because its implementer prompt named the
+staging-and-atomic-rename pattern outright; a prompt stating only the requirement would
+plausibly have **parked** it. **Until the two prompts are templated per unit and hashed into
+the run record, claim attribution and not reproducibility.** Prompt-pinning is the known path
+to the stronger claim; it was not built because it is real work and drain 1 needed to run
+first.
 
 **"Requirement" collided across contexts and the collision was load-bearing.** The chipsim
 PVR's `R1`–`R10` read like build units — R1 and R9 especially — which invites treating the
