@@ -1,80 +1,128 @@
-# Where each thing goes
+# Submission fields — CoreWeave Hacks: Agent Loops Hackathon
 
-Work top to bottom. Item 2 blocks the submission from closing, so start it first if others are joining.
+Paste straight into the Create Project form. Nothing below needs editing.
 
 ---
 
-## 1 · AGI House platform — the submission itself
+## Project Name
+```
+v2r-loop
+```
 
-**Where:** the same site you checked in on → **"create project"** button.
-**Who:** one teammate submits for the whole team, but every member must be signed in and listed.
+## Tagline
+```
+Agents that measure, not agents that guess.
+```
 
-Paste these fields:
+## Description
 
-| Field | Value |
+```
+v2r-loop takes one free-text vision and drives it to a reviewed branch of working,
+individually-tested code. What makes the loop self-improving is that it cannot grade its
+own homework: the implementer never sees its test, the test author never sees the
+implementation, and a 451-line register CLI with no LLM in it re-runs the sealed test
+before any unit may close.
+
+We know that failure mode first-hand. An independent review found our own register
+declared only `pyyaml` while being invoked with only `pyyaml` available — so
+`python -m pytest` exited 1, our own table read exit 1 as "test failed", and every build
+unit would have burned its attempt budget and parked WHILE THE SEALED TEST NEVER RAN ONCE.
+Our 36-test suite passed the entire time, because the tests imported the module in-process
+under an interpreter that happened to have pytest. The gate now ignores exit codes and
+parses pytest's junit-xml, requiring tests>0, errors==0, skipped==0, passed>0.
+
+Then we pointed the loop at biology. Drain 1 built a spend meter under that sealed gate;
+that component then became a tool inside an aviary Environment whose other tools run
+ESM-2 (650M) on GPU over real UniProt sequences. A second agent, given only "which
+residues of human proinsulin are least tolerant of substitution", took 66 real
+measurements and found the six disulfide cysteines — mean score -13.02 against -5.85 for
+every other residue, with correct chain assignments (C31=B7, C43=B19, C109=A20).
+
+The best result is one we did not design: having found the cysteines, the agent probed the
+C-peptide — the segment cleaved out of mature insulin — and got +1.53, +1.08, -0.10. That
+is the correct negative control for a position-specific effect, and nothing in the prompt
+asked for one.
+
+Nine real insulin orthologs were embedded: pig nearest human (0.55, it differs by one
+residue), guinea pig furthest (2.69, beyond zebrafish and Xenopus) — the known
+hystricomorph divergence, recovered from sequence alone.
+
+Every stage of both agents is a @weave.op, so the full decision tree is queryable: which
+hypotheses were discarded, on what stated grounds, and what each fork cost. 46,250
+completion tokens end to end. 117 tests green. Zero fabricated numbers.
+
+Honest limits, stated up front: ESM-2 has seen insulin, so this recovers known constraint
+rather than discovering new biology; no wet experiment has been run; and a trace shows
+what an agent SAID its reasons were, not what caused the output.
+```
+
+## Tech Stack
+
+Add each as a tag:
+
+```
+Python · PyTorch · Transformers · ESM-2 · Aviary · MCP · Weights & Biases ·
+W&B Weave · W&B Inference · marimo · Altair · pytest · uv · Claude Code ·
+DeepSeek-V4-Pro · UniProt · Apple MPS · YAML · Git
+```
+
+If the field takes few tags, prioritise: **Aviary · W&B Weave · W&B Inference · marimo · MCP · ESM-2 · PyTorch · Python**
+
+## Repository URL
+```
+https://github.com/supmo668/Aviary-BioSim
+```
+
+## Demo URL
+```
+https://claude.ai/code/artifact/67e77477-8d04-4984-8178-7849152bab06
+```
+*(the deck — arrow keys to navigate, `n` for speaker notes. Put the other two in the description or as extra links if the form allows.)*
+
+```
+Pre-registered study   https://claude.ai/code/artifact/df564d0d-8a96-41e0-9107-047b33d0c5e9
+Interpretability tree  https://claude.ai/code/artifact/1514a892-2eaa-4cce-9385-8bd17303d9aa
+```
+
+---
+
+## Tracks — select these four
+
+| Track | Select | Why |
+|---|---|---|
+| **Best Loop Design** | ✅ | Everyone joins. Also our strongest claim: a gate the coordinator itself could not wave through. |
+| **Best Use of Weave** | ✅ | Every stage of both agents is a `@weave.op`; the traces are the entire basis of the interpretability deliverable. We also found and fixed a real Weave defect — `weave.publish()` writes an object, not a call, so it succeeded while returning zero to the trace query. |
+| **Best Use of marimo** | ✅ | `dashboard/v2r_dashboard.py` — reactive dashboard over the register and run records. |
+| **Most Production-Ready** | ✅ | 117 tests, sealed-referee gate, four ADRs, a glossary resolving four terminology collisions, and a component already ported upstream into a plugin framework. This is the 2-weeks-later award and the work genuinely stands up. |
+
+**Do not select:**
+
+| Track | Why not |
 |---|---|
-| Team name | `BioSim` |
-| Project name | `v2r-loop — agents that measure` |
-| Members | Mangyin Mo |
-| GitHub | `https://github.com/supmo668/Aviary-BioSim` (public) |
-| Track | Best Use of Weave · Best Use of marimo · Best Loop Design |
-| X | `@mattmo_668` |
-| LinkedIn | `linkedin.com/in/matthew-mo` |
+| Best Use of ARIA | We did not use it. Claiming it would be false. |
+| Best Use of TypeSafe AI | Not used. |
+| Best Social Media demo | We have a HeyGen presenter video and an X handle, but no social campaign. Weak claim; skip unless the form lets you join freely. |
 
-**Description** — paste from `SUBMISSION.md`. It already contains the 2–3 sentence summary, what it does, how it's built (RL environment, orchestration protocol, agent framework), the sponsor table, and the honest-limitations section. The rules call the sponsor list *critical for both sponsor and grand prizes*, so do not trim that table.
+---
 
-**Demo links** — three artifacts, all must be **shared**, not private:
+## Socials
 
 ```
-Deck              https://claude.ai/code/artifact/67e77477-8d04-4984-8178-7849152bab06
-Pre-registration  https://claude.ai/code/artifact/df564d0d-8a96-41e0-9107-047b33d0c5e9
-Interpretability  https://claude.ai/code/artifact/1514a892-2eaa-4cce-9385-8bd17303d9aa
+X         @mattmo_668
+LinkedIn  linkedin.com/in/matthew-mo
 ```
 
 ---
 
-## 2 · Participant survey — blocks submission
+## One honesty note about the venue
 
-**Where:** the AGI House platform, same place as check-in. Not in your email — I searched; the only recent AGI House message is an unrelated newsletter.
-
-**Every team member must complete it** or the submission cannot be finalised. If anyone else is on the team, send it to them now rather than at the end.
+This is **CoreWeave Hacks**, and our GPU work ran on **Apple MPS locally** plus **W&B Inference** for serverless LLM calls — not on CoreWeave hardware. There is no CoreWeave track listed, so nothing here overclaims. If a judge asks where the GPU was, the answer is: ESM-2 650M on local MPS in 7 seconds, and W&B Inference for everything else, chosen specifically so no GPU sat on the critical path of an autonomous run.
 
 ---
 
-## 3 · The screen recording — under 2 minutes
+## Still to do
 
-**Where:** upload to the submission form, or link it (YouTube unlisted / Loom).
-
-Shot list with exact commands and narration: [`docs/DEMO.md`](docs/DEMO.md). Seven shots, 1:45.
-
-Before recording:
-```bash
-cd ~/github/personal/bioFM/projects/aviary-biosim
-export V2R_TRACE=1
-export WANDB_API_KEY=$(grep '^WANDB_API_KEY=' ../../.env | cut -d= -f2-)
-export WANDB_PROJECT=3m-m/Aviary-BioSim
-uv run --with pyyaml demo/gate_demo.py >/dev/null   # warm the cache
-```
-
-**The HeyGen presenter video is a companion, not this.** The rules ask for a screen recording of what you built; HeyGen cannot capture your terminal or the Weave UI. Attach it as the explanatory video if the form allows a second link.
-
----
-
-## 4 · The live presentation — 3 minutes, strictly enforced
-
-**Where:** your assigned room, via **Zoom**. Install it, or confirm https://share.zoom.us works in your browser.
-
-One or two slides maximum, heavy emphasis on the demo. The deck is built for this: `←` / `→` to move, **`n`** to show speaker notes if a judge asks for depth mid-answer.
-
-Running order and the prepared answers to expected questions are in [`docs/DEMO.md`](docs/DEMO.md) under "Judging room".
-
----
-
-## Pre-flight
-
-- [ ] All three artifact links open in a private window (proves they are shared)
-- [ ] `github.com/supmo668/Aviary-BioSim` loads while signed out
-- [ ] Survey completed by every member
-- [ ] Recording under 2:00
-- [ ] Zoom installed or share.zoom.us reachable
-- [ ] `uv run --with pyyaml demo/gate_demo.py` runs clean on the machine you will present from
+- [ ] **Participant survey** — every member, on the platform. Blocks the submission from closing.
+- [ ] **Screen recording** under 2:00 — shot list in [`docs/DEMO.md`](docs/DEMO.md)
+- [ ] Confirm all three artifact links open in a private window
+- [ ] Zoom installed, or https://share.zoom.us reachable, for the 3-minute room
