@@ -2,3 +2,4 @@
 .v2r/
 __pycache__/
 .pytest_cache/
+__marimo__/
