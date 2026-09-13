@@ -91,6 +91,8 @@ uv run --with pytest --with pyyaml pytest tests/ -q      # 42 passed
 | [`docs/CONTEXT.md`](docs/CONTEXT.md) | glossary — four terminology collisions resolved before they cost a drain |
 | [`docs/adr/`](docs/adr/) | four decisions, each with the alternative that was priced and declined |
 | [`docs/plan.md`](docs/plan.md) | the implementation plan this repo was built from |
+| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | every dependency and external service, and which are optional |
+| [`docs/DEMO.md`](docs/DEMO.md) | shot-by-shot demo scripts |
 
 ## Licence
 

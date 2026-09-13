@@ -3,6 +3,15 @@
 # requires-python = ">=3.12"
 # dependencies = ["pyyaml", "pytest"]
 # ///
+# pytest is a HARD dependency, not a convenience: the gate shells out to
+# `sys.executable -m pytest`, and an interpreter without it makes every sealed
+# test look like a failing one. See docs/adr/0001 and the _pytest_available check.
+#
+# `weave` is deliberately NOT declared here. It is imported lazily inside
+# emit_span and only when V2R_TRACE=1, so the gate stays fast and works offline.
+# To emit spans, add it at the call site:
+#     uv run --with pyyaml --with weave register.py close U-001
+# See docs/DEPENDENCIES.md.
 """Register CLI for /v2r-loop.
 
 Owns every state transition. The rest of the system trusts this file without a
