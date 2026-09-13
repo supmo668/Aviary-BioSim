@@ -1,0 +1,311 @@
+<title>PDI1 Proinsulin Pre-Registration</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F7F8FA; --surface:#FFFFFF; --ink:#14181F; --muted:#5A6472;
+    --faint:#8A93A1; --rule:#DDE1E8; --rule-strong:#C3CAD4;
+    --accent:#17518C; --accent-soft:#E8EFF7; --accent-ink:#0F3A66;
+    --supported:#2E7D74; --supported-soft:#E4F0EE;
+    --falsified:#9B2C3F; --falsified-soft:#F7E7EA;
+    --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0F1319; --surface:#161B23; --ink:#E8EBF0; --muted:#98A2B1;
+      --faint:#6B7585; --rule:#262D38; --rule-strong:#39424F;
+      --accent:#79ADE4; --accent-soft:#152536; --accent-ink:#A8C9EE;
+      --supported:#67B8AE; --supported-soft:#122421;
+      --falsified:#D98695; --falsified-soft:#2A1418;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0F1319; --surface:#161B23; --ink:#E8EBF0; --muted:#98A2B1;
+    --faint:#6B7585; --rule:#262D38; --rule-strong:#39424F;
+    --accent:#79ADE4; --accent-soft:#152536; --accent-ink:#A8C9EE;
+    --supported:#67B8AE; --supported-soft:#122421;
+    --falsified:#D98695; --falsified-soft:#2A1418;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--serif);
+       font-size:17px;line-height:1.62;padding:0 20px;padding-block:0 72px;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1020px;margin:0 auto}
+  .col{max-width:68ch}
+
+  /* ---------- masthead ---------- */
+  header{border-bottom:2px solid var(--ink);padding-block:44px 26px;margin-bottom:34px}
+  .provenance{font-family:var(--sans);font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--faint);display:flex;gap:10px;
+    flex-wrap:wrap;align-items:center;margin-bottom:22px}
+  .provenance b{color:var(--accent);font-weight:600}
+  h1{font-size:clamp(27px,4.1vw,40px);line-height:1.2;font-weight:700;
+     text-wrap:balance;margin:0 0 20px;letter-spacing:-.012em}
+  h1 em{font-style:italic;font-weight:600}
+  .status{display:flex;gap:0;flex-wrap:wrap;border:1px solid var(--rule-strong);
+    border-radius:3px;overflow:hidden;font-family:var(--sans);margin-top:26px}
+  .status div{flex:1 1 150px;padding:12px 15px;border-right:1px solid var(--rule)}
+  .status div:last-child{border-right:0}
+  .status dt{font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 4px}
+  .status dd{margin:0;font-size:14px;font-weight:500;font-family:var(--mono)}
+  .nodata{background:var(--accent-soft)}
+  .nodata dd{color:var(--accent-ink)}
+
+  /* ---------- body ---------- */
+  main{display:grid;grid-template-columns:76px minmax(0,1fr);gap:0 30px;align-items:start}
+  .rail{font-family:var(--sans);font-size:11px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--faint);padding-top:9px;
+    border-top:1px solid var(--rule)}
+  section{border-top:1px solid var(--rule);padding-block:30px 6px;min-width:0}
+  section:first-of-type,.rail:first-of-type{border-top:0}
+  h2{font-size:25px;font-weight:600;margin:0 0 16px;letter-spacing:-.01em;text-wrap:balance}
+  h3{font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:.06em;
+     text-transform:uppercase;color:var(--accent);margin:30px 0 11px}
+  p{margin:0 0 17px;max-width:68ch}
+  em{font-style:italic}
+  .lead{font-size:18.5px;color:var(--muted)}
+
+  /* ---------- hypotheses ---------- */
+  .hyp{border-left:3px solid var(--rule-strong);padding:2px 0 2px 19px;margin:0 0 22px}
+  .hyp.chosen{border-left-color:var(--accent);background:var(--accent-soft);
+    padding:16px 19px;border-radius:0 3px 3px 0}
+  .hyp .tag{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--muted)}
+  .hyp.chosen .tag{color:var(--accent-ink)}
+  .hyp .claim{font-weight:600;margin:5px 0 10px}
+  .hyp dl{margin:0;font-size:15.5px}
+  .hyp dt{font-family:var(--sans);font-size:10.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--faint);margin-top:9px}
+  .hyp dd{margin:2px 0 0;color:var(--muted)}
+
+  /* ---------- the falsification clause ---------- */
+  .falsify{border:1px solid var(--ink);border-radius:3px;margin:26px 0;overflow:hidden}
+  .falsify .head{background:var(--ink);color:var(--ground);font-family:var(--sans);
+    font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    padding:9px 18px}
+  .falsify .body{padding:19px 18px 6px}
+  .criterion{font-family:var(--mono);font-size:15px;line-height:1.6;
+    background:var(--ground);border:1px solid var(--rule);border-radius:3px;
+    padding:14px 16px;margin:0 0 16px;overflow-x:auto}
+  .criterion b{color:var(--accent);font-weight:500}
+
+  /* ---------- outcome branches ---------- */
+  .branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:6px 0 20px}
+  .branch{border:1px solid var(--rule);border-top-width:3px;border-radius:0 0 3px 3px;padding:15px 17px}
+  .branch.yes{border-top-color:var(--supported);background:var(--supported-soft)}
+  .branch.no{border-top-color:var(--falsified);background:var(--falsified-soft)}
+  .branch h4{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;margin:0 0 9px}
+  .branch.yes h4{color:var(--supported)}
+  .branch.no h4{color:var(--falsified)}
+  .branch p{font-size:15px;margin:0 0 11px;color:var(--muted)}
+  .branch .num{font-family:var(--mono);color:var(--ink);font-weight:500}
+
+  /* ---------- arms table ---------- */
+  .scroll{overflow-x:auto;margin:0 0 20px}
+  table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:14.5px;min-width:520px}
+  th{text-align:left;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+     color:var(--faint);font-weight:600;padding:0 14px 8px 0;border-bottom:1px solid var(--rule-strong)}
+  td{padding:11px 14px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--muted)}
+  td:first-child{font-family:var(--mono);font-weight:500;color:var(--ink);width:44px}
+  tr.primary td{color:var(--ink)}
+  tr.primary td:nth-child(4){color:var(--accent);font-weight:500}
+
+  /* ---------- methods list ---------- */
+  .apparatus{font-family:var(--sans);font-size:15px;display:grid;gap:0;margin:0 0 20px}
+  .apparatus div{display:grid;grid-template-columns:170px minmax(0,1fr);gap:16px;
+    padding:10px 0;border-bottom:1px solid var(--rule)}
+  .apparatus dt{font-size:11px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--faint);padding-top:2px}
+  .apparatus dd{margin:0;color:var(--muted)}
+  .apparatus .v{font-family:var(--mono);color:var(--ink)}
+
+  /* ---------- limitations ---------- */
+  .limits{font-size:15.5px;color:var(--muted);padding-left:19px;margin:0 0 18px}
+  .limits li{margin-bottom:8px}
+
+  /* ---------- references ---------- */
+  .refs{font-size:14.5px;line-height:1.5;color:var(--muted);
+    display:grid;gap:13px;counter-reset:r}
+  .refs li{padding-left:2px}
+  .refs em{color:var(--ink)}
+  footer{border-top:1px solid var(--rule);margin-top:44px;padding-top:20px;
+    font-family:var(--sans);font-size:12.5px;color:var(--faint);max-width:68ch}
+  footer a{color:var(--accent)}
+
+  @media (max-width:720px){
+    main{grid-template-columns:1fr;gap:0}
+    .rail{border-top:0;padding-top:26px;padding-bottom:0}
+    section{border-top:0;padding-top:4px}
+    section:not(:first-of-type){border-top:1px solid var(--rule);padding-top:22px}
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="provenance">
+    <span>Pre-registered design</span><span>·</span>
+    <span>generated by a traced agent pipeline</span><span>·</span>
+    <span><b>deepseek-ai/DeepSeek-V4-Pro-0813</b></span><span>·</span>
+    <span>13 Sep 2026</span>
+  </div>
+  <h1>Does <em>S. cerevisiae</em> PDI1 co-expression increase soluble, correctly folded human proinsulin in <em>Pichia pastoris</em>?</h1>
+  <p class="lead col">A pre-registered experimental design. The question is whether ER oxidoreductase capacity — not translation, not secretion — is what limits correctly folded proinsulin in yeast.</p>
+  <dl class="status">
+    <div class="nodata"><dt>Data collected</dt><dd>None</dd></div>
+    <div><dt>Primary endpoint</dt><dd>mg/L native</dd></div>
+    <div><dt>Effect sought</dt><dd>≥ 2.0×</dd></div>
+    <div><dt>Clones per arm</dt><dd>6</dd></div>
+    <div><dt>Induction</dt><dd>72 h</dd></div>
+  </dl>
+</header>
+
+<main>
+  <div class="rail">Abstract</div>
+  <section>
+    <p>The claim that co-expression of <em>Saccharomyces cerevisiae</em> PDI1 with codon-optimized human proinsulin in <em>Pichia pastoris</em> increases the soluble yield of correctly folded proinsulin by at least 2-fold after 72 h of methanol induction is an open empirical question. This document pre-registers a design to test it.</p>
+    <p>The primary endpoint is soluble, correctly folded human proinsulin in clarified culture supernatant, measured by RP-HPLC against a native proinsulin standard, with disulfide pairing confirmed in a subset by non-reducing SDS-PAGE/Western blot and LC-MS/MS peptide mapping. The comparison is between otherwise identical proinsulin-expressing strains with and without <em>PDI1</em> overexpression.</p>
+    <p><strong>No data have been collected.</strong> Expected results below are stated conditionally, for both outcomes, before any measurement.</p>
+  </section>
+
+  <div class="rail">1 · Introduction</div>
+  <section>
+    <h2>Where the yield is lost</h2>
+    <p>The classic microbial route to human insulin was established in <em>Escherichia coli</em> by Goeddel et al. (1979): A and B chains expressed separately as β-galactosidase fusions, recovered from inclusion bodies, cleaved, S-sulfonated, then oxidatively folded <em>in vitro</em>. The yield-limiting step is that <em>in vitro</em> refolding — reduced chains misfold, aggregate, or form incorrect disulfide isomers.</p>
+    <p>Yeast secretion avoids that bottleneck. <em>P. pastoris</em> can secrete proinsulin with native disulfides formed in the ER (Kjeldsen et al., 1999; Gurramkonda et al., 2010). The losses move elsewhere: ER folding, ER-associated degradation, secretory export, extracellular proteolysis. Which of these dominates for proinsulin has not been dissected as rigorously as the <em>E. coli</em> route <span style="color:var(--faint)">[inference]</span>.</p>
+    <p>PDI overexpression has increased secretion of some disulfide-containing proteins in <em>S. cerevisiae</em> (Robinson et al., 1994) and in <em>P. pastoris</em> (Inan et al., 2006). But the effect is substrate-specific, not universal — Shusta et al. (1998) found PDI/BiP effects depended on which antibody fragment was expressed. PDI1 co-expression is therefore plausible for proinsulin, and not guaranteed. That gap is what makes the question worth a direct test rather than an assumption.</p>
+  </section>
+
+  <div class="rail">2 · Hypotheses</div>
+  <section>
+    <h2>Three candidates, one taken forward</h2>
+
+    <div class="hyp chosen">
+      <div class="tag">H1 · selected</div>
+      <div class="claim">PDI1 co-expression increases soluble, correctly folded proinsulin by at least 2-fold.</div>
+      <dl>
+        <dt>Mechanism</dt>
+        <dd>Higher ER PDI oxidoreductase/isomerase capacity accelerates native disulfide formation and reduces misfolded species entering ERAD.</dd>
+        <dt>Strongest prior evidence</dt>
+        <dd>Inan et al. (2006) in <em>P. pastoris</em>; Robinson et al. (1994) in <em>S. cerevisiae</em>.</dd>
+        <dt>Most likely failure</dt>
+        <dd>Proinsulin may simply not be PDI-limited; excess PDI could retain misfolded protein via chaperone activity.</dd>
+      </dl>
+    </div>
+
+    <div class="hyp">
+      <div class="tag">H2 · rejected</div>
+      <div class="claim">Co-overexpressing PDI1 with Ero1 improves oxidative folding more than PDI1 alone.</div>
+      <dl>
+        <dt>Why rejected</dt>
+        <dd>Adds a second variable and higher cost, and a negative result would be confounded by Ero1-induced oxidative stress and UPR activation. Better as a follow-up <em>after</em> H1 shows a PDI-dependent effect.</dd>
+      </dl>
+    </div>
+
+    <div class="hyp">
+      <div class="tag">H3 · rejected</div>
+      <div class="claim">Lowering methanol induction temperature to 20–25 °C increases correctly folded yield.</div>
+      <dl>
+        <dt>Why rejected</dt>
+        <dd>Tests a generic kinetic effect rather than the specific disulfide-folding limitation. A negative result could just reflect lower specific productivity, ruling nothing out about oxidoreductase capacity.</dd>
+      </dl>
+    </div>
+
+    <p style="font-size:15.5px;color:var(--muted)">Both rejections turn on the same criterion: not which hypothesis is most likely true, but which one yields an <em>interpretable negative result</em>.</p>
+  </section>
+
+  <div class="rail">3 · Methods</div>
+  <section>
+    <h2>Four arms, one variable</h2>
+    <p>Host: <em>Pichia pastoris</em> X-33. Proinsulin is expressed from the methanol-inducible <em>AOX1</em> promoter fused to the <em>S. cerevisiae</em> α-factor prepro leader; <em>PDI1</em> carries its C-terminal HDEL ER-retention signal and is driven constitutively from <em>GAP</em>, so it is present before proinsulin synthesis begins.</p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Arm</th><th>Proinsulin</th><th>PDI1</th><th>What it establishes</th></tr></thead>
+        <tbody>
+          <tr class="primary"><td>A</td><td>Proinsulin cassette</td><td>Empty vector</td><td>Primary comparator — baseline titer</td></tr>
+          <tr class="primary"><td>B</td><td>Proinsulin cassette</td><td>PDI1</td><td>The H1 intervention</td></tr>
+          <tr><td>C</td><td>Empty vector</td><td>Empty vector</td><td>Rules out host background peaks</td></tr>
+          <tr><td>D</td><td>Empty vector</td><td>PDI1</td><td>Rules out PDI1 alone producing a peak</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Apparatus and conditions</h3>
+    <dl class="apparatus">
+      <div><dt>Primary assay</dt><dd>RP-HPLC, C18, water/acetonitrile gradient with <span class="v">0.1 %</span> TFA, UV <span class="v">214 nm</span>; native peak defined by co-elution with a human proinsulin standard</dd></div>
+      <div><dt>Folding confirmation</dt><dd>Non-reducing SDS-PAGE/Western blot and LC-MS/MS disulfide peptide mapping, on a subset</dd></div>
+      <div><dt>Secondary</dt><dd>Total proinsulin ELISA — used only to separate a folding-specific effect from a general secretion increase</dd></div>
+      <div><dt>Culture</dt><dd>BMGY at <span class="v">30 °C</span> to mid-log, resuspended in BMMY at <span class="v">OD₆₀₀ ≈ 1</span>; methanol to <span class="v">0.5 %</span> every <span class="v">24 h</span>; harvest at <span class="v">72 h</span></dd></div>
+      <div><dt>Replication</dt><dd><span class="v">6</span> independent transformants per arm, each analysed in duplicate — the biological unit is the clone, because clonal variation dominates</dd></div>
+      <div><dt>Power</dt><dd>At within-arm CV <span class="v">35–50 %</span>, six clones give <span class="v">&gt; 80 %</span> power for a one-sided two-sample <em>t</em>-test at <span class="v">α = 0.05</span></dd></div>
+    </dl>
+
+    <div class="falsify">
+      <div class="head">Pre-specified falsification criterion</div>
+      <div class="body">
+        <div class="criterion">Let <b>R</b> = mean Arm B titer ÷ mean Arm A titer at 72 h.<br><br>
+        H1 is <b>falsified</b> if R is not ≥ 2.0 <em>and</em> the upper bound of the<br>
+        one-sided 95 % CI for R, on log-transformed data, is &lt; 2.0.</div>
+        <p style="font-size:15.5px;color:var(--muted)">A point estimate below 2 whose interval still includes 2 is <em>indeterminate</em>, not falsifying. And the criterion is conditional on confirmed PDI1 expression in Arm B by anti-PDI1 immunoblot — without that, the experiment cannot test H1 at all, and no conclusion may be drawn in either direction.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="rail">4 · Expected</div>
+  <section>
+    <h2>Both outcomes, written before the measurement</h2>
+    <p>No data have been collected. These are conditional expectations, not findings.</p>
+    <div class="branches">
+      <div class="branch yes">
+        <h4>If H1 is supported</h4>
+        <p>Mean Arm B native titer at least <span class="num">2×</span> Arm A, with the RP-HPLC native peak correspondingly larger and native disulfide pairing confirmed by peptide mapping.</p>
+        <p>ELISA may also rise, but the decisive signal is the <em>native</em> peak — a folding-specific gain rather than more total secretion.</p>
+      </div>
+      <div class="branch no">
+        <h4>If H1 is not supported</h4>
+        <p>PDI1 confirmed by immunoblot, but Arm B titer similar to or below Arm A. Worked example: Arm A <span class="num">10 mg/L</span>, Arm B <span class="num">15 mg/L</span> → <span class="num">R = 1.5</span>, upper bound &lt; 2.0.</p>
+        <p>A <em>decrease</em> would suggest excess PDI1 retaining misfolded proinsulin in the ER, or perturbed ER redox balance.</p>
+      </div>
+    </div>
+    <p style="font-size:15.5px;color:var(--muted)">Controls: Arms C and D must produce no native proinsulin peak; spiked standard recovery from Arm C spent medium must fall within pre-specified limits; reduced/alkylated proinsulin must not co-elute with the native standard.</p>
+  </section>
+
+  <div class="rail">5 · Discussion</div>
+  <section>
+    <h2>What either result would mean</h2>
+    <p>A single genetic modification against an otherwise identical comparator means a positive result can be attributed to PDI1 co-expression rather than to codon optimization, selection markers, or induction conditions. It would motivate work on PDI1 dosage, Ero1 co-expression, and redox tuning — H2, held back deliberately, becomes the next experiment.</p>
+    <p>A negative result would not imply PDI is unimportant. It would show proinsulin is not PDI1-limited <em>under these conditions</em>. Because PDI effects are known to be substrate-specific (Shusta et al., 1998), that is a biologically interpretable finding rather than a dead end — which is precisely why H1 was chosen over H3.</p>
+    <h3>Limitations</h3>
+    <ul class="limits">
+      <li>One <em>PDI1</em> source, one promoter, one expression level — no dose–response is established.</li>
+      <li>One induction temperature and a single 72 h endpoint; improvements occurring earlier or later would be missed.</li>
+      <li>RP-HPLC co-elution is strong but not definitive evidence of correct folding for every molecule; peptide mapping covers only a subset.</li>
+      <li>Six clones per arm is powered for a large effect, but <em>P. pastoris</em> clonal variation can still widen the interval.</li>
+      <li>The codon-optimized cassette is identical across arms, so codon optimization is not itself tested.</li>
+    </ul>
+  </section>
+
+  <div class="rail">6 · References</div>
+  <section>
+    <ol class="refs">
+      <li>Frand AR, Kaiser CA. 1998. The ERO1 gene of yeast is required for oxidation of protein disulfide isomerase in the endoplasmic reticulum. <em>Molecular Cell</em> 1:161–170.</li>
+      <li>Goeddel DV, Kleid DG, Bolivar F, Heyneker HL, Yansura DG, Crea R, Hirose T, Kraszewski A, Itakura K, Riggs AD. 1979. Expression in <em>Escherichia coli</em> of chemically synthesized genes for human insulin. <em>PNAS</em> 76:106–110.</li>
+      <li>Gurramkonda C, Polez S, Skoko N, Adnan A, Gäbel T, Chugh D, Swaminathan S, Khanna N, Tisminetzky S, Rinas U. 2010. Application of simple fed-batch technique to high-level secretory production of insulin precursor using <em>Pichia pastoris</em>. <em>Microbial Cell Factories</em> 9:31.</li>
+      <li>Inan M, Aryasomayajula D, Sinha J, Meagher MM. 2006. Enhancement of protein secretion in <em>Pichia pastoris</em> by overexpression of protein disulfide isomerase. <em>Biotechnology and Bioengineering</em> 93:771–778.</li>
+      <li>Kjeldsen T, Pettersson AF, Hach M. 1999. Secretory expression and characterization of insulin precursor in yeast <em>Pichia pastoris</em>. <em>Applied Microbiology and Biotechnology</em> 52:207–214.</li>
+      <li>Li Z, Xiong F, Lin Q, d'Anjou M, Daugulis AJ, Yang DS, Hew CL. 2001. Low-temperature increases the yield of biologically active recombinant protein in <em>Pichia pastoris</em>. <em>Protein Expression and Purification</em> 21:438–445.</li>
+      <li>Robinson AS, Hines V, Wittrup KD. 1994. Protein disulfide isomerase overexpression increases secretion of foreign proteins in <em>Saccharomyces cerevisiae</em>. <em>Bio/Technology</em> 12:381–384.</li>
+      <li>Shusta EV, Raines RT, Plückthun A, Wittrup KD. 1998. Increasing the secretory capacity of <em>Saccharomyces cerevisiae</em> for production of single-chain antibody fragments. <em>Nature Biotechnology</em> 16:773–777.</li>
+    </ol>
+  </section>
+</main>
+
+<footer>
+  <p><strong>Provenance.</strong> This document was produced by an automated, fully traced reasoning pipeline — question framing, literature grounding, hypothesis generation, selection, experimental design and drafting were each a separate instrumented inference call. It is a demonstration of machine-generated experimental design, <strong>not</strong> a peer-reviewed publication, and no experiment described here has been performed. Citations were checked to correspond to real published work; readers should verify them independently before relying on any claim.</p>
+  <p>Reasoning trace and stage-by-stage decisions: the companion interpretability report.</p>
+</footer>
+</div>

@@ -1,0 +1,247 @@
+<title>How the Agent Chose H1</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F7F8FA; --surface:#FFFFFF; --ink:#14181F; --muted:#5A6472;
+    --faint:#8A93A1; --rule:#DDE1E8; --rule-strong:#C3CAD4;
+    --accent:#17518C; --accent-soft:#E8EFF7; --accent-ink:#0F3A66;
+    --kept:#2E7D74; --kept-soft:#E4F0EE;
+    --cut:#9B2C3F; --cut-soft:#F7E7EA;
+    --bar:#17518C; --bar-track:#E4E8EE;
+    --serif:"Source Serif 4",Georgia,serif;
+    --sans:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0F1319; --surface:#161B23; --ink:#E8EBF0; --muted:#98A2B1;
+      --faint:#6B7585; --rule:#262D38; --rule-strong:#39424F;
+      --accent:#79ADE4; --accent-soft:#152536; --accent-ink:#A8C9EE;
+      --kept:#67B8AE; --kept-soft:#122421;
+      --cut:#D98695; --cut-soft:#2A1418;
+      --bar:#79ADE4; --bar-track:#222A35;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0F1319; --surface:#161B23; --ink:#E8EBF0; --muted:#98A2B1;
+    --faint:#6B7585; --rule:#262D38; --rule-strong:#39424F;
+    --accent:#79ADE4; --accent-soft:#152536; --accent-ink:#A8C9EE;
+    --kept:#67B8AE; --kept-soft:#122421;
+    --cut:#D98695; --cut-soft:#2A1418;
+    --bar:#79ADE4; --bar-track:#222A35;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.6;padding:0 20px;padding-block:0 68px;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto}
+  .prose{max-width:64ch}
+
+  header{padding-block:44px 26px;border-bottom:2px solid var(--ink);margin-bottom:30px}
+  .eyebrow{font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:16px}
+  .eyebrow b{color:var(--accent);font-weight:600}
+  h1{font-size:clamp(26px,4vw,38px);line-height:1.15;font-weight:700;
+    letter-spacing:-.018em;margin:0 0 16px;text-wrap:balance}
+  .sub{font-family:var(--serif);font-size:18px;color:var(--muted);max-width:62ch;margin:0}
+
+  h2{font-size:12px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 6px}
+  .sec{padding-block:34px 0;border-top:1px solid var(--rule);margin-top:34px}
+  .sec:first-of-type{border-top:0;margin-top:0;padding-top:0}
+  .sec > p{font-family:var(--serif);font-size:16.5px;color:var(--muted);
+    max-width:64ch;margin:0 0 20px}
+  .lede{font-size:21px;font-weight:600;letter-spacing:-.01em;color:var(--ink);
+    margin:0 0 14px;max-width:60ch;text-wrap:balance;font-family:var(--sans)}
+
+  /* ---------- stage chart ---------- */
+  .chart{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);
+    border-radius:3px;overflow:hidden;margin-bottom:14px}
+  .row{background:var(--surface);display:grid;
+    grid-template-columns:150px minmax(0,1fr) 74px 62px;gap:14px;
+    align-items:center;padding:11px 15px}
+  .row.hd{background:var(--ground);font-size:10px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--faint);font-weight:600}
+  .row.hl{background:var(--accent-soft)}
+  .stage{font-weight:600;font-size:14px;min-width:0}
+  .stage small{display:block;font-weight:400;font-size:11.5px;color:var(--faint);
+    letter-spacing:0;text-transform:none}
+  .track{background:var(--bar-track);height:9px;border-radius:2px;overflow:hidden}
+  .fill{background:var(--bar);height:100%;border-radius:2px}
+  .num{font-family:var(--mono);font-size:13px;text-align:right;
+    font-variant-numeric:tabular-nums}
+  .ratio{font-family:var(--mono);font-size:13px;text-align:right;
+    font-variant-numeric:tabular-nums;font-weight:500}
+  .ratio.low{color:var(--accent)}
+  .caption{font-size:13px;color:var(--faint);max-width:64ch;margin:0 0 8px}
+
+  /* ---------- hypothesis space ---------- */
+  .space{display:grid;gap:12px;margin:20px 0}
+  .hyp{border:1px solid var(--rule);border-left-width:4px;border-radius:0 3px 3px 0;
+    padding:15px 18px;background:var(--surface)}
+  .hyp.kept{border-left-color:var(--kept);background:var(--kept-soft)}
+  .hyp.cut{border-left-color:var(--cut);background:var(--cut-soft)}
+  .hyp .top{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:7px}
+  .hyp .id{font-family:var(--mono);font-weight:500;font-size:14px}
+  .hyp .verdict{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+  .hyp.kept .verdict{color:var(--kept)}
+  .hyp.cut .verdict{color:var(--cut)}
+  .hyp .claim{font-family:var(--serif);font-size:16px;color:var(--ink);margin:0 0 10px}
+  .hyp .why{font-size:14px;color:var(--muted);margin:0}
+  .hyp .why b{color:var(--ink);font-weight:600}
+
+  /* ---------- pull quote ---------- */
+  .pull{border-top:2px solid var(--accent);border-bottom:1px solid var(--rule);
+    padding:20px 0;margin:26px 0}
+  .pull p{font-family:var(--serif);font-size:20px;line-height:1.45;
+    color:var(--ink);margin:0 0 8px;max-width:58ch;text-wrap:balance}
+  .pull cite{font-style:normal;font-size:11.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--faint)}
+
+  /* ---------- finding cards ---------- */
+  .findings{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));
+    gap:14px;margin:20px 0}
+  .card{border:1px solid var(--rule);border-radius:3px;padding:16px 18px;background:var(--surface)}
+  .card h3{font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    margin:0 0 9px;color:var(--faint);font-weight:600}
+  .card p{font-size:14.5px;color:var(--muted);margin:0 0 9px}
+  .card p:last-child{margin-bottom:0}
+  .card b{color:var(--ink)}
+  .card code{font-family:var(--mono);font-size:12.5px;background:var(--ground);
+    padding:1px 5px;border-radius:2px;color:var(--accent)}
+
+  .limits{border:1px dashed var(--rule-strong);border-radius:3px;padding:18px 20px;
+    margin:22px 0;background:var(--surface)}
+  .limits h3{font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--cut);margin:0 0 10px;font-weight:600}
+  .limits ul{margin:0;padding-left:19px;font-size:14.5px;color:var(--muted)}
+  .limits li{margin-bottom:7px}
+  .limits li:last-child{margin-bottom:0}
+
+  footer{border-top:1px solid var(--rule);margin-top:38px;padding-top:18px;
+    font-size:12.5px;color:var(--faint);max-width:64ch}
+  footer a{color:var(--accent)}
+  .scroll{overflow-x:auto}
+
+  @media (max-width:640px){
+    .row{grid-template-columns:1fr 62px 54px;gap:10px}
+    .row .track{grid-column:1 / -1;order:3}
+    .row.hd .track{display:none}
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Interpretability report · <b>6 traced stages</b> · deepseek-ai/DeepSeek-V4-Pro-0813 · 13 Sep 2026</div>
+  <h1>How the agent chose H1</h1>
+  <p class="sub">An agent proposed three ways to raise recombinant proinsulin yield and took one forward. Because every stage was traced, we can read back what it discarded and on what grounds — and check whether the grounds were good ones.</p>
+</header>
+
+<div class="sec">
+  <h2>Where the thinking went</h2>
+  <p class="lede">The model deliberated hardest where the science was, and least where the prose was.</p>
+  <p class="caption">Completion tokens per stage, drawn to the largest stage. The right-hand column is output characters per completion token — a low ratio means most of the budget went to reasoning rather than text.</p>
+
+  <div class="scroll">
+  <div class="chart">
+    <div class="row hd"><div>Stage</div><div class="track"></div><div class="num">Tokens</div><div class="ratio">Chars/tok</div></div>
+
+    <div class="row"><div class="stage">Frame the question<small>reduce topic to one falsifiable claim</small></div>
+      <div class="track"><div class="fill" style="width:13.8%"></div></div>
+      <div class="num">1,329</div><div class="ratio">0.79</div></div>
+
+    <div class="row hl"><div class="stage">Ground in literature<small>what is actually established</small></div>
+      <div class="track"><div class="fill" style="width:69.4%"></div></div>
+      <div class="num">6,692</div><div class="ratio low">0.46</div></div>
+
+    <div class="row hl"><div class="stage">Generate hypotheses<small>three candidates, with failure modes</small></div>
+      <div class="track"><div class="fill" style="width:45.4%"></div></div>
+      <div class="num">4,382</div><div class="ratio low">0.43</div></div>
+
+    <div class="row hl"><div class="stage">Select one<small>and justify against the rejected</small></div>
+      <div class="track"><div class="fill" style="width:22.5%"></div></div>
+      <div class="num">2,172</div><div class="ratio low">0.47</div></div>
+
+    <div class="row"><div class="stage">Design the study<small>arms, controls, falsification</small></div>
+      <div class="track"><div class="fill" style="width:71.7%"></div></div>
+      <div class="num">6,918</div><div class="ratio">0.68</div></div>
+
+    <div class="row"><div class="stage">Draft the paper<small>assemble into sections</small></div>
+      <div class="track"><div class="fill" style="width:100%"></div></div>
+      <div class="num">9,642</div><div class="ratio">1.92</div></div>
+  </div>
+  </div>
+
+  <p>The three highlighted stages — grounding, generating, selecting — produced under half a character per token spent. Drafting produced <b>1.92</b>, four times as much text per unit of thought. That is the profile you would want: the budget went into deciding what to test, not into writing it up. It is also not something you could assert without the trace.</p>
+</div>
+
+<div class="sec">
+  <h2>The hypothesis space</h2>
+  <p class="lede">Three candidates entered. The reasons two were cut are the interpretable part.</p>
+
+  <div class="space">
+    <div class="hyp kept">
+      <div class="top"><span class="id">H1</span><span class="verdict">taken forward</span></div>
+      <p class="claim">PDI1 co-expression raises soluble, correctly folded proinsulin ≥ 2-fold.</p>
+      <p class="why"><b>Kept because:</b> it tests the most mechanistically relevant limitation — ER oxidoreductase capacity — with a single genetic modification, and a negative result stays interpretable: either proinsulin is not PDI-limited, or excess PDI retains misfolded protein.</p>
+    </div>
+
+    <div class="hyp cut">
+      <div class="top"><span class="id">H2</span><span class="verdict">rejected</span></div>
+      <p class="claim">Co-overexpressing PDI1 with Ero1 beats PDI1 alone.</p>
+      <p class="why"><b>Cut because:</b> it adds a second variable and higher cost, and a negative result would be <b>confounded</b> by Ero1-induced oxidative stress and UPR activation. Deferred to a follow-up conditional on H1 showing a PDI-dependent effect.</p>
+    </div>
+
+    <div class="hyp cut">
+      <div class="top"><span class="id">H3</span><span class="verdict">rejected</span></div>
+      <p class="claim">Lowering induction temperature to 20–25 °C raises folded yield.</p>
+      <p class="why"><b>Cut because:</b> it tests a generic kinetic effect rather than the specific disulfide-folding limitation. A negative result could simply reflect lower specific productivity — ruling nothing out about oxidoreductase capacity.</p>
+    </div>
+  </div>
+
+  <div class="pull">
+    <p>Both rejections turn on the same criterion — and it is not which hypothesis is most likely to be true. It is which one yields an <em>interpretable negative result</em>.</p>
+    <cite>The selection rule, recovered from the trace rather than specified in the prompt</cite>
+  </div>
+
+  <p>The prompt asked the model to weigh prior evidence, cost to test, and how interpretable a negative result would be. It weighted the third above the first — H3 was acknowledged as <em>cheap</em> and still cut, because a null from H3 would be uninformative. That is a defensible experimental-design instinct, and it is visible only because the rejection reasons were captured alongside the choice.</p>
+</div>
+
+<div class="sec">
+  <h2>Two findings about the instrumentation itself</h2>
+
+  <div class="findings">
+    <div class="card">
+      <h3>Instrumented ≠ readable</h3>
+      <p>The build loop that produced this system emits a span per iteration and <b>publishes them successfully</b> — yet querying its traces returns <b>zero</b>.</p>
+      <p><code>weave.publish()</code> writes an <b>object</b>, not a call. Different store, invisible to the trace query. Six closes also landed as six <em>versions of one object</em>, not six objects.</p>
+      <p>This pipeline uses <code>@weave.op</code> instead, so its stages are real calls and queryable. A system can be perfectly instrumented and unreadable by its own documented procedure.</p>
+    </div>
+    <div class="card">
+      <h3>The budget hid the answer</h3>
+      <p>The first two runs returned <b>empty content</b> with <code>finish_reason: length</code>. Nothing was wrong with the prompt — reasoning tokens are billed against <code>max_tokens</code>, so a ceiling sized for the <em>answer</em> is consumed entirely by the thinking.</p>
+      <p>Fixed by escalating the budget on empty content rather than guessing a number. The grounding stage needed <b>6,692</b> tokens to emit <b>3,072</b> characters.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>What this does and does not show</h2>
+  <div class="limits">
+    <h3>Read this before trusting the above</h3>
+    <ul>
+      <li>The trace shows what the model <b>said</b> its reasons were, not what caused the output. Stated rationale and actual mechanism are different things, and only the first is captured here.</li>
+      <li>Three hypotheses were requested, so three appeared. The trace cannot show what a broader or narrower request would have surfaced — the hypothesis space was bounded by the prompt.</li>
+      <li>Chars-per-token is a proxy for deliberation, not a measure of it. It separates reasoning-heavy from transcription-heavy stages; it says nothing about whether the reasoning was any good.</li>
+      <li>No experiment has been run. The design's quality is assessable from the literature; its conclusions are not, because there are none.</li>
+      <li>Citations were checked to correspond to real published work. That check was manual, not part of the traced pipeline.</li>
+    </ul>
+  </div>
+  <p>The honest claim is narrow and still worth something: for this run, the decision structure is <b>recoverable</b>. You can see which alternatives existed, which were discarded, on what stated grounds, and how much deliberation each step consumed — without re-running anything.</p>
+</div>
+
+<footer>
+  <p>Traces: <code>3m-m/Aviary-BioSim</code> on Weights &amp; Biases Weave. Six <code>@weave.op</code> stages over W&amp;B Inference. Companion document: the pre-registered experimental design this run produced.</p>
+</footer>
+</div>
