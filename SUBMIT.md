@@ -85,17 +85,35 @@ https://github.com/supmo668/Aviary-BioSim
 ```
 
 ## Demo URL
+
+**This is the one that goes in the form.** A separate artifact with the speaker notes
+removed from the file entirely — not hidden, not toggled off. There is no key that reveals
+them because there is nothing to reveal.
+
 ```
-https://claude.ai/code/artifact/67e77477-8d04-4984-8178-7849152bab06?present
+https://claude.ai/code/artifact/33a47af4-a12b-4bd3-82f7-6b07de4cedc8
 ```
-*(`?present` is the judge-facing link: speaker notes are off and cannot be toggled on, and
-the notes hint is hidden. Arrow keys still navigate. **Drop `?present` for your own link
-when you present** — you want `n` available if a judge asks for depth mid-answer.)*
+
+### Your own link — keep this one private
+
+Same seven slides, with the speaker notes still in. Press **`n`** to show them if a judge
+asks for depth mid-answer. **Do not paste this into the form.**
+
+```
+https://claude.ai/code/artifact/67e77477-8d04-4984-8178-7849152bab06
+```
+
+### The other two deliverables
+
+Put these in the description, or as extra links if the form accepts more than one.
 
 ```
 Pre-registered study   https://claude.ai/code/artifact/df564d0d-8a96-41e0-9107-047b33d0c5e9
 Interpretability tree  https://claude.ai/code/artifact/1514a892-2eaa-4cce-9385-8bd17303d9aa
 ```
+
+**Share all four** from each artifact's share menu, then open them in a private window to
+confirm. Artifacts are private by default; an unshared link shows a judge nothing.
 
 ---
 
@@ -137,5 +155,5 @@ This is **CoreWeave Hacks**, and our GPU work ran on **Apple MPS locally** plus 
 
 - [ ] **Participant survey** — every member, on the platform. Blocks the submission from closing.
 - [ ] **Screen recording** under 2:00 — shot list in [`docs/DEMO.md`](docs/DEMO.md)
-- [ ] Confirm all three artifact links open in a private window
+- [ ] Confirm all four artifact links open in a private window (submission deck, presenter deck, study, interpretability)
 - [ ] Zoom installed, or https://share.zoom.us reachable, for the 3-minute room
