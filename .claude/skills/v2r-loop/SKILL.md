@@ -164,6 +164,16 @@ mechanism, the exact numbers, and the answers to the obvious challenges live.
 
 ### Deliverable rules
 
+- **No internal vocabulary on a deliverable.** The glossary exists so *this loop* stays
+  precise; it is not language a reader has agreed to learn. Terms like **drain**, **build
+  unit**, **register**, **park**, **sealed test** and **instinct pin** belong in the code and
+  the design docs, never on a slide or in a report a stranger reads. Say what the thing does:
+  a drain is *a pass*, a build unit is *a task*, parking is *setting work aside*, the register
+  is *the worklist*, a sealed test is *an independent test*. If a term genuinely has no plain
+  equivalent, define it once, in the sentence where it first appears.
+- **The deck ships a `?present` mode.** Speaker notes forced off and un-toggleable, the notes
+  hint hidden, navigation unchanged — so one link is safe to hand to a stranger and another
+  keeps the notes for the person presenting.
 - **Schematics over paragraphs.** A flow, a tree, a chart or a labelled table beats prose
   wherever it can carry the same content.
 - **Both themes, one gutter, phone width.** These get read on someone else's screen.

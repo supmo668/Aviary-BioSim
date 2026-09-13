@@ -126,7 +126,7 @@
 
 <!-- 1 · TITLE -->
 <section class="slide on" data-note="title">
-  <div class="tag">Team BioSim · v2r-loop</div>
+  <div class="tag">Team BioSim · Vision-to-Reality Loop</div>
   <h1>Agents that <span>measure</span>,<br>not agents that guess.</h1>
   <p class="say">An autonomous loop built its own tools, then used them to run a real experiment in protein biology &mdash; and reached an answer that was already known, by measuring rather than recalling.</p>
   <div class="stats">
@@ -142,9 +142,9 @@
   <h2>Self-improving agents grade their own homework.</h2>
   <p class="say">An agent writes the code, runs the check, and reports success. When the check is weak &mdash; or silently broken &mdash; nothing notices, and the loop gets confidently better at passing a test nobody enforces.</p>
   <div class="cols">
-    <div class="box"><div class="h">It happened to us</div><div class="b">Our register declared only <code>pyyaml</code> while being invoked with only <code>pyyaml</code> available. <code>python -m pytest</code> exited <b>1</b>. Our table read exit 1 as <b>"test failed"</b>.</div></div>
-    <div class="box"><div class="h">The consequence</div><div class="b">Every unit would have burned its attempts and parked <b>while the sealed test never ran once</b>. Our 36-test suite passed throughout.</div></div>
-    <div class="box hi"><div class="h">The hypothesis</div><div class="b">A loop is only trustworthy if <b>the actor doing the work is structurally unable to record that the work passed.</b></div></div>
+    <div class="box"><div class="h">It happened to us</div><div class="b">Our test runner was never given the library it needed in order to run tests. It exited with code <b>1</b> — and our own rule read code 1 as <b>"a test failed"</b>.</div></div>
+    <div class="box"><div class="h">The consequence</div><div class="b">Every task would have exhausted its retries and been set aside <b>while the test never ran once</b>. Our 36-test suite passed throughout.</div></div>
+    <div class="box hi"><div class="h">The hypothesis</div><div class="b">A loop is only trustworthy if <b>whoever does the work cannot be the one who decides it passed.</b></div></div>
   </div>
 </section>
 
@@ -154,13 +154,13 @@
   <h2>Separate the worker from the gate. Then point it at biology.</h2>
   <div class="flow">
     <div class="step"><div class="n">01</div><div class="t">One sentence in</div><div class="d">A vision, not a spec. The loop researches, grills and plans its own specification.</div></div>
-    <div class="step"><div class="n">02</div><div class="t">Sealed referee</div><div class="d">Implementer never sees its test. Test author never sees the code. A 451-line gate re-runs the test itself.</div></div>
-    <div class="step"><div class="n">03</div><div class="t">Aviary environment</div><div class="d">The loop's output becomes tools: ESM-2 scoring and its own spend meter, exposed via <code>Tool.from_function</code>.</div></div>
+    <div class="step"><div class="n">02</div><div class="t">Independent check</div><div class="d">The agent writing the code never sees its test. The agent writing the test never sees the code. A 451-line checker runs it.</div></div>
+    <div class="step"><div class="n">03</div><div class="t">Aviary environment</div><div class="d">The loop's own output becomes the tools: protein scoring, and the budget guard it had just built.</div></div>
     <div class="step"><div class="n">04</div><div class="t">The agent measures</div><div class="d">It chooses which residues to probe. The environment runs the model. Real numbers come back.</div></div>
   </div>
   <div class="cols">
     <div class="box"><div class="h">Adoption &mdash; what we reused</div><div class="b"><b>Aviary</b> (Future-House) for the environment contract, <b>ESM-2 650M</b> on Apple MPS, <b>UniProt</b> for sequences, <b>W&amp;B Weave</b> for tracing, <b>W&amp;B Inference</b> so no GPU sits on the critical path.</div></div>
-    <div class="box"><div class="h">Reasoning &mdash; what we built</div><div class="b">The register CLI with <b>no LLM in it</b>, the sealed-test gate that parses pytest's own report rather than its exit code, and <code>BioSimEnv</code> &mdash; an aviary <code>Environment</code> whose <code>step()</code> runs a protein model instead of a simulation.</div></div>
+    <div class="box"><div class="h">Reasoning &mdash; what we built</div><div class="b">A checker with <b>no language model in it</b>, which reads the test runner's own report rather than trusting its exit code, and <code>BioSimEnv</code> &mdash; an aviary <code>Environment</code> whose <code>step()</code> runs a protein model instead of a simulation.</div></div>
   </div>
 </section>
 
@@ -339,14 +339,14 @@
   <div class="tag">Conclusion</div>
   <h2>The loop produced the instrument that produced the result.</h2>
   <div class="cols">
-    <div class="box"><div class="h">It built its own tools</div><div class="b">Drain 1 produced a spend meter closed by sealed tests. That same component is now a <b>tool in the aviary environment</b>, metering the agent that uses it &mdash; and has been ported upstream into the framework.</div></div>
-    <div class="box"><div class="h">It knows when to stop</div><div class="b">A drain closing zero new units ends the loop. Not a timeout, not a fixed count &mdash; <b>an actual convergence signal.</b></div></div>
+    <div class="box"><div class="h">It built its own tools</div><div class="b">The loop's first pass produced a budget guard, every behaviour proven by an independent test. That same component is now a <b>tool in the aviary environment</b>, metering the agent that uses it &mdash; and has been contributed upstream.</div></div>
+    <div class="box"><div class="h">It knows when to stop</div><div class="b">A pass that completes no new work ends the loop. Not a timeout, not a fixed count &mdash; <b>an actual convergence signal.</b></div></div>
     <div class="box hi"><div class="h">It reached a known answer</div><div class="b">Six cysteines, correct chain assignments, a self-chosen control, and a second tier of hydrophobic core residues &mdash; <b>none of it in the prompt.</b></div></div>
   </div>
   <div class="stats">
-    <div class="big g">4&nbsp;&rarr;&nbsp;1<small>rounds to the pattern; deliberation fell 8&times;</small></div>
+    <div class="big g">4&nbsp;&rarr;&nbsp;1<small>rounds to find the pattern; reasoning cost fell 8&times;</small></div>
     <div class="big n">46k<small>completion tokens, end to end</small></div>
-    <div class="big n">117<small>tests green across the loop</small></div>
+    <div class="big n">117<small>tests passing</small></div>
   </div>
 </section>
 
@@ -359,10 +359,10 @@
     <li><b>A trace shows stated reasons, not causes.</b> We can read what the agent said it was doing. Whether that is why it did it is a different question, and not one a trace answers.</li>
     <li><b>No wet experiment has been run.</b> The pre-registered design is assessable from the literature; its conclusions are not, because there are none yet.</li>
     <li><b>Two of our sequence labels were wrong</b> &mdash; a rattlesnake fragment labelled chicken, <em>Xenopus</em> labelled zebrafish. The data caught it. Labels now come from the database, never from us.</li>
-    <li><b>And the one that matters most.</b> Three defects surfaced today and they are one shape: a mechanism reported success while the property it existed to guarantee was absent. All three were caught by hand. <b>The gate catches a unit that fails; it is blind to a mechanism that passes for the wrong reason.</b></li>
+    <li><b>And the one that matters most.</b> Three defects surfaced today and they are one shape: a mechanism reported success while the property it existed to guarantee was absent. All three were caught by hand. <b>The check catches work that fails. It is blind to a mechanism that passes for the wrong reason.</b></li>
   </ul>
   <div class="cols" style="margin-top:8px">
-    <div class="box hi"><div class="h">What we would do next</div><div class="b">Pin the per-unit prompts into the run record &mdash; they are where the difficulty lives, and until they are hashed the replay claim is attribution, not reproduction. We narrowed the claim rather than overstate it.</div></div>
+    <div class="box hi"><div class="h">What we would do next</div><div class="b">Record the exact instructions each task was given. That is where the difficulty actually lives, and until it is recorded a run is attributable but not reproducible. We narrowed the claim rather than overstate it.</div></div>
   </div>
 </section>
 
@@ -371,7 +371,7 @@
 <div class="bar">
   <span class="cnt" id="cnt">1 / 7</span>
   <span class="prog" id="prog"></span>
-  <span><kbd>&larr;</kbd> <kbd>&rarr;</kbd> navigate &nbsp;·&nbsp; <kbd>N</kbd> speaker notes</span>
+  <span id="hint"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> navigate &nbsp;·&nbsp; <kbd>N</kbd> speaker notes</span>
 </div>
 
 <div class="notes on" id="notes"><h3>Speaker notes</h3><dl id="ndl"></dl></div>
@@ -418,6 +418,11 @@ const NOTES = {
   ]
 };
 
+// ?present — a clean link for judges: no speaker notes, no notes hint, arrows still work.
+const PRESENT = new URLSearchParams(location.search).has('present');
+if (PRESENT) document.getElementById('hint').innerHTML =
+  '<kbd>&larr;</kbd> <kbd>&rarr;</kbd> navigate';
+
 const slides = [...document.querySelectorAll('.slide')];
 const prog = document.getElementById('prog');
 const cnt = document.getElementById('cnt');
@@ -447,14 +452,15 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(i - 1); }
   else if (e.key === 'Home') { e.preventDefault(); show(0); }
   else if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
-  else if (e.key === 'n' || e.key === 'N') {
+  else if ((e.key === 'n' || e.key === 'N') && !PRESENT) {
     document.body.classList.toggle('notes-on');
     try { localStorage.setItem('v2r-notes', document.body.classList.contains('notes-on') ? '1' : '0'); } catch (e2) {}
   }
 });
 
 try {
-  if (localStorage.getItem('v2r-notes') === '1') document.body.classList.add('notes-on');
+  if (!PRESENT && localStorage.getItem('v2r-notes') === '1')
+    document.body.classList.add('notes-on');
 } catch (e) {}
 show(0);
 </script>

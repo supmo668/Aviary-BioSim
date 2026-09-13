@@ -86,9 +86,11 @@ https://github.com/supmo668/Aviary-BioSim
 
 ## Demo URL
 ```
-https://claude.ai/code/artifact/67e77477-8d04-4984-8178-7849152bab06
+https://claude.ai/code/artifact/67e77477-8d04-4984-8178-7849152bab06?present
 ```
-*(the deck — arrow keys to navigate, `n` for speaker notes. Put the other two in the description or as extra links if the form allows.)*
+*(`?present` is the judge-facing link: speaker notes are off and cannot be toggled on, and
+the notes hint is hidden. Arrow keys still navigate. **Drop `?present` for your own link
+when you present** — you want `n` available if a judge asks for depth mid-answer.)*
 
 ```
 Pre-registered study   https://claude.ai/code/artifact/df564d0d-8a96-41e0-9107-047b33d0c5e9
