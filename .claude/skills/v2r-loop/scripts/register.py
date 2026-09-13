@@ -13,7 +13,6 @@ See docs/adr/0001-register-cli-owns-every-transition.md
 
 import argparse
 import hashlib
-import shutil
 import subprocess
 import sys
 import time
@@ -201,6 +200,58 @@ def cmd_park(args) -> int:
     return 0
 
 
+INSTINCT_STORE = ".aiadlc/instincts"
+
+
+def instinct_pin() -> str | None:
+    """Tree SHA of the instinct store — an exact, already-versioned identifier.
+
+    See ADR-0003: the store is in-repo and not gitignored, so the pin needs no
+    new machinery. Returns None before any instinct has been captured.
+    """
+    try:
+        return git("rev-parse", f"HEAD:{INSTINCT_STORE}")
+    except subprocess.CalledProcessError:
+        return None
+
+
+def register_sha() -> str:
+    return "sha256:" + hashlib.sha256(REGISTER.read_bytes()).hexdigest()
+
+
+def cmd_pin(args) -> int:
+    print(instinct_pin() or "")
+    return 0
+
+
+def cmd_drain_start(args) -> int:
+    data = load(REGISTER)
+    data["run"]["drain"] = args.drain
+    data["run"]["seed"] = args.seed
+    data["run"]["instinct_pin"] = instinct_pin()
+    save(REGISTER, data)
+    print(f"drain {args.drain} seed {args.seed} pin {data['run']['instinct_pin']}")
+    return 0
+
+
+def cmd_drain_end(args) -> int:
+    data = load(REGISTER)
+    record = {
+        "drain": data["run"]["drain"],
+        "register_sha": register_sha(),
+        "instinct_pin": data["run"]["instinct_pin"],
+        "seed": data["run"]["seed"],
+        "ceilings": data["run"]["ceilings"],
+        "closed": [u["id"] for u in data["units"] if u["state"] == CLOSED],
+        "parked": [u["id"] for u in data["units"] if u["state"] == PARKED],
+        "outcome": args.outcome,
+    }
+    save(V2R_DIR / f"run-record-{record['drain']}.yaml", record)
+    print(f"drain {record['drain']} {args.outcome}: "
+          f"{len(record['closed'])} closed, {len(record['parked'])} parked")
+    return 0
+
+
 def attempts_exhausted(unit: dict, data: dict) -> bool:
     """Per-unit budget. Exhausting it parks ONE unit; the drain continues."""
     return unit["attempts"] >= data["run"]["ceilings"]["max_attempts"]
@@ -255,6 +306,17 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--started-at", type=float, required=True, dest="started_at")
     check.add_argument("--spend-usd", type=float, default=0.0, dest="spend_usd")
     check.set_defaults(fn=cmd_check)
+
+    start = sub.add_parser("drain-start", help="pin the instinct set and open a drain")
+    start.add_argument("--drain", type=int, required=True)
+    start.add_argument("--seed", type=int, required=True)
+    start.set_defaults(fn=cmd_drain_start)
+
+    end = sub.add_parser("drain-end", help="write the run record")
+    end.add_argument("--outcome", choices=["completed", "halted"], required=True)
+    end.set_defaults(fn=cmd_drain_end)
+
+    sub.add_parser("pin", help="print the instinct pin").set_defaults(fn=cmd_pin)
     return parser
 
 
