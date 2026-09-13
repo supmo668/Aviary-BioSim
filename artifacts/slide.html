@@ -1,0 +1,273 @@
+<title>Agents That Measure</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F7F8FA;--surface:#FFFFFF;--ink:#14181F;--muted:#5A6472;--faint:#8A93A1;
+    --rule:#DDE1E8;--rule-strong:#C3CAD4;--accent:#17518C;--accent-soft:#E8EFF7;
+    --accent-ink:#0F3A66;--dim:#B9C2CE;--kept:#2E7D74;
+    --sans:"IBM Plex Sans",Arial,sans-serif;--mono:"IBM Plex Mono",Menlo,monospace;
+    --serif:"Source Serif 4",Georgia,serif;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ground:#0F1319;--surface:#161B23;--ink:#E8EBF0;--muted:#98A2B1;--faint:#6B7585;
+    --rule:#262D38;--rule-strong:#39424F;--accent:#79ADE4;--accent-soft:#152536;
+    --accent-ink:#A8C9EE;--dim:#39434F;--kept:#67B8AE;}}
+  :root[data-theme="dark"]{
+    --ground:#0F1319;--surface:#161B23;--ink:#E8EBF0;--muted:#98A2B1;--faint:#6B7585;
+    --rule:#262D38;--rule-strong:#39424F;--accent:#79ADE4;--accent-soft:#152536;
+    --accent-ink:#A8C9EE;--dim:#39434F;--kept:#67B8AE;}
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+    padding:0 20px;padding-block:0 60px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto}
+
+  /* ── the slide ── */
+  .slide{background:var(--surface);border:1px solid var(--rule-strong);border-radius:4px;
+    padding:38px 40px 30px;margin-block:28px 0;box-shadow:0 1px 3px rgba(20,24,31,.05)}
+  .kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+    margin-bottom:14px}
+  .slide h1{font-size:clamp(30px,5vw,50px);line-height:1.05;font-weight:700;
+    letter-spacing:-.025em;margin:0 0 10px;text-wrap:balance}
+  .slide h1 span{color:var(--accent)}
+  .slide .say{font-family:var(--serif);font-size:19px;color:var(--muted);margin:0 0 28px;max-width:56ch}
+
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0 0 26px;
+    border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .step{padding:16px 18px;border-right:1px solid var(--rule);position:relative}
+  .step:last-child{border-right:0;background:var(--accent-soft)}
+  .step .n{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.1em}
+  .step .t{font-size:15px;font-weight:600;margin:6px 0 4px;letter-spacing:-.01em}
+  .step .d{font-size:12.5px;color:var(--muted);line-height:1.45}
+  .step:last-child .t{color:var(--accent-ink)}
+
+  .headline{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;
+    border-top:1px solid var(--rule);padding-top:22px}
+  .big{font-family:var(--mono);font-size:clamp(28px,4.4vw,44px);font-weight:500;
+    letter-spacing:-.03em;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+  .big small{display:block;font-family:var(--sans);font-size:12.5px;font-weight:400;
+    letter-spacing:0;color:var(--muted);margin-top:9px;line-height:1.4}
+
+  /* ── figures ── */
+  .fig{background:var(--surface);border:1px solid var(--rule);border-radius:3px;
+    padding:20px 22px 16px;margin-top:20px}
+  .fig h3{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);
+    margin:0 0 3px;font-weight:600}
+  .fig .cap{font-size:13px;color:var(--muted);margin:0 0 14px;max-width:72ch}
+  .fig .scroll{overflow-x:auto}
+  svg{display:block;max-width:100%;height:auto}
+  .res{fill:var(--dim)} .cys{fill:var(--accent)}
+  .cl{font-family:var(--mono);font-size:9px;fill:var(--accent);text-anchor:middle}
+  .rg{stroke:var(--rule-strong);stroke-width:2}
+  .rl{font-family:var(--sans);font-size:10px;fill:var(--faint);text-anchor:middle;
+      letter-spacing:.05em;text-transform:uppercase}
+  .ax{stroke:var(--rule);stroke-width:1}
+  .at{font-family:var(--mono);font-size:10px;fill:var(--faint)}
+  .hum{fill:var(--accent)} .org{fill:var(--dim)} .out{fill:var(--kept)}
+  .pl{font-family:var(--sans);font-size:11px;fill:var(--muted);font-style:italic}
+  .lg{font-size:11.5px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
+  .lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+
+  /* ── speaker notes ── */
+  .notes{margin-top:34px;border-top:2px solid var(--ink);padding-top:22px}
+  .notes h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 16px;color:var(--ink)}
+  .note{display:grid;grid-template-columns:118px minmax(0,1fr);gap:20px;
+    padding:14px 0;border-bottom:1px solid var(--rule)}
+  .note dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+    font-weight:600;padding-top:2px}
+  .note dd{margin:0;font-family:var(--serif);font-size:15.5px;line-height:1.6;color:var(--muted)}
+  .note dd b{color:var(--ink);font-weight:600}
+  .note dd code{font-family:var(--mono);font-size:13px;color:var(--accent)}
+  .note dd + dd{margin-top:9px}
+  @media (max-width:760px){
+    .flow,.headline{grid-template-columns:1fr}
+    .step{border-right:0;border-bottom:1px solid var(--rule)}
+    .note{grid-template-columns:1fr;gap:5px}
+  }
+</style>
+
+<div class="wrap">
+<div class="slide">
+  <div class="kicker">Team BioSim · v2r-loop</div>
+  <h1>Agents that <span>measure</span>,<br>not agents that guess.</h1>
+  <p class="say">An LLM agent was given a protein model as a tool and asked which residues of human proinsulin cannot be changed. It found the answer by running the experiment.</p>
+
+  <div class="flow">
+    <div class="step"><div class="n">01</div><div class="t">One sentence in</div>
+      <div class="d">A vision, not a spec. The loop earns the spec.</div></div>
+    <div class="step"><div class="n">02</div><div class="t">Aviary environment</div>
+      <div class="d">ESM-2 exposed as a Tool. Real sequences, real GPU.</div></div>
+    <div class="step"><div class="n">03</div><div class="t">Agent probes</div>
+      <div class="d">66 substitutions chosen by the agent, scored for real.</div></div>
+    <div class="step"><div class="n">04</div><div class="t">It finds the disulfides</div>
+      <div class="d">Unprompted. And runs its own controls.</div></div>
+  </div>
+
+  <div class="headline">
+    <div class="big">−13.0<small>mean score, the six disulfide cysteines</small></div>
+    <div class="big">−5.9<small>mean score, every other residue</small></div>
+    <div class="big">66<small>real measurements, zero fabricated</small></div>
+  </div>
+</div>
+
+<div class="fig">
+  <h3>Figure 1 · Substitution intolerance across mature proinsulin</h3>
+  <p class="cap">Mean ESM-2 log-likelihood ratio over all 19 substitutions at each position, human preproinsulin P01308. Taller means less tolerant. The six cysteines are labelled; nothing else is highlighted.</p>
+  <div class="scroll">
+  <svg viewBox="0 0 940 236" role="img" aria-label="Per-residue substitution intolerance; the six cysteines are the tallest bars">
+    <line class="ax" x1="52" y1="200" x2="930" y2="200"/>
+    <line class="ax" x1="52" y1="50" x2="52" y2="200"/>
+    <text class="at" x="46" y="204" text-anchor="end">0</text>
+    <text class="at" x="46" y="54" text-anchor="end">−15</text>
+<rect class="res" x="52.0" y="198.61" width="7.78" height="1.39" rx="2"><title>F25  mean -0.14</title></rect>
+<rect class="res" x="61.98" y="195.11" width="7.78" height="4.89" rx="2"><title>V26  mean 0.49</title></rect>
+<rect class="res" x="71.95" y="139.70" width="7.78" height="60.30" rx="2"><title>N27  mean -6.07</title></rect>
+<rect class="res" x="81.93" y="107.59" width="7.78" height="92.41" rx="2"><title>Q28  mean -9.3</title></rect>
+<rect class="res" x="91.91" y="104.29" width="7.78" height="95.71" rx="2"><title>H29  mean -9.63</title></rect>
+<rect class="res" x="101.88" y="92.88" width="7.78" height="107.12" rx="2"><title>L30  mean -10.78</title></rect>
+<rect class="cys" x="111.86" y="66.85" width="7.78" height="133.15" rx="2"><title>C31  mean -13.4</title></rect>
+<text class="cl" x="115.75" y="59.85">C31</text>
+<rect class="res" x="121.84" y="88.24" width="7.78" height="111.76" rx="2"><title>G32  mean -11.24</title></rect>
+<rect class="res" x="131.81" y="145.06" width="7.78" height="54.94" rx="2"><title>S33  mean -5.53</title></rect>
+<rect class="res" x="141.79" y="111.01" width="7.78" height="88.99" rx="2"><title>H34  mean -8.95</title></rect>
+<rect class="res" x="151.77" y="79.90" width="7.78" height="120.10" rx="2"><title>L35  mean -12.08</title></rect>
+<rect class="res" x="161.74" y="85.93" width="7.78" height="114.07" rx="2"><title>V36  mean -11.48</title></rect>
+<rect class="res" x="171.72" y="91.47" width="7.78" height="108.53" rx="2"><title>E37  mean -10.92</title></rect>
+<rect class="res" x="181.7" y="85.51" width="7.78" height="114.49" rx="2"><title>A38  mean -11.52</title></rect>
+<rect class="res" x="191.67" y="88.99" width="7.78" height="111.01" rx="2"><title>L39  mean -11.17</title></rect>
+<rect class="res" x="201.65" y="113.00" width="7.78" height="87.00" rx="2"><title>Y40  mean -8.75</title></rect>
+<rect class="res" x="211.63" y="119.13" width="7.78" height="80.87" rx="2"><title>L41  mean -8.14</title></rect>
+<rect class="res" x="221.6" y="87.45" width="7.78" height="112.55" rx="2"><title>V42  mean -11.32</title></rect>
+<rect class="cys" x="231.58" y="50.00" width="7.78" height="150.00" rx="2"><title>C43  mean -15.09</title></rect>
+<text class="cl" x="235.47" y="43.00">C43</text>
+<rect class="res" x="241.56" y="110.65" width="7.78" height="89.35" rx="2"><title>G44  mean -8.99</title></rect>
+<rect class="res" x="251.53" y="124.78" width="7.78" height="75.22" rx="2"><title>E45  mean -7.57</title></rect>
+<rect class="res" x="261.51" y="118.83" width="7.78" height="81.17" rx="2"><title>R46  mean -8.17</title></rect>
+<rect class="res" x="271.49" y="96.11" width="7.78" height="103.89" rx="2"><title>G47  mean -10.45</title></rect>
+<rect class="res" x="281.47" y="97.09" width="7.78" height="102.91" rx="2"><title>F48  mean -10.35</title></rect>
+<rect class="res" x="291.44" y="99.76" width="7.78" height="100.24" rx="2"><title>F49  mean -10.09</title></rect>
+<rect class="res" x="301.42" y="112.43" width="7.78" height="87.57" rx="2"><title>Y50  mean -8.81</title></rect>
+<rect class="res" x="311.4" y="141.20" width="7.78" height="58.80" rx="2"><title>T51  mean -5.92</title></rect>
+<rect class="res" x="321.37" y="108.81" width="7.78" height="91.19" rx="2"><title>P52  mean -9.17</title></rect>
+<rect class="res" x="331.35" y="119.34" width="7.78" height="80.66" rx="2"><title>K53  mean -8.12</title></rect>
+<rect class="res" x="341.33" y="173.20" width="7.78" height="26.80" rx="2"><title>T54  mean -2.7</title></rect>
+<rect class="res" x="351.3" y="117.54" width="7.78" height="82.46" rx="2"><title>R55  mean -8.3</title></rect>
+<rect class="res" x="361.28" y="109.89" width="7.78" height="90.11" rx="2"><title>R56  mean -9.07</title></rect>
+<rect class="res" x="371.26" y="153.85" width="7.78" height="46.15" rx="2"><title>E57  mean -4.64</title></rect>
+<rect class="res" x="381.23" y="166.89" width="7.78" height="33.11" rx="2"><title>A58  mean -3.33</title></rect>
+<rect class="res" x="391.21" y="164.60" width="7.78" height="35.40" rx="2"><title>E59  mean -3.56</title></rect>
+<rect class="res" x="401.19" y="185.65" width="7.78" height="14.35" rx="2"><title>D60  mean -1.44</title></rect>
+<rect class="res" x="411.16" y="177.01" width="7.78" height="22.99" rx="2"><title>L61  mean -2.31</title></rect>
+<rect class="res" x="421.14" y="194.30" width="7.78" height="5.70" rx="2"><title>Q62  mean -0.57</title></rect>
+<rect class="res" x="431.12" y="188.87" width="7.78" height="11.13" rx="2"><title>V63  mean -1.12</title></rect>
+<rect class="res" x="441.09" y="179.99" width="7.78" height="20.01" rx="2"><title>G64  mean -2.01</title></rect>
+<rect class="res" x="451.07" y="191.76" width="7.78" height="8.24" rx="2"><title>Q65  mean -0.83</title></rect>
+<rect class="res" x="461.05" y="185.56" width="7.78" height="14.44" rx="2"><title>V66  mean -1.45</title></rect>
+<rect class="res" x="471.02" y="182.12" width="7.78" height="17.88" rx="2"><title>E67  mean -1.8</title></rect>
+<rect class="res" x="481.0" y="185.78" width="7.78" height="14.22" rx="2"><title>L68  mean -1.43</title></rect>
+<rect class="res" x="490.98" y="178.69" width="7.78" height="21.31" rx="2"><title>G69  mean -2.14</title></rect>
+<rect class="res" x="500.95" y="181.92" width="7.78" height="18.08" rx="2"><title>G70  mean -1.82</title></rect>
+<rect class="res" x="510.93" y="182.06" width="7.78" height="17.94" rx="2"><title>G71  mean -1.8</title></rect>
+<rect class="res" x="520.91" y="181.93" width="7.78" height="18.07" rx="2"><title>P72  mean -1.82</title></rect>
+<rect class="res" x="530.88" y="175.34" width="7.78" height="24.66" rx="2"><title>G73  mean -2.48</title></rect>
+<rect class="res" x="540.86" y="180.61" width="7.78" height="19.39" rx="2"><title>A74  mean -1.95</title></rect>
+<rect class="res" x="550.84" y="177.74" width="7.78" height="22.26" rx="2"><title>G75  mean -2.24</title></rect>
+<rect class="res" x="560.81" y="186.86" width="7.78" height="13.14" rx="2"><title>S76  mean -1.32</title></rect>
+<rect class="res" x="570.79" y="175.72" width="7.78" height="24.28" rx="2"><title>L77  mean -2.44</title></rect>
+<rect class="res" x="580.77" y="185.43" width="7.78" height="14.57" rx="2"><title>Q78  mean -1.47</title></rect>
+<rect class="res" x="590.74" y="169.37" width="7.78" height="30.63" rx="2"><title>P79  mean -3.08</title></rect>
+<rect class="res" x="600.72" y="179.91" width="7.78" height="20.09" rx="2"><title>L80  mean -2.02</title></rect>
+<rect class="res" x="610.7" y="172.93" width="7.78" height="27.07" rx="2"><title>A81  mean -2.72</title></rect>
+<rect class="res" x="620.67" y="187.65" width="7.78" height="12.35" rx="2"><title>L82  mean -1.24</title></rect>
+<rect class="res" x="630.65" y="175.88" width="7.78" height="24.12" rx="2"><title>E83  mean -2.43</title></rect>
+<rect class="res" x="640.63" y="168.34" width="7.78" height="31.66" rx="2"><title>G84  mean -3.18</title></rect>
+<rect class="res" x="650.6" y="186.95" width="7.78" height="13.05" rx="2"><title>S85  mean -1.31</title></rect>
+<rect class="res" x="660.58" y="162.41" width="7.78" height="37.59" rx="2"><title>L86  mean -3.78</title></rect>
+<rect class="res" x="670.56" y="157.47" width="7.78" height="42.53" rx="2"><title>Q87  mean -4.28</title></rect>
+<rect class="res" x="680.53" y="123.58" width="7.78" height="76.42" rx="2"><title>K88  mean -7.69</title></rect>
+<rect class="res" x="690.51" y="117.08" width="7.78" height="82.92" rx="2"><title>R89  mean -8.34</title></rect>
+<rect class="res" x="700.49" y="99.18" width="7.78" height="100.82" rx="2"><title>G90  mean -10.14</title></rect>
+<rect class="res" x="710.47" y="97.99" width="7.78" height="102.01" rx="2"><title>I91  mean -10.26</title></rect>
+<rect class="res" x="720.44" y="95.81" width="7.78" height="104.19" rx="2"><title>V92  mean -10.48</title></rect>
+<rect class="res" x="730.42" y="115.24" width="7.78" height="84.76" rx="2"><title>E93  mean -8.53</title></rect>
+<rect class="res" x="740.4" y="130.03" width="7.78" height="69.97" rx="2"><title>Q94  mean -7.04</title></rect>
+<rect class="cys" x="750.37" y="85.79" width="7.78" height="114.21" rx="2"><title>C95  mean -11.49</title></rect>
+<text class="cl" x="754.26" y="78.79">C95</text>
+<rect class="cys" x="760.35" y="70.25" width="7.78" height="129.75" rx="2"><title>C96  mean -13.05</title></rect>
+<text class="cl" x="764.24" y="63.25">C96</text>
+<rect class="res" x="770.33" y="193.39" width="7.78" height="6.61" rx="2"><title>T97  mean -0.66</title></rect>
+<rect class="res" x="780.3" y="174.74" width="7.78" height="25.26" rx="2"><title>S98  mean -2.54</title></rect>
+<rect class="res" x="790.28" y="156.52" width="7.78" height="43.48" rx="2"><title>I99  mean -4.37</title></rect>
+<rect class="cys" x="800.26" y="77.51" width="7.78" height="122.49" rx="2"><title>C100  mean -12.32</title></rect>
+<text class="cl" x="804.15" y="70.51">C100</text>
+<rect class="res" x="810.23" y="117.06" width="7.78" height="82.94" rx="2"><title>S101  mean -8.34</title></rect>
+<rect class="res" x="820.21" y="130.14" width="7.78" height="69.86" rx="2"><title>L102  mean -7.03</title></rect>
+<rect class="res" x="830.19" y="132.64" width="7.78" height="67.36" rx="2"><title>Y103  mean -6.78</title></rect>
+<rect class="res" x="840.16" y="148.98" width="7.78" height="51.02" rx="2"><title>Q104  mean -5.13</title></rect>
+<rect class="res" x="850.14" y="90.88" width="7.78" height="109.12" rx="2"><title>L105  mean -10.98</title></rect>
+<rect class="res" x="860.12" y="85.19" width="7.78" height="114.81" rx="2"><title>E106  mean -11.55</title></rect>
+<rect class="res" x="870.09" y="132.67" width="7.78" height="67.33" rx="2"><title>N107  mean -6.77</title></rect>
+<rect class="res" x="880.07" y="96.65" width="7.78" height="103.35" rx="2"><title>Y108  mean -10.4</title></rect>
+<rect class="cys" x="890.05" y="72.94" width="7.78" height="127.06" rx="2"><title>C109  mean -12.78</title></rect>
+<text class="cl" x="893.94" y="65.94">C109</text>
+<rect class="res" x="900.02" y="113.90" width="7.78" height="86.10" rx="2"><title>N110  mean -8.66</title></rect>
+<line class="rg" x1="52.0" y1="209" x2="349.1" y2="209"/>
+<text class="rl" x="200.6" y="222">B chain</text>
+<line class="rg" x1="371.3" y1="209" x2="678.3" y2="209"/>
+<text class="rl" x="524.8" y="222">C peptide</text>
+<line class="rg" x1="700.5" y1="209" x2="907.8" y2="209"/>
+<text class="rl" x="804.1" y="222">A chain</text>  </svg>
+  </div>
+  <div class="lg"><span><i style="background:var(--accent)"></i>disulfide cysteine</span><span><i style="background:var(--dim)"></i>all other residues</span></div>
+</div>
+
+<div class="fig">
+  <h3>Figure 2 · Insulin orthologs in embedding space</h3>
+  <p class="cap">First two principal components of ESM-2 embeddings for nine real UniProt insulin sequences (64.8% and 22.2% of variance). Labels come from the organism the database returned, never from a guess.</p>
+  <div class="scroll">
+  <svg viewBox="0 0 600 240" role="img" aria-label="Insulin orthologs projected into two dimensions; guinea pig sits furthest from human">
+    <line class="ax" x1="70" y1="215" x2="560" y2="215"/>
+    <line class="ax" x1="70" y1="35" x2="70" y2="215"/>
+    <text class="at" x="315" y="232" text-anchor="middle">PC1 · 64.8%</text>
+<circle class="hum" cx="135.7" cy="138.7" r="6"><title>Homo sapiens  d=0.00</title></circle>
+<text class="pl" x="146.7" y="142.7" text-anchor="start">H. sapiens</text>
+<circle class="org" cx="348.2" cy="152.8" r="6"><title>Mus musculus  d=1.41</title></circle>
+<text class="pl" x="359.2" y="156.8" text-anchor="start">M. musculus</text>
+<circle class="org" cx="316.7" cy="150.2" r="6"><title>Rattus norvegicus  d=1.26</title></circle>
+<text class="pl" x="327.7" y="154.2" text-anchor="start">R. norvegicus</text>
+<circle class="org" cx="138.6" cy="153.4" r="6"><title>Sus scrofa  d=0.55</title></circle>
+<text class="pl" x="149.6" y="157.4" text-anchor="start">S. scrofa</text>
+<circle class="org" cx="70.0" cy="153.3" r="6"><title>Bos taurus  d=0.97</title></circle>
+<text class="pl" x="81.0" y="157.3" text-anchor="start">B. taurus</text>
+<circle class="out" cx="540.0" cy="200.0" r="6"><title>Cavia porcellus  d=2.69</title></circle>
+<text class="pl" x="529.0" y="204.0" text-anchor="end">C. porcellus</text>
+<circle class="org" cx="234.9" cy="50.0" r="6"><title>Gallus gallus  d=1.37</title></circle>
+<text class="pl" x="245.9" y="54.0" text-anchor="start">G. gallus</text>
+<circle class="org" cx="417.6" cy="70.3" r="6"><title>Danio rerio  d=2.03</title></circle>
+<text class="pl" x="428.6" y="74.3" text-anchor="start">D. rerio</text>
+<circle class="org" cx="421.2" cy="82.9" r="6"><title>Xenopus laevis  d=2.01</title></circle>
+<text class="pl" x="432.2" y="86.9" text-anchor="start">X. laevis</text>  </svg>
+  </div>
+  <div class="lg"><span><i style="background:var(--accent)"></i>human</span><span><i style="background:var(--kept)"></i><i></i>guinea pig — the known outlier</span><span><i style="background:var(--dim)"></i>other species</span></div>
+</div>
+
+<div class="notes">
+  <h2>Speaker notes</h2>
+
+  <div class="note"><dt>Open with</dt><dd>"Most agent demos reason about a domain. This one measures it." Then the one-line setup: the agent had a protein language model as a tool and a question it could only answer by running experiments.</dd></div>
+
+  <div class="note"><dt>The environment</dt><dd><b>Aviary</b> — Future-House's language-agent gym — is the substrate. Its <code>Environment</code> contract is two abstract methods, <code>reset()</code> returning observations plus a tool list, and <code>step(action)</code> returning obs, reward, done, truncated.<dd>Our <code>BioSimEnv</code> exposes three tools: <code>score_variant</code> and <code>embed_sequence</code>, both running <b>ESM-2 (650M)</b> on Apple MPS, and <code>record</code> — the spend meter our own build loop wrote earlier today, exposed via <code>Tool.from_function</code>. Every model call the agent makes is metered by a component an independent sealed test proved correct.</dd><dd><b>If asked about reward:</b> it is wired to 0.0 deliberately. Aviary carries a reward channel because it is an RL gym; this is tool-mediated discovery, not training. Inventing a scalar to fill the slot would be a fabricated signal.</dd></div>
+
+  <div class="note"><dt>The measurement</dt><dd>Scoring is the standard <b>masked-marginal</b>: mask position <i>i</i>, one forward pass, read log P for each amino acid. <code>score = log P(mut) − log P(wt)</code>. One pass per position covers all 19 substitutions there, so the full 110-residue scan is 110 passes — <b>7 seconds on MPS</b>.</dd></div>
+
+  <div class="note"><dt>Figure 1</dt><dd>2,090 substitutions. Cysteine mean <b>−13.02</b> against a non-cysteine mean of <b>−5.85</b> across the mature protein — a gap of 7.2 log units. The six cysteines are C31 (B7), C43 (B19), C95 (A6), C96 (A7), C100 (A11) and C109 (A20); they form the three disulfides that hold insulin together.</dd><dd><b>The honest framing:</b> we did not engineer this result. The direction was known independently — human <i>INS</i> cysteine mutations cause permanent neonatal diabetes through proinsulin misfolding, and the mouse <i>Akita</i> C96Y allele is the classic case. We pointed the agent at a question with an established answer and checked whether it got there.</dd></div>
+
+  <div class="note"><dt>Figure 2</dt><dd>Two known outcomes recovered by a model that only ever saw sequence. <b>Pig is closest to human (0.55)</b> — porcine insulin differs by a single residue, which is why it was the therapeutic before recombinant. <b>Guinea pig is furthest (2.69)</b>, further than zebrafish or <i>Xenopus</i> — hystricomorph insulin is famously divergent.</dd><dd><b>If asked how we know the labels are right:</b> two of our original accessions were wrong. One "chicken" entry was a rattlesnake fragment, one "zebrafish" was <i>Xenopus</i>. The pipeline now takes every label from the organism UniProt returns and drops anything under 90 residues. A guessed label on a real sequence is a fabricated figure.</dd></div>
+
+  <div class="note"><dt>The best moment</dt><dd>The agent <b>ran its own controls</b>. Nobody asked it to. After finding the cysteines, it probed C-peptide positions — Gly70, Pro72, Pro79, Glu83, Gln62 — and got scores at or <i>above</i> zero. That demonstrates the effect is position-specific rather than a whole-protein artifact, and the C-peptide is exactly the right negative control: it is cleaved out of mature insulin and poorly conserved.</dd><dd>It also found the second tier unprompted — Leu30, Leu35, Leu105, Phe48, Phe49, Tyr50 — the buried hydrophobic core that collapses around those disulfides.</dd></div>
+
+  <div class="note"><dt>Traceability</dt><dd>Every stage is a <code>@weave.op</code>, so the trace records which measurement the agent asked for and what it did with the answer. Rounds 1–4 spent 6,905 / 6,304 / 1,087 / 819 completion tokens — deliberation collapses once the pattern is found, which is visible in the trace and not assertable without it.</dd></div>
+
+  <div class="note"><dt>If challenged</dt><dd><b>"Isn't ESM-2 just memorising insulin?"</b> Likely in part — insulin is heavily represented. That is why the claim is narrow: this shows an agent can plan and execute a measurement campaign and reach an independently-known answer, not that it discovered new biology.</dd><dd><b>"Did you seed the answer?"</b> No. The objective names the protein and asks which residues are least tolerant. Cysteines, disulfides and the expected direction appear nowhere in the prompt. The audit trail of all 66 measurements ships with the run.</dd></div>
+</div>
+</div>
