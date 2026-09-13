@@ -13,6 +13,7 @@ See docs/adr/0001-register-cli-owns-every-transition.md
 
 import argparse
 import hashlib
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -165,6 +166,40 @@ def cmd_close(args) -> int:
     return EXIT_CLOSED
 
 
+def cmd_park(args) -> int:
+    """Retire one build unit. Preserve the attempt, restore the tree, record why.
+
+    A park is local: it says nothing about any other unit. See ADR-0004.
+    """
+    data = load(REGISTER)
+    unit = unit_by_id(data, args.unit)
+    pre_claim = unit["pre_claim_sha"]
+    if not pre_claim:
+        print(f"{unit['id']} has no pre_claim_sha; was it claimed?", file=sys.stderr)
+        return 2
+
+    branch = f"park/{unit['id']}"
+    evidence_src = Path(args.evidence).read_bytes()
+
+    # Preserve the attempt on its own branch, then restore the tree.
+    git("add", "-A")
+    git("commit", "-q", "--allow-empty", "-m", f"parked attempt for {unit['id']}")
+    git("branch", "-f", branch, "HEAD")
+    git("reset", "-q", "--hard", pre_claim)
+
+    parked_dir = V2R_DIR / "parked"
+    parked_dir.mkdir(parents=True, exist_ok=True)
+    evidence_dest = parked_dir / f"{unit['id']}.out"
+    evidence_dest.write_bytes(evidence_src)
+
+    unit["state"] = PARKED
+    unit["park_branch"] = branch
+    unit["evidence"] = str(evidence_dest)
+    save(REGISTER, data)
+    print(f"parked {unit['id']} -> {branch}; tree restored to {pre_claim[:8]}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="register")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -182,6 +217,11 @@ def build_parser() -> argparse.ArgumentParser:
     close = sub.add_parser("close", help="close a unit if its sealed test passes")
     close.add_argument("unit")
     close.set_defaults(fn=cmd_close)
+
+    park = sub.add_parser("park", help="retire a unit, preserving the attempt")
+    park.add_argument("unit")
+    park.add_argument("--evidence", required=True, help="path to the failing test output")
+    park.set_defaults(fn=cmd_park)
     return parser
 
 
