@@ -120,7 +120,12 @@ class SpendTracker:
         self.ceiling_usd = float(ceiling_usd)
 
     def record(self, call_id: str, cost_usd: float) -> None:
-        """Record one call's cost against `call_id`. — U-001"""
+        """Record one call's cost against `call_id`. — U-001
+
+        Args:
+            call_id: Identifier of the call being charged, so recorded spend stays attributable.
+            cost_usd: Cost of that call in US dollars, added to this tracker's running total.
+        """
         # The ledger is created on first use so it is unambiguously per-instance:
         # two trackers never share it, and __init__ stays owned by its own unit.
         if "_entries" not in self.__dict__:
@@ -297,4 +302,12 @@ class SpendTracker:
 
     def as_tool(self) -> "Tool":
         """Expose `record` as an aviary Tool for an Environment's tool list. — U-006"""
-        raise NotImplementedError("U-006")
+        # Imported here, not at module scope, so importing this module stays
+        # possible where fhaviary is not installed.
+        from aviary.core import Tool
+
+        # THIS instance's bound method, so the tool an agent calls records against
+        # the tracker that produced it. from_function derives the tool's name,
+        # description and parameter schema from `record` itself — no wrapper
+        # restates them, so the contract cannot drift from the code.
+        return Tool.from_function(self.record)
