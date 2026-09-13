@@ -6,13 +6,24 @@ Paste straight into the Create Project form. Nothing below needs editing.
 
 ## Project Name
 ```
-v2r-loop
+Vision-to-Reality Loop
 ```
+*(the codebase, skill and docs call it `v2r-loop`; the form spells it out so it reads cold.
+Team is **BioSim**; the repo stays **Aviary-BioSim** — do not rename it, its URL is live
+inside both published artifacts and the W&B project name.)*
 
 ## Tagline
 ```
 Agents that measure, not agents that guess.
 ```
+
+**How the three names divide the work** — keep them distinct and nothing needs reconciling:
+
+| Name | Job |
+|---|---|
+| **BioSim** | the team, and the biology application the loop was proved on |
+| **Vision-to-Reality Loop** (`v2r-loop`) | the product — what Best Loop Design is judging |
+| **Aviary-BioSim** | the repository. Unchanged. |
 
 ## Description
 
