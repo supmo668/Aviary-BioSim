@@ -11,6 +11,10 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from aviary.core import Tool
 
 
 class ConfigError(ValueError):
@@ -68,4 +72,8 @@ class SpendTracker:
     @classmethod
     def restore(cls, path: str | Path, ceiling_usd: float) -> "SpendTracker":
         """Rebuild a tracker from state previously written to `path`. — U-006"""
+        raise NotImplementedError("U-006")
+
+    def as_tool(self) -> "Tool":
+        """Expose `record` as an aviary Tool for an Environment's tool list. — U-006"""
         raise NotImplementedError("U-006")
