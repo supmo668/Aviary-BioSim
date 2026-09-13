@@ -132,7 +132,18 @@ class SpendTracker:
 
     def check(self) -> None:
         """Return None while spend is within the ceiling; refuse past it. — U-004"""
-        raise NotImplementedError("U-004")
+        # A pure query: it reads the ledger through total() and changes nothing,
+        # so it can be called any number of times and keeps refusing for as long
+        # as the tracker is over budget.
+        total = self.total()
+        # The ceiling is inclusive — spending exactly the declared amount is
+        # within budget. Only spend strictly above it is a refusal, otherwise a
+        # run would be halted one call early.
+        if total > self.ceiling_usd:
+            # The real numbers, in the documented order: actual spend first, the
+            # declared ceiling second.
+            raise BudgetExceeded(total, self.ceiling_usd)
+        return None
 
     def persist(self, path: str | Path) -> None:
         """Write recorded spend to `path`, durably. — U-006"""
