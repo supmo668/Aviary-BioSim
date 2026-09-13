@@ -16,6 +16,7 @@ import hashlib
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import yaml
@@ -200,6 +201,33 @@ def cmd_park(args) -> int:
     return 0
 
 
+def attempts_exhausted(unit: dict, data: dict) -> bool:
+    """Per-unit budget. Exhausting it parks ONE unit; the drain continues."""
+    return unit["attempts"] >= data["run"]["ceilings"]["max_attempts"]
+
+
+def check_ceilings(data: dict, started_at: float, spend_usd: float) -> str | None:
+    """Whole-drain budget. A breach halts the drain; it never parks a unit."""
+    ceilings = data["run"]["ceilings"]
+    if data["run"]["drain"] > ceilings["max_drains"]:
+        return f"drain cap: {data['run']['drain']} > {ceilings['max_drains']}"
+    elapsed = time.time() - started_at
+    if elapsed > ceilings["max_wall_clock_s"]:
+        return f"wall clock: {elapsed:.0f}s > {ceilings['max_wall_clock_s']}s"
+    if spend_usd > ceilings["max_spend_usd"]:
+        return f"spend: ${spend_usd:.2f} > ${ceilings['max_spend_usd']}"
+    return None
+
+
+def cmd_check(args) -> int:
+    data = load(REGISTER)
+    reason = check_ceilings(data, started_at=args.started_at, spend_usd=args.spend_usd)
+    if reason:
+        print(f"HALT: {reason}", file=sys.stderr)
+        return EXIT_HALT
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="register")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -222,6 +250,11 @@ def build_parser() -> argparse.ArgumentParser:
     park.add_argument("unit")
     park.add_argument("--evidence", required=True, help="path to the failing test output")
     park.set_defaults(fn=cmd_park)
+
+    check = sub.add_parser("check", help="halt if a declared ceiling is breached")
+    check.add_argument("--started-at", type=float, required=True, dest="started_at")
+    check.add_argument("--spend-usd", type=float, default=0.0, dest="spend_usd")
+    check.set_defaults(fn=cmd_check)
     return parser
 
 
