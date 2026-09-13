@@ -12,6 +12,7 @@ See docs/adr/0001-register-cli-owns-every-transition.md
 """
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
@@ -46,6 +47,29 @@ def next_open(data: dict) -> str | None:
     return None
 
 
+def git(*args: str) -> str:
+    return subprocess.run(
+        ["git", *args], capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+def head_sha() -> str:
+    return git("rev-parse", "HEAD")
+
+
+def cmd_claim(args) -> int:
+    data = load(REGISTER)
+    unit = unit_by_id(data, args.unit)
+    if unit["state"] != OPEN:
+        print(f"{unit['id']} is {unit['state']}, not open", file=sys.stderr)
+        return 2
+    unit["state"] = CLAIMED
+    unit["pre_claim_sha"] = head_sha()
+    save(REGISTER, data)
+    print(f"claimed {unit['id']} at {unit['pre_claim_sha'][:8]}")
+    return 0
+
+
 def cmd_status(args) -> int:
     data = load(REGISTER)
     counts: dict[str, int] = {}
@@ -70,6 +94,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("status", help="summarise register state").set_defaults(fn=cmd_status)
     sub.add_parser("next", help="print the next open build unit id").set_defaults(fn=cmd_next)
+
+    claim = sub.add_parser("claim", help="claim the next build unit")
+    claim.add_argument("unit")
+    claim.set_defaults(fn=cmd_claim)
     return parser
 
 

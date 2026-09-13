@@ -27,3 +27,24 @@ def test_next_returns_none_when_nothing_open(git_repo, register_data):
 def test_next_skips_parked_units(git_repo, register_data):
     register_data["units"][0]["state"] = "parked"
     assert register.next_open(register_data) is None
+
+
+def test_claim_marks_unit_and_records_pre_claim_sha(git_repo, register_data):
+    register.V2R_DIR.mkdir()
+    register.save(register.REGISTER, register_data)
+
+    assert register.main(["claim", "U-001"]) == 0
+
+    unit = register.unit_by_id(register.load(register.REGISTER), "U-001")
+    assert unit["state"] == "claimed"
+    assert unit["pre_claim_sha"] == register.head_sha()
+
+
+def test_claim_refuses_a_unit_that_is_not_open(git_repo, register_data):
+    register.V2R_DIR.mkdir()
+    register.save(register.REGISTER, register_data)
+
+    assert register.main(["claim", "U-002"]) == 2
+
+    unit = register.unit_by_id(register.load(register.REGISTER), "U-002")
+    assert unit["state"] == "closed"
