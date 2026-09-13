@@ -19,7 +19,7 @@ v2r-loop is built so that **cannot** happen. The agent that does the work is str
 
 - The **implementer** never sees the test it must satisfy.
 - The **test-author** never sees the implementation, and writes only from the unit's statement plus a committed interface skeleton.
-- The **register CLI** — 400 lines, no LLM, no network in its decision path — re-runs the sealed test itself and refuses to close a unit on anything less than an observed pass.
+- The **register CLI** — 451 lines, no LLM, no network in its decision path — re-runs the sealed test itself and refuses to close a unit on anything less than an observed pass.
 
 We did not get this right by design alone. An independent review of our own trust core found that `register.py` declared only `pyyaml` as a dependency while being invoked as `uv run --with pyyaml` — so `python -m pytest` exited 1, our table read 1 as *"test failed"*, and **every unit would have burned its attempts and parked while the sealed test never ran once**. Our 36-test suite passed throughout, because the tests imported the module in-process under an interpreter that happened to have pytest.
 

@@ -9,7 +9,7 @@
 
 ## Summary (2–3 sentences)
 
-**v2r-loop** takes a single free-text vision and drives it to a reviewed branch of working, individually-tested code: an attended head turns the vision into a specification, a plan and a committed interface skeleton, then an unattended body drains it one testable behaviour at a time. What makes the loop self-improving is that it **cannot grade its own homework** — the implementer never sees its test, the test-author never sees the implementation, and a 400-line register CLI with no LLM in it re-runs the sealed test itself before any unit may close. Between drains it reads its own Weave traces, captures what it learned, retries only what failed, and stops when a drain closes nothing new.
+**v2r-loop** takes a single free-text vision and drives it to a reviewed branch of working, individually-tested code: an attended head turns the vision into a specification, a plan and a committed interface skeleton, then an unattended body drains it one testable behaviour at a time. What makes the loop self-improving is that it **cannot grade its own homework** — the implementer never sees its test, the test-author never sees the implementation, and a 451-line register CLI with no LLM in it re-runs the sealed test itself before any unit may close. Between drains it reads its own Weave traces, captures what it learned, retries only what failed, and stops when a drain closes nothing new.
 
 ## What it does / what it's useful for
 
