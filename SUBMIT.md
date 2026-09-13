@@ -103,16 +103,20 @@ asks for depth mid-answer. **Do not paste this into the form.**
 https://claude.ai/code/artifact/67e77477-8d04-4984-8178-7849152bab06
 ```
 
-### The other two deliverables
+### The other three deliverables
 
 Put these in the description, or as extra links if the form accepts more than one.
 
 ```
 Pre-registered study   https://claude.ai/code/artifact/df564d0d-8a96-41e0-9107-047b33d0c5e9
 Interpretability tree  https://claude.ai/code/artifact/1514a892-2eaa-4cce-9385-8bd17303d9aa
+marimo dashboard       https://claude.ai/code/artifact/a5dd195c-e3f5-4d6b-a41d-4ce2f1531c0b
 ```
 
-**Share all four** from each artifact's share menu, then open them in a private window to
+The dashboard link is the **evidence for the marimo track** — put it somewhere a judge will
+click. Without it the track rests on a Python file nobody will install.
+
+**Share all five** from each artifact's share menu, then open them in a private window to
 confirm. Artifacts are private by default; an unshared link shows a judge nothing.
 
 ---
@@ -123,7 +127,7 @@ confirm. Artifacts are private by default; an unshared link shows a judge nothin
 |---|---|---|
 | **Best Loop Design** | ✅ | Everyone joins. Also our strongest claim: a gate the coordinator itself could not wave through. |
 | **Best Use of Weave** | ✅ | Every stage of both agents is a `@weave.op`; the traces are the entire basis of the interpretability deliverable. We also found and fixed a real Weave defect — `weave.publish()` writes an object, not a call, so it succeeded while returning zero to the trace query. |
-| **Best Use of marimo** | ✅ | `dashboard/v2r_dashboard.py` — reactive dashboard over the register and run records. |
+| **Best Use of marimo** | ✅ | `dashboard/v2r_dashboard.py` — reactive dashboard over the loop's own state files, shown running against the real run: [a5dd195c…](https://claude.ai/code/artifact/a5dd195c-e3f5-4d6b-a41d-4ce2f1531c0b) |
 | **Most Production-Ready** | ✅ | 117 tests, sealed-referee gate, four ADRs, a glossary resolving four terminology collisions, and a component already ported upstream into a plugin framework. This is the 2-weeks-later award and the work genuinely stands up. |
 
 **Do not select:**
@@ -155,5 +159,5 @@ This is **CoreWeave Hacks**, and our GPU work ran on **Apple MPS locally** plus 
 
 - [ ] **Participant survey** — every member, on the platform. Blocks the submission from closing.
 - [ ] **Screen recording** under 2:00 — shot list in [`docs/DEMO.md`](docs/DEMO.md)
-- [ ] Confirm all four artifact links open in a private window (submission deck, presenter deck, study, interpretability)
+- [ ] Confirm all five artifact links open in a private window (submission deck, presenter deck, study, interpretability, dashboard)
 - [ ] Zoom installed, or https://share.zoom.us reachable, for the 3-minute room

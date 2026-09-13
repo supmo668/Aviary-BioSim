@@ -107,14 +107,141 @@
     .cost .track{flex:1;margin:0}
     .fnd{grid-template-columns:1fr;gap:4px}
   }
+
+  /* ── the drawn tree ── */
+  .treefig{margin:22px 0 6px}
+  .treefig .scroll{overflow-x:auto}
+  .treefig svg{display:block;max-width:100%;height:auto;color:var(--muted);min-width:660px}
+  .treefig figcaption{font-size:13px;color:var(--faint);margin-top:12px;max-width:70ch}
+  .treefig figcaption b{color:var(--ink)}
+  .rail{stroke:var(--rule-strong);stroke-width:1}
+  .tick{fill:var(--accent)}
+  .railhd{font-family:var(--sans);font-size:9.5px;fill:var(--faint);
+    letter-spacing:.1em;text-transform:uppercase}
+  .step{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+  .cum{font-family:var(--mono);font-size:10px;fill:var(--faint)}
+  .nk{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+  .nc{fill:var(--surface);stroke:var(--rule-strong);stroke-width:1;stroke-dasharray:4 3}
+  .fin{fill:var(--kept-soft);stroke:var(--kept);stroke-width:2}
+  .arm{fill:var(--surface);stroke:var(--rule-strong);stroke-width:1}
+  .lb{font-family:var(--sans);font-size:13.5px;font-weight:600;fill:var(--ink)}
+  .sb{font-family:var(--sans);font-size:11px;fill:var(--muted)}
+  .ar{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+  .fl{font-family:var(--sans);font-size:14px;font-weight:700;fill:var(--kept)}
+  .fs{font-family:var(--sans);font-size:11px;fill:var(--muted)}
+  .cl{font-family:var(--sans);font-size:12.5px;font-weight:600;fill:var(--muted)}
+  .cw{font-family:var(--sans);font-size:11px;fill:var(--faint)}
+  .ek{stroke:var(--accent);stroke-width:2.5;fill:none}
+  .kf{fill:var(--accent)}
+  .ec{stroke:var(--rule-strong);stroke-width:1.5;fill:none;stroke-dasharray:5 4}
+  .el{font-family:var(--sans);font-size:10.5px;fill:var(--faint);font-style:italic}
+  .x{font-family:var(--sans);font-size:15px;fill:var(--cut);font-weight:700}
+  .fk{fill:var(--accent);stroke:var(--surface);stroke-width:2}
 </style>
 
 <div class="wrap">
 <header>
   <div class="eyebrow">Interpretability · <b>10 traced decisions</b> · 46,250 completion tokens · deepseek-ai/DeepSeek-V4-Pro-0813</div>
   <h1>Every fork, what it cost, and why the other branch lost</h1>
-  <p class="sub">Two agents took one topic to a designed experiment and a real measurement. Because every step was traced, the whole decision tree can be read back — including the branches that were cut, and the price paid to reach each fork.</p>
+  <p class="sub">Two agents took one topic to a designed experiment and a real measurement. Because every step was traced, the whole tree can be drawn — the path taken, the branches killed, the stated reason for each, and what had been spent by the time the fork arrived.</p>
 </header>
+
+
+<figure class="treefig">
+  <div class="scroll">
+<svg viewBox="0 0 900 960" role="img" aria-label="Decision tree: a spine of taken decisions descends while rejected options branch off from each fork and dead-end, with cumulative token cost on the left">
+<defs><marker id="arK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="kf"/></marker></defs>
+<line class="rail" x1="86" y1="70" x2="86" y2="882"/>
+<text class="railhd" x="86" y="44" text-anchor="middle">cost</text>
+<text class="railhd" x="86" y="57" text-anchor="middle">tokens</text>
+<circle class="tick" cx="86" cy="186" r="3.5"/>
+<text class="step" x="74" y="183" text-anchor="end">+1,329</text>
+<text class="cum"  x="74" y="197" text-anchor="end">1,329</text>
+<circle class="tick" cx="86" cy="314" r="3.5"/>
+<text class="step" x="74" y="311" text-anchor="end">+6,692</text>
+<text class="cum"  x="74" y="325" text-anchor="end">8,021</text>
+<circle class="tick" cx="86" cy="446" r="3.5"/>
+<text class="step" x="74" y="443" text-anchor="end">+6,554</text>
+<text class="cum"  x="74" y="457" text-anchor="end">14,575</text>
+<circle class="tick" cx="86" cy="590" r="3.5"/>
+<text class="step" x="74" y="587" text-anchor="end">+6,918</text>
+<text class="cum"  x="74" y="601" text-anchor="end">21,493</text>
+<circle class="tick" cx="86" cy="714" r="3.5"/>
+<text class="step" x="74" y="711" text-anchor="end">+9,642</text>
+<text class="cum"  x="74" y="725" text-anchor="end">31,135</text>
+<circle class="tick" cx="86" cy="812" r="3.5"/>
+<text class="step" x="74" y="809" text-anchor="end">+15,115</text>
+<text class="cum"  x="74" y="823" text-anchor="end">46,250</text>
+<rect class="nk" x="150" y="47" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="67" text-anchor="middle">Raise folded insulin yield</text>
+<text class="sb" x="300" y="83" text-anchor="middle">the vision, as given</text>
+<line class="ek" x1="300" y1="93" x2="300" y2="163" marker-end="url(#arK)"/>
+<circle class="fk" cx="300" cy="124" r="4.5"/>
+<path class="ec" d="M 305 124 C 430 124, 416 84, 526 84"/>
+<rect class="nc" x="556" y="59" width="300" height="50" rx="5"/>
+<text class="cl" x="570" y="77">Which host is best?</text>
+<text class="cw" x="570" y="95">too broad to falsify in one study</text>
+<text class="x" x="532" y="90" text-anchor="middle">&#10005;</text>
+<path class="ec" d="M 305 124 C 430 124, 416 232, 526 232"/>
+<rect class="nc" x="556" y="207" width="300" height="50" rx="5"/>
+<text class="cl" x="570" y="225">Optimise refolding buffers</text>
+<text class="cw" x="570" y="243">downstream of the question asked</text>
+<text class="x" x="532" y="238" text-anchor="middle">&#10005;</text>
+<rect class="nk" x="150" y="163" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="183" text-anchor="middle">Does PDI1 raise it 2&#215;?</text>
+<text class="sb" x="300" y="199" text-anchor="middle">tractable &#183; falsifiable</text>
+<line class="ek" x1="300" y1="209" x2="300" y2="291" marker-end="url(#arK)"/>
+<rect class="nk" x="150" y="291" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="311" text-anchor="middle">What is already known</text>
+<text class="sb" x="300" y="327" text-anchor="middle">Goeddel 79 &#183; Robinson 94 &#183; Shusta 98</text>
+<line class="ek" x1="300" y1="337" x2="300" y2="423" marker-end="url(#arK)"/>
+<text class="el" x="314" y="350">three hypotheses</text>
+<circle class="fk" cx="300" cy="376" r="4.5"/>
+<path class="ec" d="M 305 376 C 430 376, 416 350, 526 350"/>
+<rect class="nc" x="556" y="325" width="300" height="50" rx="5"/>
+<text class="cl" x="570" y="343">H2 &#183; PDI1 + Ero1</text>
+<text class="cw" x="570" y="361">a null would be confounded</text>
+<text class="x" x="532" y="356" text-anchor="middle">&#10005;</text>
+<path class="ec" d="M 305 376 C 430 376, 416 492, 526 492"/>
+<rect class="nc" x="556" y="467" width="300" height="50" rx="5"/>
+<text class="cl" x="570" y="485">H3 &#183; lower temperature</text>
+<text class="cw" x="570" y="503">cheapest &#8212; and rules nothing out</text>
+<text class="x" x="532" y="498" text-anchor="middle">&#10005;</text>
+<rect class="nk" x="150" y="423" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="443" text-anchor="middle">H1 &#183; PDI1 alone</text>
+<text class="sb" x="300" y="459" text-anchor="middle">a null here stays interpretable</text>
+<line class="ek" x1="300" y1="469" x2="300" y2="558" marker-end="url(#arK)"/>
+<rect class="nk" x="118" y="558" width="364" height="64" rx="5"/>
+<text class="lb" x="300" y="579" text-anchor="middle">Four arms, one variable</text>
+<rect class="arm" x="134" y="589" width="75" height="24" rx="3"/>
+<text class="ar" x="171" y="600" text-anchor="middle">A&#8202;&#183;&#8202;baseline</text>
+<rect class="arm" x="217" y="589" width="75" height="24" rx="3"/>
+<text class="ar" x="254" y="600" text-anchor="middle">B&#8202;&#183;&#8202;PDI1</text>
+<rect class="arm" x="300" y="589" width="75" height="24" rx="3"/>
+<text class="ar" x="337" y="600" text-anchor="middle">C&#8202;&#183;&#8202;host</text>
+<rect class="arm" x="383" y="589" width="75" height="24" rx="3"/>
+<text class="ar" x="420" y="600" text-anchor="middle">D&#8202;&#183;&#8202;PDI1 only</text>
+<line class="ek" x1="300" y1="622" x2="300" y2="691" marker-end="url(#arK)"/>
+<rect class="nk" x="150" y="691" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="711" text-anchor="middle">R &lt; 2.0 falsifies H1</text>
+<text class="sb" x="300" y="727" text-anchor="middle">written before any measurement</text>
+<line class="ek" x1="300" y1="737" x2="300" y2="789" marker-end="url(#arK)"/>
+<text class="el" x="314" y="752">second agent, given tools</text>
+<rect class="nk" x="140" y="789" width="320" height="46" rx="5"/>
+<text class="lb" x="300" y="809" text-anchor="middle">66 measurements, real sequences</text>
+<text class="sb" x="300" y="825" text-anchor="middle">ESM-2 on GPU, agent chose each one</text>
+<line class="ek" x1="300" y1="835" x2="300" y2="877" marker-end="url(#arK)"/>
+<rect class="fin" x="110" y="877" width="380" height="46" rx="5"/>
+<text class="fl" x="300" y="897" text-anchor="middle">The six disulfide cysteines</text>
+<text class="fs" x="300" y="913" text-anchor="middle">&#8722;13.02 against &#8722;5.85 &#183; plus a control it chose itself</text>
+</svg>
+
+  </div>
+  <figcaption><b>The solid spine is the path taken; every dashed branch is an option the agent
+  considered and killed, with the reason it gave.</b> Cost on the left accumulates down the
+  tree — the two forks that decided the science cost 7,883 tokens between them, less than
+  drafting the paper that reported them.</figcaption>
+</figure>
 
 <!-- L1 -->
 <div class="layer">

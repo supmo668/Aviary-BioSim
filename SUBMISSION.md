@@ -11,6 +11,7 @@
 | Presentation deck | https://claude.ai/code/artifact/67e77477-8d04-4984-8178-7849152bab06 |
 | Pre-registered study | https://claude.ai/code/artifact/df564d0d-8a96-41e0-9107-047b33d0c5e9 |
 | Interpretability report | https://claude.ai/code/artifact/1514a892-2eaa-4cce-9385-8bd17303d9aa |
+| marimo dashboard | https://claude.ai/code/artifact/a5dd195c-e3f5-4d6b-a41d-4ce2f1531c0b |
 | Weave traces | `3m-m/Aviary-BioSim` |
 
 ---
