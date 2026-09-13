@@ -58,3 +58,31 @@ def test_close_halts_when_the_sealed_test_has_a_syntax_error(git_repo, register_
     _seed(git_repo, register_data, "def test_broken(:\n")
 
     assert register.main(["close", "U-001"]) == 3
+
+
+def test_seal_records_the_sealed_test_digest(git_repo, register_data):
+    test_file = _seed(git_repo, register_data, "def test_ok():\n    assert True\n")
+
+    assert register.main(["seal", "U-001"]) == 0
+
+    unit = register.unit_by_id(register.load(register.REGISTER), "U-001")
+    assert unit["sealed_test_sha"] == register.sha256_file(str(test_file))
+
+
+def test_close_halts_when_the_sealed_test_was_modified_after_sealing(git_repo, register_data):
+    test_file = _seed(git_repo, register_data, "def test_ok():\n    assert 1 == 2\n")
+    register.main(["seal", "U-001"])
+
+    test_file.write_text("def test_ok():\n    assert True\n")
+
+    assert register.main(["close", "U-001"]) == 3
+
+    unit = register.unit_by_id(register.load(register.REGISTER), "U-001")
+    assert unit["state"] == "claimed"
+
+
+def test_close_still_works_when_the_test_is_unmodified(git_repo, register_data):
+    _seed(git_repo, register_data, "def test_ok():\n    assert True\n")
+    register.main(["seal", "U-001"])
+
+    assert register.main(["close", "U-001"]) == 0

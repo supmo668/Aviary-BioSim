@@ -12,6 +12,7 @@ See docs/adr/0001-register-cli-owns-every-transition.md
 """
 
 import argparse
+import hashlib
 import subprocess
 import sys
 from pathlib import Path
@@ -111,9 +112,37 @@ def run_sealed_test(path: str) -> tuple[int, str]:
     return completed.returncode, completed.stdout + completed.stderr
 
 
+def sha256_file(path: str) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def cmd_seal(args) -> int:
+    """Record the sealed test's digest. Run once, after the test-author writes it."""
+    data = load(REGISTER)
+    unit = unit_by_id(data, args.unit)
+    if not Path(unit["sealed_test"]).exists():
+        print(f"sealed test not found: {unit['sealed_test']}", file=sys.stderr)
+        return 2
+    unit["sealed_test_sha"] = sha256_file(unit["sealed_test"])
+    save(REGISTER, data)
+    print(f"sealed {unit['id']} {unit['sealed_test_sha'][:12]}")
+    return 0
+
+
 def cmd_close(args) -> int:
     data = load(REGISTER)
     unit = unit_by_id(data, args.unit)
+
+    recorded = unit.get("sealed_test_sha")
+    if recorded and Path(unit["sealed_test"]).exists():
+        actual = sha256_file(unit["sealed_test"])
+        if actual != recorded:
+            print(
+                f"HALT: sealed test for {unit['id']} changed after sealing "
+                f"({recorded[:12]} -> {actual[:12]})",
+                file=sys.stderr,
+            )
+            return EXIT_HALT
 
     code, output = run_sealed_test(unit["sealed_test"])
 
@@ -145,6 +174,10 @@ def build_parser() -> argparse.ArgumentParser:
     claim = sub.add_parser("claim", help="claim the next build unit")
     claim.add_argument("unit")
     claim.set_defaults(fn=cmd_claim)
+
+    seal = sub.add_parser("seal", help="record the sealed test digest after authoring")
+    seal.add_argument("unit")
+    seal.set_defaults(fn=cmd_seal)
 
     close = sub.add_parser("close", help="close a unit if its sealed test passes")
     close.add_argument("unit")
