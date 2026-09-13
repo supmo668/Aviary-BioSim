@@ -124,6 +124,35 @@ Parked section + `git branch --list 'park/*'`. Same as Shot 4.
 
 ---
 
+## Optional beat · the governance moment (20s)
+
+Swap this in for the improvement-arc shot when you want the strongest possible answer to
+"is it genuinely self-correcting?" — because it is an event that happened, not a claim.
+
+**Screen:** nothing. Say it to camera, or over a static register view.
+
+> "While we were building this, under deadline, the coordinating agent asked the worker to
+> add a build unit to a register that had already been approved.
+>
+> The worker refused. It quoted the rule back — *only the human gate fixes scope* — and
+> routed the request to the human, who approved it properly.
+>
+> A gate a coordinator can wave through isn't a gate. Ours held against the person with the
+> deadline."
+
+**Why this beat is strong:** every team will *claim* their agents are self-correcting.
+This is a log entry. It also demonstrates the property the judging criterion actually asks
+about — correction under pressure, from the direction pressure really comes from.
+
+**A second one, if you have room:** the coordinator's documented run command omitted the
+weave dependency, so every trace span would have been silently dropped and the whole
+between-drain learning step would have read an empty project. The worker caught it before
+the drain started — because an earlier design decision made a dropped span print once to
+stderr instead of failing silently. One choice about error visibility, made hours earlier,
+is the only reason the failure was findable.
+
+---
+
 ## Questions to expect, and the honest answers
 
 **"Has the full loop run end-to-end autonomously?"**
