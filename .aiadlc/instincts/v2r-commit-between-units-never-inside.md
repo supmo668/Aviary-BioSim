@@ -1,8 +1,8 @@
 ---
 name: v2r-commit-between-units-never-inside
-confidence: 0.850
+confidence: 0.900
 created: 2026-09-13T18:49:54Z
-last_reinforced: 2026-09-13T18:49:54Z
+last_reinforced: 2026-09-13T18:56:39Z
 ttl_days: 30
 triggers: [.claude/skills/v2r-loop/scripts/register.py, .v2r/register.yaml, park]
 tags: [v2r-loop, git, park]

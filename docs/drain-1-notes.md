@@ -92,3 +92,27 @@ missing `weave` dependency in the register's environment would have dropped ever
 silence: all six units would still have closed, the run record would have looked perfect,
 and the Weave project would have been empty — discovered at the demo rather than at the
 drain. The `$R` invocation needs `--with weave --with fhaviary`; `SKILL.md` now says so.
+
+## The instinct pin does not mean what it claims
+
+Found immediately after the drain, while verifying the tree was clean: four instinct files
+had changed on their own. A Stop hook reinforces any instinct whose triggers match files
+just touched — confidence `+0.05`, `last_reinforced` rewritten — and `instinct decay`
+rewrites confidence on a timer. No learning was adopted; the store simply moved.
+
+The pin is `git rev-parse HEAD:.aiadlc/instincts`, a tree SHA, so:
+
+1. **Two drains can carry different pins with an identical instinct set.** A divergence
+   can no longer be attributed to instincts by comparing pins — which is the pin's entire
+   job, and which matters more now that the surrounding claim has been narrowed to
+   attribution.
+2. **The store can change *during* a drain.** `cmd_close` runs `git add -A`, so
+   hook-mutated instinct files are swept into unit commits mid-drain. `CONTEXT.md` states
+   that learned behaviour is "only ever *adopted* between drains, never during one"; nothing
+   currently enforces that. Drain 1 was immune only because `.aiadlc/instincts` did not exist
+   until stage 4.
+
+Candidate fixes, cheapest first: hash the instinct *bodies* and exclude the volatile
+frontmatter (`confidence`, `last_reinforced`) from the pin; or snapshot the store at
+drain-start and build against the snapshot; or have `close` stage explicit paths rather than
+`git add -A`. Not fixed here — it is register-level work and wants its own gate.
