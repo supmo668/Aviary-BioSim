@@ -1,124 +1,180 @@
 <title>Agents That Measure</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
-    --ground:#F7F8FA;--surface:#FFFFFF;--ink:#14181F;--muted:#5A6472;--faint:#8A93A1;
-    --rule:#DDE1E8;--rule-strong:#C3CAD4;--accent:#17518C;--accent-soft:#E8EFF7;
-    --accent-ink:#0F3A66;--dim:#B9C2CE;--kept:#2E7D74;
+    --ground:#F4F6F9;--surface:#FFFFFF;--ink:#111620;--muted:#586274;--faint:#8B94A3;
+    --rule:#DCE1E9;--rule-strong:#BFC7D3;--accent:#17518C;--accent-soft:#E7EFF8;
+    --accent-ink:#0E3A66;--dim:#C4CCD8;--kept:#2E7D74;--cut:#9B2C3F;
     --sans:"IBM Plex Sans",Arial,sans-serif;--mono:"IBM Plex Mono",Menlo,monospace;
     --serif:"Source Serif 4",Georgia,serif;
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-    --ground:#0F1319;--surface:#161B23;--ink:#E8EBF0;--muted:#98A2B1;--faint:#6B7585;
-    --rule:#262D38;--rule-strong:#39424F;--accent:#79ADE4;--accent-soft:#152536;
-    --accent-ink:#A8C9EE;--dim:#39434F;--kept:#67B8AE;}}
+    --ground:#0C1016;--surface:#141A22;--ink:#E9ECF1;--muted:#99A3B2;--faint:#6C7686;
+    --rule:#242B36;--rule-strong:#38414E;--accent:#7CB0E6;--accent-soft:#142435;--accent-ink:#A9CAEF;--dim:#38414E;--kept:#67B8AE;--cut:#D98695;}}
   :root[data-theme="dark"]{
-    --ground:#0F1319;--surface:#161B23;--ink:#E8EBF0;--muted:#98A2B1;--faint:#6B7585;
-    --rule:#262D38;--rule-strong:#39424F;--accent:#79ADE4;--accent-soft:#152536;
-    --accent-ink:#A8C9EE;--dim:#39434F;--kept:#67B8AE;}
+    --ground:#0C1016;--surface:#141A22;--ink:#E9ECF1;--muted:#99A3B2;--faint:#6C7686;
+    --rule:#242B36;--rule-strong:#38414E;--accent:#7CB0E6;--accent-soft:#142435;
+    --accent-ink:#A9CAEF;--dim:#38414E;--kept:#67B8AE;--cut:#D98695;}
   *{box-sizing:border-box}
-  body{background:var(--ground);color:var(--ink);font-family:var(--sans);
-    padding:0 20px;padding-block:0 60px;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1040px;margin:0 auto}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);margin:0;
+    padding:0 16px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-  /* ── the slide ── */
-  .slide{background:var(--surface);border:1px solid var(--rule-strong);border-radius:4px;
-    padding:38px 40px 30px;margin-block:28px 0;box-shadow:0 1px 3px rgba(20,24,31,.05)}
-  .kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
-    margin-bottom:14px}
-  .slide h1{font-size:clamp(30px,5vw,50px);line-height:1.05;font-weight:700;
-    letter-spacing:-.025em;margin:0 0 10px;text-wrap:balance}
-  .slide h1 span{color:var(--accent)}
-  .slide .say{font-family:var(--serif);font-size:19px;color:var(--muted);margin:0 0 28px;max-width:56ch}
+  .deck{max-width:1080px;margin:0 auto;padding-block:18px 0}
+  .slide{display:none;background:var(--surface);border:1px solid var(--rule);
+    border-radius:5px;padding:40px 44px;min-height:min(600px,72vh);
+    box-shadow:0 1px 2px rgba(17,22,32,.04);animation:in .22s ease-out}
+  .slide.on{display:block}
+  @keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.slide{animation:none}}
 
-  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0 0 26px;
-    border:1px solid var(--rule);border-radius:3px;overflow:hidden}
-  .step{padding:16px 18px;border-right:1px solid var(--rule);position:relative}
+  .tag{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+    font-weight:600;margin-bottom:15px}
+  h1{font-size:clamp(30px,4.6vw,48px);line-height:1.04;font-weight:700;
+    letter-spacing:-.026em;margin:0 0 14px;text-wrap:balance}
+  h1 span{color:var(--accent)}
+  h2{font-size:clamp(23px,3.1vw,33px);line-height:1.12;font-weight:600;
+    letter-spacing:-.018em;margin:0 0 18px;text-wrap:balance}
+  .say{font-family:var(--serif);font-size:18px;line-height:1.55;color:var(--muted);
+    max-width:58ch;margin:0 0 24px}
+  .say b{color:var(--ink);font-weight:600}
+
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin:22px 0}
+  .box{border:1px solid var(--rule);border-radius:4px;padding:16px 18px}
+  .box.hi{border-color:var(--accent);background:var(--accent-soft)}
+  .box .h{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+    font-weight:600;margin-bottom:8px}
+  .box.hi .h{color:var(--accent-ink)}
+  .box .b{font-size:14.5px;color:var(--muted);line-height:1.5}
+  .box .b b{color:var(--ink)}
+
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);
+    border-radius:4px;overflow:hidden;margin:22px 0}
+  .step{padding:15px 16px;border-right:1px solid var(--rule)}
   .step:last-child{border-right:0;background:var(--accent-soft)}
   .step .n{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.1em}
-  .step .t{font-size:15px;font-weight:600;margin:6px 0 4px;letter-spacing:-.01em}
-  .step .d{font-size:12.5px;color:var(--muted);line-height:1.45}
+  .step .t{font-size:14.5px;font-weight:600;margin:6px 0 4px;letter-spacing:-.01em}
   .step:last-child .t{color:var(--accent-ink)}
+  .step .d{font-size:12.5px;color:var(--muted);line-height:1.45}
 
-  .headline{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;
-    border-top:1px solid var(--rule);padding-top:22px}
-  .big{font-family:var(--mono);font-size:clamp(28px,4.4vw,44px);font-weight:500;
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;
+    border-top:1px solid var(--rule);padding-top:20px;margin-top:22px}
+  .big{font-family:var(--mono);font-size:clamp(26px,4vw,42px);font-weight:500;
     letter-spacing:-.03em;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+  .big.g{color:var(--kept)} .big.n{color:var(--ink)}
   .big small{display:block;font-family:var(--sans);font-size:12.5px;font-weight:400;
     letter-spacing:0;color:var(--muted);margin-top:9px;line-height:1.4}
 
-  /* ── figures ── */
-  .fig{background:var(--surface);border:1px solid var(--rule);border-radius:3px;
-    padding:20px 22px 16px;margin-top:20px}
-  .fig h3{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);
-    margin:0 0 3px;font-weight:600}
-  .fig .cap{font-size:13px;color:var(--muted);margin:0 0 14px;max-width:72ch}
-  .fig .scroll{overflow-x:auto}
+  figure{margin:16px 0 0}
+  figcaption{font-size:12.5px;color:var(--faint);margin-top:10px;max-width:74ch}
+  .scroll{overflow-x:auto}
   svg{display:block;max-width:100%;height:auto}
   .res{fill:var(--dim)} .cys{fill:var(--accent)}
   .cl{font-family:var(--mono);font-size:9px;fill:var(--accent);text-anchor:middle}
   .rg{stroke:var(--rule-strong);stroke-width:2}
-  .rl{font-family:var(--sans);font-size:10px;fill:var(--faint);text-anchor:middle;
-      letter-spacing:.05em;text-transform:uppercase}
+  .rl{font-family:var(--sans);font-size:10px;fill:var(--faint);text-anchor:middle;letter-spacing:.05em;text-transform:uppercase}
   .ax{stroke:var(--rule);stroke-width:1}
   .at{font-family:var(--mono);font-size:10px;fill:var(--faint)}
   .hum{fill:var(--accent)} .org{fill:var(--dim)} .out{fill:var(--kept)}
   .pl{font-family:var(--sans);font-size:11px;fill:var(--muted);font-style:italic}
-  .lg{font-size:11.5px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
+  .lg{font-size:11.5px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
   .lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
 
+  .ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin:6px 0 4px}
+  .ctrl div{border:1px solid var(--rule);border-radius:3px;padding:9px 11px;text-align:center}
+  .ctrl .r{font-family:var(--mono);font-size:12.5px;font-weight:500}
+  .ctrl .s{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--kept)}
+  .ctrl.neg .s{color:var(--cut)}
+
+  ul.pts{margin:0;padding-left:20px;font-size:15.5px;color:var(--muted);line-height:1.62}
+  ul.pts li{margin-bottom:10px} ul.pts b{color:var(--ink)}
+  code{font-family:var(--mono);font-size:.88em;color:var(--accent)}
+
+  /* ── chrome ── */
+  .bar{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:14px;
+    padding:12px 4px 26px;font-size:12px;color:var(--faint)}
+  .prog{flex:1;display:flex;gap:4px}
+  .prog b{flex:1;height:3px;border-radius:2px;background:var(--rule);cursor:pointer;
+    transition:background .18s}
+  .prog b.on{background:var(--accent)}
+  .cnt{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--rule-strong);
+    border-bottom-width:2px;border-radius:3px;padding:1px 5px;color:var(--muted)}
+
   /* ── speaker notes ── */
-  .notes{margin-top:34px;border-top:2px solid var(--ink);padding-top:22px}
-  .notes h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 16px;color:var(--ink)}
-  .note{display:grid;grid-template-columns:118px minmax(0,1fr);gap:20px;
-    padding:14px 0;border-bottom:1px solid var(--rule)}
-  .note dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
-    font-weight:600;padding-top:2px}
-  .note dd{margin:0;font-family:var(--serif);font-size:15.5px;line-height:1.6;color:var(--muted)}
-  .note dd b{color:var(--ink);font-weight:600}
-  .note dd code{font-family:var(--mono);font-size:13px;color:var(--accent)}
-  .note dd + dd{margin-top:9px}
+  .notes{display:none;max-width:1080px;margin:0 auto 40px;background:var(--surface);
+    border:1px solid var(--accent);border-top-width:3px;border-radius:4px;padding:22px 26px}
+  body.notes-on .notes.on{display:block}
+  .notes h3{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);
+    margin:0 0 14px;font-weight:600}
+  .notes dl{margin:0;display:grid;gap:0}
+  .notes dt{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
+    font-weight:600;margin-top:14px}
+  .notes dt:first-child{margin-top:0}
+  .notes dd{margin:5px 0 0;font-family:var(--serif);font-size:15px;line-height:1.58;color:var(--muted)}
+  .notes dd b{color:var(--ink);font-weight:600}
+  .notes dd code{font-size:13px}
+
   @media (max-width:760px){
-    .flow,.headline{grid-template-columns:1fr}
+    .flow{grid-template-columns:1fr}
     .step{border-right:0;border-bottom:1px solid var(--rule)}
-    .note{grid-template-columns:1fr;gap:5px}
+    .slide{padding:26px 20px;min-height:0}
   }
 </style>
 
-<div class="wrap">
-<div class="slide">
-  <div class="kicker">Team BioSim · v2r-loop</div>
+<div class="deck">
+
+<!-- 1 · TITLE -->
+<section class="slide on" data-note="title">
+  <div class="tag">Team BioSim · v2r-loop</div>
   <h1>Agents that <span>measure</span>,<br>not agents that guess.</h1>
-  <p class="say">An LLM agent was given a protein model as a tool and asked which residues of human proinsulin cannot be changed. It found the answer by running the experiment.</p>
+  <p class="say">An autonomous loop built its own tools, then used them to run a real experiment in protein biology &mdash; and reached an answer that was already known, by measuring rather than recalling.</p>
+  <div class="stats">
+    <div class="big n">2,090<small>substitutions scored on real sequences</small></div>
+    <div class="big n">66<small>measurements the agent chose itself</small></div>
+    <div class="big n">0<small>numbers fabricated anywhere</small></div>
+  </div>
+</section>
 
+<!-- 2 · PROBLEM -->
+<section class="slide" data-note="problem">
+  <div class="tag">Problem</div>
+  <h2>Self-improving agents grade their own homework.</h2>
+  <p class="say">An agent writes the code, runs the check, and reports success. When the check is weak &mdash; or silently broken &mdash; nothing notices, and the loop gets confidently better at passing a test nobody enforces.</p>
+  <div class="cols">
+    <div class="box"><div class="h">It happened to us</div><div class="b">Our register declared only <code>pyyaml</code> while being invoked with only <code>pyyaml</code> available. <code>python -m pytest</code> exited <b>1</b>. Our table read exit 1 as <b>"test failed"</b>.</div></div>
+    <div class="box"><div class="h">The consequence</div><div class="b">Every unit would have burned its attempts and parked <b>while the sealed test never ran once</b>. Our 36-test suite passed throughout.</div></div>
+    <div class="box hi"><div class="h">The hypothesis</div><div class="b">A loop is only trustworthy if <b>the actor doing the work is structurally unable to record that the work passed.</b></div></div>
+  </div>
+</section>
+
+<!-- 3 · SOLUTION & METHODS -->
+<section class="slide" data-note="method">
+  <div class="tag">Solution &amp; methods</div>
+  <h2>Separate the worker from the gate. Then point it at biology.</h2>
   <div class="flow">
-    <div class="step"><div class="n">01</div><div class="t">One sentence in</div>
-      <div class="d">A vision, not a spec. The loop earns the spec.</div></div>
-    <div class="step"><div class="n">02</div><div class="t">Aviary environment</div>
-      <div class="d">ESM-2 exposed as a Tool. Real sequences, real GPU.</div></div>
-    <div class="step"><div class="n">03</div><div class="t">Agent probes</div>
-      <div class="d">66 substitutions chosen by the agent, scored for real.</div></div>
-    <div class="step"><div class="n">04</div><div class="t">It finds the disulfides</div>
-      <div class="d">Unprompted. And runs its own controls.</div></div>
+    <div class="step"><div class="n">01</div><div class="t">One sentence in</div><div class="d">A vision, not a spec. The loop researches, grills and plans its own specification.</div></div>
+    <div class="step"><div class="n">02</div><div class="t">Sealed referee</div><div class="d">Implementer never sees its test. Test author never sees the code. A 451-line gate re-runs the test itself.</div></div>
+    <div class="step"><div class="n">03</div><div class="t">Aviary environment</div><div class="d">The loop's output becomes tools: ESM-2 scoring and its own spend meter, exposed via <code>Tool.from_function</code>.</div></div>
+    <div class="step"><div class="n">04</div><div class="t">The agent measures</div><div class="d">It chooses which residues to probe. The environment runs the model. Real numbers come back.</div></div>
   </div>
-
-  <div class="headline">
-    <div class="big">−13.0<small>mean score, the six disulfide cysteines</small></div>
-    <div class="big">−5.9<small>mean score, every other residue</small></div>
-    <div class="big">66<small>real measurements, zero fabricated</small></div>
+  <div class="cols">
+    <div class="box"><div class="h">Adoption &mdash; what we reused</div><div class="b"><b>Aviary</b> (Future-House) for the environment contract, <b>ESM-2 650M</b> on Apple MPS, <b>UniProt</b> for sequences, <b>W&amp;B Weave</b> for tracing, <b>W&amp;B Inference</b> so no GPU sits on the critical path.</div></div>
+    <div class="box"><div class="h">Reasoning &mdash; what we built</div><div class="b">The register CLI with <b>no LLM in it</b>, the sealed-test gate that parses pytest's own report rather than its exit code, and <code>BioSimEnv</code> &mdash; an aviary <code>Environment</code> whose <code>step()</code> runs a protein model instead of a simulation.</div></div>
   </div>
-</div>
+</section>
 
-<div class="fig">
-  <h3>Figure 1 · Substitution intolerance across mature proinsulin</h3>
-  <p class="cap">Mean ESM-2 log-likelihood ratio over all 19 substitutions at each position, human preproinsulin P01308. Taller means less tolerant. The six cysteines are labelled; nothing else is highlighted.</p>
-  <div class="scroll">
-  <svg viewBox="0 0 940 236" role="img" aria-label="Per-residue substitution intolerance; the six cysteines are the tallest bars">
-    <line class="ax" x1="52" y1="200" x2="930" y2="200"/>
-    <line class="ax" x1="52" y1="50" x2="52" y2="200"/>
-    <text class="at" x="46" y="204" text-anchor="end">0</text>
-    <text class="at" x="46" y="54" text-anchor="end">−15</text>
+<!-- 4 · PRODUCT A -->
+<section class="slide" data-note="product1">
+  <div class="tag">Product · the measurement</div>
+  <h2>The model treats six residues as untouchable.</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 940 236" role="img" aria-label="Substitution intolerance across proinsulin; the six cysteines are the tallest bars">
+      <line class="ax" x1="52" y1="200" x2="930" y2="200"/>
+      <line class="ax" x1="52" y1="50" x2="52" y2="200"/>
+      <text class="at" x="46" y="204" text-anchor="end">0</text>
+      <text class="at" x="46" y="54" text-anchor="end">&#8722;15</text>
 <rect class="res" x="52.0" y="198.61" width="7.78" height="1.39" rx="2"><title>F25  mean -0.14</title></rect>
 <rect class="res" x="61.98" y="195.11" width="7.78" height="4.89" rx="2"><title>V26  mean 0.49</title></rect>
 <rect class="res" x="71.95" y="139.70" width="7.78" height="60.30" rx="2"><title>N27  mean -6.07</title></rect>
@@ -216,19 +272,45 @@
 <line class="rg" x1="371.3" y1="209" x2="678.3" y2="209"/>
 <text class="rl" x="524.8" y="222">C peptide</text>
 <line class="rg" x1="700.5" y1="209" x2="907.8" y2="209"/>
-<text class="rl" x="804.1" y="222">A chain</text>  </svg>
+<text class="rl" x="804.1" y="222">A chain</text>    </svg>
+    </div>
+    <div class="lg"><span><i style="background:var(--accent)"></i>disulfide cysteine</span><span><i style="background:var(--dim)"></i>every other residue</span></div>
+    <figcaption>Mean ESM-2 log-likelihood ratio over all 19 substitutions at each position of human preproinsulin (P01308). Taller means less tolerated. Only the cysteines are labelled.</figcaption>
+  </figure>
+  <div class="stats">
+    <div class="big">&#8722;13.0<small>the six disulfide cysteines</small></div>
+    <div class="big n">&#8722;5.9<small>every other residue</small></div>
+    <div class="big n">7 s<small>full 110-residue scan on MPS</small></div>
   </div>
-  <div class="lg"><span><i style="background:var(--accent)"></i>disulfide cysteine</span><span><i style="background:var(--dim)"></i>all other residues</span></div>
-</div>
+</section>
 
-<div class="fig">
-  <h3>Figure 2 · Insulin orthologs in embedding space</h3>
-  <p class="cap">First two principal components of ESM-2 embeddings for nine real UniProt insulin sequences (64.8% and 22.2% of variance). Labels come from the organism the database returned, never from a guess.</p>
-  <div class="scroll">
-  <svg viewBox="0 0 600 240" role="img" aria-label="Insulin orthologs projected into two dimensions; guinea pig sits furthest from human">
-    <line class="ax" x1="70" y1="215" x2="560" y2="215"/>
-    <line class="ax" x1="70" y1="35" x2="70" y2="215"/>
-    <text class="at" x="315" y="232" text-anchor="middle">PC1 · 64.8%</text>
+<!-- 5 · PRODUCT B -->
+<section class="slide" data-note="product2">
+  <div class="tag">Product · the control</div>
+  <h2>It checked itself. Nobody asked it to.</h2>
+  <p class="say">Having found the cysteines, the agent probed the <b>C-peptide</b> &mdash; the segment cleaved out of mature insulin and poorly conserved. Exactly the right negative control for a position-specific effect.</p>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div class="box hi"><div class="h">Disulfide cysteines &mdash; intolerant</div>
+      <div class="ctrl neg" style="margin-top:4px">
+        <div><div class="r">C43A</div><div class="s">&#8722;16.1</div></div>
+        <div><div class="r">C31A</div><div class="s">&#8722;13.9</div></div>
+        <div><div class="r">C109A</div><div class="s">&#8722;13.5</div></div>
+        <div><div class="r">C96A</div><div class="s">&#8722;12.8</div></div>
+      </div></div>
+    <div class="box"><div class="h">C-peptide controls &mdash; tolerant</div>
+      <div class="ctrl" style="margin-top:4px">
+        <div><div class="r">Q62A</div><div class="s">+1.53</div></div>
+        <div><div class="r">P79A</div><div class="s">+1.08</div></div>
+        <div><div class="r">G70A</div><div class="s">+0.18</div></div>
+        <div><div class="r">E83A</div><div class="s">&#8722;0.10</div></div>
+      </div></div>
+  </div>
+  <figure style="margin-top:8px">
+    <div class="scroll">
+    <svg viewBox="0 0 600 240" role="img" aria-label="Insulin orthologs in embedding space; guinea pig is furthest from human">
+      <line class="ax" x1="70" y1="215" x2="560" y2="215"/>
+      <line class="ax" x1="70" y1="35" x2="70" y2="215"/>
+      <text class="at" x="315" y="232" text-anchor="middle">PC1 &middot; 64.8%</text>
 <circle class="hum" cx="135.7" cy="138.7" r="6"><title>Homo sapiens  d=0.00</title></circle>
 <text class="pl" x="146.7" y="142.7" text-anchor="start">H. sapiens</text>
 <circle class="org" cx="348.2" cy="152.8" r="6"><title>Mus musculus  d=1.41</title></circle>
@@ -246,28 +328,131 @@
 <circle class="org" cx="417.6" cy="70.3" r="6"><title>Danio rerio  d=2.03</title></circle>
 <text class="pl" x="428.6" y="74.3" text-anchor="start">D. rerio</text>
 <circle class="org" cx="421.2" cy="82.9" r="6"><title>Xenopus laevis  d=2.01</title></circle>
-<text class="pl" x="432.2" y="86.9" text-anchor="start">X. laevis</text>  </svg>
+<text class="pl" x="432.2" y="86.9" text-anchor="start">X. laevis</text>    </svg>
+    </div>
+    <figcaption>Nine real insulin orthologs. <b>Pig nearest human (0.55)</b> &mdash; porcine insulin differs by one residue. <b>Guinea pig furthest (2.69)</b>, beyond zebrafish and <em>Xenopus</em> &mdash; the known hystricomorph divergence, recovered from sequence alone.</figcaption>
+  </figure>
+</section>
+
+<!-- 6 · CONCLUSION -->
+<section class="slide" data-note="conclusion">
+  <div class="tag">Conclusion</div>
+  <h2>The loop produced the instrument that produced the result.</h2>
+  <div class="cols">
+    <div class="box"><div class="h">It built its own tools</div><div class="b">Drain 1 produced a spend meter closed by sealed tests. That same component is now a <b>tool in the aviary environment</b>, metering the agent that uses it &mdash; and has been ported upstream into the framework.</div></div>
+    <div class="box"><div class="h">It knows when to stop</div><div class="b">A drain closing zero new units ends the loop. Not a timeout, not a fixed count &mdash; <b>an actual convergence signal.</b></div></div>
+    <div class="box hi"><div class="h">It reached a known answer</div><div class="b">Six cysteines, correct chain assignments, a self-chosen control, and a second tier of hydrophobic core residues &mdash; <b>none of it in the prompt.</b></div></div>
   </div>
-  <div class="lg"><span><i style="background:var(--accent)"></i>human</span><span><i style="background:var(--kept)"></i><i></i>guinea pig — the known outlier</span><span><i style="background:var(--dim)"></i>other species</span></div>
+  <div class="stats">
+    <div class="big g">4&nbsp;&rarr;&nbsp;1<small>rounds to the pattern; deliberation fell 8&times;</small></div>
+    <div class="big n">46k<small>completion tokens, end to end</small></div>
+    <div class="big n">117<small>tests green across the loop</small></div>
+  </div>
+</section>
+
+<!-- 7 · DISCUSSION -->
+<section class="slide" data-note="discussion">
+  <div class="tag">Discussion</div>
+  <h2>What this does not show.</h2>
+  <ul class="pts">
+    <li><b>ESM-2 has seen insulin.</b> This is recovery of known constraint, not discovery of new biology. The claim is that an agent can plan and execute a measurement campaign and arrive at an independently-known answer &mdash; nothing more.</li>
+    <li><b>A trace shows stated reasons, not causes.</b> We can read what the agent said it was doing. Whether that is why it did it is a different question, and not one a trace answers.</li>
+    <li><b>No wet experiment has been run.</b> The pre-registered design is assessable from the literature; its conclusions are not, because there are none yet.</li>
+    <li><b>Two of our sequence labels were wrong</b> &mdash; a rattlesnake fragment labelled chicken, <em>Xenopus</em> labelled zebrafish. The data caught it. Labels now come from the database, never from us.</li>
+  </ul>
+  <div class="cols" style="margin-top:8px">
+    <div class="box hi"><div class="h">What we would do next</div><div class="b">Pin the per-unit prompts into the run record &mdash; they are where the difficulty lives, and until they are hashed the replay claim is attribution, not reproduction. We narrowed the claim rather than overstate it.</div></div>
+  </div>
+</section>
+
 </div>
 
-<div class="notes">
-  <h2>Speaker notes</h2>
-
-  <div class="note"><dt>Open with</dt><dd>"Most agent demos reason about a domain. This one measures it." Then the one-line setup: the agent had a protein language model as a tool and a question it could only answer by running experiments.</dd></div>
-
-  <div class="note"><dt>The environment</dt><dd><b>Aviary</b> — Future-House's language-agent gym — is the substrate. Its <code>Environment</code> contract is two abstract methods, <code>reset()</code> returning observations plus a tool list, and <code>step(action)</code> returning obs, reward, done, truncated.<dd>Our <code>BioSimEnv</code> exposes three tools: <code>score_variant</code> and <code>embed_sequence</code>, both running <b>ESM-2 (650M)</b> on Apple MPS, and <code>record</code> — the spend meter our own build loop wrote earlier today, exposed via <code>Tool.from_function</code>. Every model call the agent makes is metered by a component an independent sealed test proved correct.</dd><dd><b>If asked about reward:</b> it is wired to 0.0 deliberately. Aviary carries a reward channel because it is an RL gym; this is tool-mediated discovery, not training. Inventing a scalar to fill the slot would be a fabricated signal.</dd></div>
-
-  <div class="note"><dt>The measurement</dt><dd>Scoring is the standard <b>masked-marginal</b>: mask position <i>i</i>, one forward pass, read log P for each amino acid. <code>score = log P(mut) − log P(wt)</code>. One pass per position covers all 19 substitutions there, so the full 110-residue scan is 110 passes — <b>7 seconds on MPS</b>.</dd></div>
-
-  <div class="note"><dt>Figure 1</dt><dd>2,090 substitutions. Cysteine mean <b>−13.02</b> against a non-cysteine mean of <b>−5.85</b> across the mature protein — a gap of 7.2 log units. The six cysteines are C31 (B7), C43 (B19), C95 (A6), C96 (A7), C100 (A11) and C109 (A20); they form the three disulfides that hold insulin together.</dd><dd><b>The honest framing:</b> we did not engineer this result. The direction was known independently — human <i>INS</i> cysteine mutations cause permanent neonatal diabetes through proinsulin misfolding, and the mouse <i>Akita</i> C96Y allele is the classic case. We pointed the agent at a question with an established answer and checked whether it got there.</dd></div>
-
-  <div class="note"><dt>Figure 2</dt><dd>Two known outcomes recovered by a model that only ever saw sequence. <b>Pig is closest to human (0.55)</b> — porcine insulin differs by a single residue, which is why it was the therapeutic before recombinant. <b>Guinea pig is furthest (2.69)</b>, further than zebrafish or <i>Xenopus</i> — hystricomorph insulin is famously divergent.</dd><dd><b>If asked how we know the labels are right:</b> two of our original accessions were wrong. One "chicken" entry was a rattlesnake fragment, one "zebrafish" was <i>Xenopus</i>. The pipeline now takes every label from the organism UniProt returns and drops anything under 90 residues. A guessed label on a real sequence is a fabricated figure.</dd></div>
-
-  <div class="note"><dt>The best moment</dt><dd>The agent <b>ran its own controls</b>. Nobody asked it to. After finding the cysteines, it probed C-peptide positions — Gly70, Pro72, Pro79, Glu83, Gln62 — and got scores at or <i>above</i> zero. That demonstrates the effect is position-specific rather than a whole-protein artifact, and the C-peptide is exactly the right negative control: it is cleaved out of mature insulin and poorly conserved.</dd><dd>It also found the second tier unprompted — Leu30, Leu35, Leu105, Phe48, Phe49, Tyr50 — the buried hydrophobic core that collapses around those disulfides.</dd></div>
-
-  <div class="note"><dt>Traceability</dt><dd>Every stage is a <code>@weave.op</code>, so the trace records which measurement the agent asked for and what it did with the answer. Rounds 1–4 spent 6,905 / 6,304 / 1,087 / 819 completion tokens — deliberation collapses once the pattern is found, which is visible in the trace and not assertable without it.</dd></div>
-
-  <div class="note"><dt>If challenged</dt><dd><b>"Isn't ESM-2 just memorising insulin?"</b> Likely in part — insulin is heavily represented. That is why the claim is narrow: this shows an agent can plan and execute a measurement campaign and reach an independently-known answer, not that it discovered new biology.</dd><dd><b>"Did you seed the answer?"</b> No. The objective names the protein and asks which residues are least tolerant. Cysteines, disulfides and the expected direction appear nowhere in the prompt. The audit trail of all 66 measurements ships with the run.</dd></div>
+<div class="bar">
+  <span class="cnt" id="cnt">1 / 7</span>
+  <span class="prog" id="prog"></span>
+  <span><kbd>&larr;</kbd> <kbd>&rarr;</kbd> navigate &nbsp;·&nbsp; <kbd>N</kbd> speaker notes</span>
 </div>
-</div>
+
+<div class="notes on" id="notes"><h3>Speaker notes</h3><dl id="ndl"></dl></div>
+
+<script>
+const NOTES = {
+  title: [
+    ["Open with", "“Most agent demos reason about a domain. This one measures it.” Then the setup in one line: the agent had a protein language model as a tool and a question it could only answer by running experiments."],
+    ["Frame the whole talk", "Two things happened today. A loop built software under a gate it could not cheat, and then that software became the instrument for a real biology experiment. The second is only interesting because of the first."]
+  ],
+  problem: [
+    ["The story is ours, not hypothetical", "Say it plainly: our own review found this. <b>register.py</b> declared only <code>pyyaml</code> as a dependency, while being invoked with only <code>pyyaml</code> available. So <code>python -m pytest</code> exited 1, and our own table read exit 1 as “test failed.”"],
+    ["Why it matters", "Every build unit would have burned its attempt budget and parked <b>while the sealed test never executed a single assertion</b> — and our 36-test suite passed the entire time, because the tests imported the module in-process under an interpreter that happened to have pytest."],
+    ["The fix, if asked", "The gate stopped trusting exit codes. It parses pytest's junit-xml and requires tests&gt;0, errors==0, skipped==0, passed&gt;0. A sealed test that collects nothing, or is entirely skipped, can never close a unit."]
+  ],
+  method: [
+    ["The separation", "Implementer never sees its test; test author never sees the implementation; the register CLI — 451 lines, no LLM in it — re-runs the sealed test before any unit may close. No agent can assert a close."],
+    ["Aviary specifics", "Aviary's <code>Environment</code> contract is two abstract methods: <code>reset()</code> returning observations plus a tool list, and <code>step(action)</code> returning obs, reward, done, truncated. <code>BioSimEnv</code> implements both; <code>step()</code> runs ESM-2 rather than a simulation."],
+    ["The tools", "<code>score_variant</code> and <code>embed_sequence</code> run ESM-2 650M on Apple MPS over UniProt sequences. The third tool is <code>record</code> — the spend meter drain 1 produced, exposed through <code>Tool.from_function</code>. The loop's own output meters the agent that uses it."],
+    ["If asked about reward", "Wired to <b>0.0 deliberately</b>. Aviary carries a reward channel because it is an RL gym. This is tool-mediated discovery, not training, and inventing a scalar to fill the slot would be a fabricated signal."]
+  ],
+  product1: [
+    ["The measurement", "Standard <b>masked-marginal</b> scoring: mask position i, one forward pass, read log P for each amino acid. <code>score = log P(mut) − log P(wt)</code>. One pass per position covers all 19 substitutions there, so the full 110-residue scan is 110 passes — <b>7 seconds on MPS</b>."],
+    ["The numbers", "2,090 substitutions. Cysteine mean <b>−13.02</b> against non-cysteine <b>−5.85</b> across the mature protein — a gap of 7.2 log units. The six are C31 (B7), C43 (B19), C95 (A6), C96 (A7), C100 (A11), C109 (A20): the three disulfides that hold insulin together."],
+    ["Honest framing", "We did not engineer this. The direction was known independently — human <i>INS</i> cysteine mutations cause permanent neonatal diabetes through proinsulin misfolding, and the mouse <i>Akita</i> C96Y allele is the classic case. We pointed the agent at a question with an established answer and checked whether it got there."]
+  ],
+  product2: [
+    ["The best moment in the run", "Nobody asked for a control. After finding the cysteines the agent probed C-peptide positions and got scores at or above zero. That demonstrates the effect is position-specific rather than a whole-protein artifact — and the C-peptide is precisely the right choice, because it is cleaved out of mature insulin and poorly conserved."],
+    ["Second tier, also unprompted", "It identified Leu30, Leu35, Leu105, Phe48, Phe49 and Tyr50 as the next-most constrained, and named them as the buried hydrophobic core that collapses around the disulfides. That is the correct reading of its own numbers."],
+    ["The orthologs", "Two known facts recovered from sequence alone. Pig nearest human at 0.55 — porcine insulin differs by a single residue, which is why it was the therapeutic before recombinant. Guinea pig furthest at 2.69, beyond zebrafish and <i>Xenopus</i> — hystricomorph insulin is markedly divergent."],
+    ["If asked about labels", "Two of our original accessions were wrong: one “chicken” entry was a rattlesnake fragment, one “zebrafish” was <i>Xenopus</i>. Every label now comes from the organism UniProt returns, and anything under 90 residues is dropped. A guessed label on a real sequence is a fabricated figure."]
+  ],
+  conclusion: [
+    ["The through-line", "Drain 1 built a spend meter under sealed tests. That component is now a tool inside the aviary environment, metering the agent that calls it — and has been ported into the aiadlc framework, where the autonomous loops declared a spend cap that nothing measured."],
+    ["Termination", "A drain that closes zero new units ends the loop. Not a timeout. The loop stops because it stopped improving, and says so in the run record."],
+    ["Traceability", "Every stage is a <code>@weave.op</code>. Rounds 1–4 spent 6,905 / 6,304 / 1,087 / 819 completion tokens while the measurement rate held flat — deliberation collapsed once the pattern was found. That is visible in the trace and not assertable without it."]
+  ],
+  discussion: [
+    ["Lead with the limitation", "Say the memorisation point before a judge does. ESM-2 has certainly seen insulin. The claim is narrow on purpose."],
+    ["“Did you seed the answer?”", "No. The objective names the protein and asks which residues are least tolerant. Cysteines, disulfides and the expected direction appear nowhere in the prompt. The audit trail of all 66 measurements ships with the run."],
+    ["“What stops it building the wrong thing efficiently?”", "One human gate, before any code: you approve the spec, the register and the interface skeleton. Scope freezes there and no later drain can widen it. That is the one failure sealed tests cannot catch, which is exactly why a human sits at that point."],
+    ["The prompt-pinning gap", "Our own worker agent found it. The register pins the instinct set, the seed and the register hash — not the per-unit prompts, which is where difficulty actually lives. We narrowed the documented claim from reproduction to attribution rather than leave an overclaim in a public repo."]
+  ]
+};
+
+const slides = [...document.querySelectorAll('.slide')];
+const prog = document.getElementById('prog');
+const cnt = document.getElementById('cnt');
+const ndl = document.getElementById('ndl');
+let i = 0;
+
+slides.forEach((_, k) => {
+  const b = document.createElement('b');
+  b.addEventListener('click', () => show(k));
+  prog.appendChild(b);
+});
+
+function show(k){
+  i = Math.max(0, Math.min(slides.length - 1, k));
+  slides.forEach((s, n) => s.classList.toggle('on', n === i));
+  [...prog.children].forEach((b, n) => b.classList.toggle('on', n <= i));
+  cnt.textContent = (i + 1) + ' / ' + slides.length;
+  const key = slides[i].dataset.note;
+  ndl.innerHTML = (NOTES[key] || []).map(([t, d]) => '<dt>' + t + '</dt><dd>' + d + '</dd>').join('');
+  window.scrollTo({top: 0, behavior: 'instant'});
+  try { localStorage.setItem('v2r-slide', i); } catch (e) {}
+}
+
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); show(i + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(i - 1); }
+  else if (e.key === 'Home') { e.preventDefault(); show(0); }
+  else if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+  else if (e.key === 'n' || e.key === 'N') {
+    document.body.classList.toggle('notes-on');
+    try { localStorage.setItem('v2r-notes', document.body.classList.contains('notes-on') ? '1' : '0'); } catch (e2) {}
+  }
+});
+
+try {
+  if (localStorage.getItem('v2r-notes') === '1') document.body.classList.add('notes-on');
+} catch (e) {}
+show(0);
+</script>

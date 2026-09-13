@@ -1,6 +1,6 @@
 ---
 name: v2r-loop
-description: Vision to reality. Takes a single free-text vision and carries it to a reviewed branch of working, individually-tested code. An attended head aligns the vision - researching open questions, grilling it until its boundary is decided, fixing the domain language, writing the spec, planning the implementation, and emitting a committed interface skeleton - which you approve once, declaring the ceilings the run may spend. An unattended body then drains it one build unit at a time, each written by an implementer that never sees its test and tested by an author that never sees the implementation, each close earned by a gate that re-runs the test itself. Failed units are reverted out of the tree and preserved on a branch, so the drain never leaves broken code behind. Between drains it reads its own execution traces, captures what it learned, and retries only what failed, stopping when it stops improving. Never writes the trunk, never lands its own PR, and cannot widen its scope after approval. Use when a vision needs building out end to end and you want to be involved once rather than continuously.
+description: Vision to reality. Takes a single free-text vision and carries it to a reviewed branch of working, individually-tested code. An attended head aligns the vision - researching open questions, grilling it until its boundary is decided, fixing the domain language, writing the spec, planning the implementation, and emitting a committed interface skeleton - which you approve once, declaring the ceilings the run may spend. An unattended body then drains it one build unit at a time, each written by an implementer that never sees its test and tested by an author that never sees the implementation, each close earned by a gate that re-runs the test itself. Failed units are reverted out of the tree and preserved on a branch, so the drain never leaves broken code behind. Between drains it reads its own execution traces, captures what it learned, and retries only what failed, stopping when it stops improving. It then turns the run into three human-readable deliverables: the domain document the vision asked for, an interpretability report reconstructing every decision and what it cost, and a navigable presentation deck with speaker notes. Never writes the trunk, never lands its own PR, and cannot widen its scope after approval. Use when a vision needs building out end to end and you want to be involved once rather than continuously.
 argument-hint: "<vision>"
 ---
 
@@ -23,7 +23,20 @@ resolve and **stop before the gate** — never work around one, never ask mid-dr
 |---|---|
 | Inference compute | W&B Inference (serverless — no GPU on the critical path) |
 | `WANDB_API_KEY` | Infisical `biofm/dev`, or `.env` |
-| Trace read | `wandb` MCP server |
+| Trace read | `wandb` MCP server (`query_weave_traces_tool`) |
+| Trace write | `weave.init(WANDB_PROJECT)` + `@weave.op` on every stage |
+| Spend meter | `spend record` / `spend check --cap` — halts on exit 3 |
+
+```bash
+export V2R_TRACE=1                       # without it every span is dropped
+export WANDB_API_KEY=...                 # Infisical biofm/dev, or .env
+export WANDB_PROJECT=<team>/<project>
+```
+
+**`@weave.op`, never `weave.publish`.** `publish` writes an *object*, not a call: it
+succeeds, prints a confident URL, and is invisible to the trace query that Stage 4 and D2
+both depend on. Verify by querying the traces back, not by reading the code — instrumented
+and readable are different properties, and this exact drift has already happened once.
 
 Confirm you are **not** on the trunk branch. If you are, stop.
 
@@ -92,9 +105,76 @@ PR.**
 
 Stop when a drain closes zero new units, or `max_drains` is reached. Report the parked list.
 
+Then go to **Stage 5** — the run is not finished until all three deliverables exist.
+
+## Stage 5 — Deliverables (the run must produce all three)
+
+A drain that leaves only a branch has not finished. Every run ends in three artifacts,
+each built **only** from what the run actually produced. No figure may show a number the
+run did not compute, and no label may be written from your guess when the source says
+otherwise — check it against the data that came back.
+
+### D1 · The domain document
+
+Whatever the vision asked for, written properly for its field. A scientific vision yields
+a paper-shaped document — abstract, introduction, hypothesis, methods, expected results,
+discussion, references. A software vision yields a design document. Match the field's own
+conventions; the vision names the domain, not you.
+
+**Every figure comes from a run that happened.** If the vision admits a computable check —
+a model, a dataset, a benchmark — run it and chart the real output. State plainly what was
+executed and what was not. A predicted result presented as a finding is the one failure
+that discredits everything else on the page.
+
+### D2 · The interpretability report
+
+Reconstruct the decision tree from the traces, not from memory:
+
+```bash
+# the traces are already there — every stage is a @weave.op
+query_weave_traces_tool   # which calls ran, in what order, at what cost
+$R pin                    # the instinct set this drain ran under
+```
+
+For **each fork**: the options that existed, which was taken, and — side by side — why
+each rejected branch lost, in the agent's own stated terms. Against every layer put the
+**running cost to that point**, in completion tokens or metered spend. A fork with no
+alternatives is not a fork; say so and move on rather than inventing a branch.
+
+Close with what the report does *not* establish. A trace shows what an agent said its
+reasons were, never what caused the output, and that distinction belongs on the page.
+
+### D3 · The presentation deck
+
+Scientific structure, one idea per slide:
+
+| | |
+|---|---|
+| 1 | Title — the claim in one line |
+| 2 | **Problem / hypothesis** |
+| 3 | **Solution & methods** — what was reasoned, what was adopted |
+| 4–5 | **Product** — the figures, from real runs |
+| 6 | **Conclusion** |
+| 7 | **Discussion** — limitations, stated before anyone asks |
+
+Required behaviour: one slide visible at a time, `←` / `→` to navigate, **`n` toggles
+speaker notes**, a clickable progress rail and a slide counter. Terse on the slide, full
+technical detail in the notes — every slide carries notes, always. The notes are where the
+mechanism, the exact numbers, and the answers to the obvious challenges live.
+
+### Deliverable rules
+
+- **Schematics over paragraphs.** A flow, a tree, a chart or a labelled table beats prose
+  wherever it can carry the same content.
+- **Both themes, one gutter, phone width.** These get read on someone else's screen.
+- **Every chart drawn to its scale**, with the axis labelled in the units the run produced.
+- **Name the limitations yourself.** Whatever a reader would object to, say it first.
+
 ## Never
 
 - Write the trunk, or land a PR.
+- Present a predicted or seeded number as a measured one.
+- Label a figure from your own assumption when the source data says otherwise.
 - Add a build unit that was not in the approved register.
 - Assert a close. Only `register.py close` closes a unit.
 - Show the implementer the sealed test, or the test-author the implementation.
