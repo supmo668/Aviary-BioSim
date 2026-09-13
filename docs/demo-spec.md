@@ -35,3 +35,12 @@ observe a partially written state file.
 
 In scope: recording, totalling, ceiling configuration, refusal, durable state.
 Out of scope: pricing tables, provider APIs, concurrency across processes, retry policy.
+
+**R5 — The tracker is usable by an aviary agent.**
+The tracker's recording operation is exposed as an `aviary.core.Tool`, so an
+`Environment.reset()` can return it in its tool list. The tool's name, description and
+parameter schema are derived from the operation's own signature and docstring rather than
+restated, so the contract cannot drift from the code.
+
+_(R5 and U-006 were added at a second human gate, after drain 1 had opened. Recorded here
+because the register is the loop's only memory and a scope change must be legible in it.)_

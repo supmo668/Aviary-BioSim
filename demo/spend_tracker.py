@@ -9,6 +9,7 @@ Spec: docs/demo-spec.md
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 
@@ -43,11 +44,18 @@ class SpendTracker:
 
     def record(self, call_id: str, cost_usd: float) -> None:
         """Record one call's cost against `call_id`. — U-001"""
-        raise NotImplementedError("U-001")
+        # The ledger is created on first use so it is unambiguously per-instance:
+        # two trackers never share it, and __init__ stays owned by its own unit.
+        if "_entries" not in self.__dict__:
+            self._entries = []
+        self._entries.append((str(call_id), float(cost_usd)))
 
     def total(self) -> float:
         """Return the sum of every cost recorded so far. — U-002"""
-        raise NotImplementedError("U-002")
+        # fsum, not sum: a budget guard compares this against a ceiling, so the
+        # running total must be the correctly-rounded sum of the costs recorded
+        # rather than an accumulation of per-addition rounding error.
+        return math.fsum(cost for _, cost in self.__dict__.get("_entries", ()))
 
     def check(self) -> None:
         """Return None while spend is within the ceiling; refuse past it. — U-004"""
