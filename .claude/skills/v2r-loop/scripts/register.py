@@ -13,6 +13,7 @@ See docs/adr/0001-register-cli-owns-every-transition.md
 
 import argparse
 import hashlib
+import os
 import subprocess
 import sys
 import time
@@ -113,6 +114,37 @@ def run_sealed_test(path: str) -> tuple[int, str]:
     return completed.returncode, completed.stdout + completed.stderr
 
 
+_SPAN_SINK = None  # tests install a callable here; production resolves weave lazily
+_SPAN_WARNED = False
+
+
+def emit_span(name: str, **attrs) -> None:
+    """Record one iteration span.
+
+    Never raises — a drain must not die on telemetry. But it does not fail
+    silently either: a dropped span means stage 4 has no evidence to read, so
+    the first failure is reported once on stderr.
+    """
+    global _SPAN_WARNED
+    payload = {"name": name, **attrs}
+    if _SPAN_SINK is not None:
+        _SPAN_SINK(payload)
+        return
+    if not os.environ.get("WANDB_API_KEY"):
+        return
+    try:
+        import weave
+
+        weave.init(os.environ.get("WANDB_PROJECT", "3m-m/Aviary-BioSim"))
+        weave.publish(payload, name=name)
+    except Exception as exc:  # noqa: BLE001 — telemetry is never load-bearing
+        if not _SPAN_WARNED:
+            print(f"weave span dropped ({type(exc).__name__}: {exc}); "
+                  f"stage 4 will have no evidence for this drain", file=sys.stderr)
+            _SPAN_WARNED = True
+        return
+
+
 def sha256_file(path: str) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -143,6 +175,7 @@ def cmd_close(args) -> int:
                 f"({recorded[:12]} -> {actual[:12]})",
                 file=sys.stderr,
             )
+            emit_span("unit.halt", unit=unit["id"], reason="sealed-test-modified")
             return EXIT_HALT
 
     code, output = run_sealed_test(unit["sealed_test"])
@@ -150,12 +183,14 @@ def cmd_close(args) -> int:
     if code not in (PYTEST_PASSED, PYTEST_FAILED):
         print(f"HALT: gate could not execute for {unit['id']} (exit {code})", file=sys.stderr)
         print(output, file=sys.stderr)
+        emit_span("unit.halt", unit=unit["id"], reason="gate-unexecutable", pytest_exit=code)
         return EXIT_HALT
 
     if code == PYTEST_FAILED:
         unit["attempts"] += 1
         save(REGISTER, data)
         print(f"{unit['id']} failed its sealed test (attempt {unit['attempts']})", file=sys.stderr)
+        emit_span("unit.attempt", unit=unit["id"], attempts=unit["attempts"], output=output[-2000:])
         return EXIT_TEST_FAILED
 
     unit["state"] = CLOSED
@@ -163,6 +198,7 @@ def cmd_close(args) -> int:
     git("add", "-A")
     git("commit", "-q", "-m", f"{unit['id']} {unit['statement']} (satisfies {unit['satisfies']})")
     print(f"closed {unit['id']}")
+    emit_span("unit.close", unit=unit["id"], satisfies=unit["satisfies"], attempts=unit["attempts"])
     return EXIT_CLOSED
 
 
@@ -197,6 +233,7 @@ def cmd_park(args) -> int:
     unit["evidence"] = str(evidence_dest)
     save(REGISTER, data)
     print(f"parked {unit['id']} -> {branch}; tree restored to {pre_claim[:8]}")
+    emit_span("unit.park", unit=unit["id"], attempts=unit["attempts"], branch=branch)
     return 0
 
 
