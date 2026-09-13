@@ -1,0 +1,4 @@
+# /v2r-loop run state — must stay untracked
+.v2r/
+__pycache__/
+.pytest_cache/
