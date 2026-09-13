@@ -89,6 +89,53 @@ def cmd_next(args) -> int:
     return 0
 
 
+PYTEST_PASSED = 0
+PYTEST_FAILED = 1
+EXIT_NO_SEALED_TEST = 90  # ours, deliberately outside pytest's 0-5 exit space
+EXIT_CLOSED, EXIT_TEST_FAILED, EXIT_HALT = 0, 1, 3
+
+
+def run_sealed_test(path: str) -> tuple[int, str]:
+    """Run one sealed test. Returns (exit code, combined output).
+
+    Exit 5 (no tests collected) is NOT a pass: a sealed test that collects
+    nothing would otherwise close a build unit by never failing.
+    """
+    if not Path(path).exists():
+        return EXIT_NO_SEALED_TEST, f"sealed test not found: {path}"
+    completed = subprocess.run(
+        [sys.executable, "-m", "pytest", path, "-q", "--no-header", "-p", "no:cacheprovider"],
+        capture_output=True,
+        text=True,
+    )
+    return completed.returncode, completed.stdout + completed.stderr
+
+
+def cmd_close(args) -> int:
+    data = load(REGISTER)
+    unit = unit_by_id(data, args.unit)
+
+    code, output = run_sealed_test(unit["sealed_test"])
+
+    if code not in (PYTEST_PASSED, PYTEST_FAILED):
+        print(f"HALT: gate could not execute for {unit['id']} (exit {code})", file=sys.stderr)
+        print(output, file=sys.stderr)
+        return EXIT_HALT
+
+    if code == PYTEST_FAILED:
+        unit["attempts"] += 1
+        save(REGISTER, data)
+        print(f"{unit['id']} failed its sealed test (attempt {unit['attempts']})", file=sys.stderr)
+        return EXIT_TEST_FAILED
+
+    unit["state"] = CLOSED
+    save(REGISTER, data)
+    git("add", "-A")
+    git("commit", "-q", "-m", f"{unit['id']} {unit['statement']} (satisfies {unit['satisfies']})")
+    print(f"closed {unit['id']}")
+    return EXIT_CLOSED
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="register")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -98,6 +145,10 @@ def build_parser() -> argparse.ArgumentParser:
     claim = sub.add_parser("claim", help="claim the next build unit")
     claim.add_argument("unit")
     claim.set_defaults(fn=cmd_claim)
+
+    close = sub.add_parser("close", help="close a unit if its sealed test passes")
+    close.add_argument("unit")
+    close.set_defaults(fn=cmd_close)
     return parser
 
 
