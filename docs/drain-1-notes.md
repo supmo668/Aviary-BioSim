@@ -68,7 +68,22 @@ for o in c._objects():
 ```
 
 So a drain can be perfectly instrumented and still be unreadable by its own documented
-procedure. Either stage 4's instruction changes, or `emit_span` opens a real call.
+procedure. Instrumented and readable are different properties.
+
+**Fixed after drain 1.** `emit_span` now calls a `@weave.op`-decorated function named for the
+transition, so each span is a real traced call. Verified by querying it back rather than by
+reading the code: `count_weave_traces_tool` went from 0 to non-zero, and a filter on the op
+name returns the call with its attributes as inputs and output.
+
+Worth noting `docs/spec.md` "Known gaps" already prescribed `@weave.op` spans — *"`register.py`
+must emit its own `@weave.op` spans per iteration"*. The implementation reached for
+`weave.publish` instead and nothing caught the divergence, because publishing succeeded and
+printed a confident URL. The spec was right and the code drifted from it silently.
+
+**Drain 1's evidence still needs the object API.** Its six closes were published as object
+versions before the fix and are deliberately left as they are — re-emitting them now as calls
+would fabricate trace evidence with the wrong timestamps, asserted by me rather than observed
+by the gate. Drain 2 onward is queryable as calls.
 
 ## Why the instrumentation gap was visible at all
 

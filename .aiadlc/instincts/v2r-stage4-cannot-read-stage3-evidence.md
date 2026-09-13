@@ -1,11 +1,35 @@
 ---
 name: v2r-stage4-cannot-read-stage3-evidence
-confidence: 0.900
+confidence: 1.000
 created: 2026-09-13T18:49:53Z
-last_reinforced: 2026-09-13T18:49:53Z
+last_reinforced: 2026-09-13T18:55:56Z
 ttl_days: 30
 triggers: [.claude/skills/v2r-loop/scripts/register.py, .claude/skills/v2r-loop/SKILL.md, emit_span, weave]
-tags: [v2r-loop, observability, defect]
+tags: [v2r-loop, observability, defect, fixed]
 ---
+FIXED after drain 1 — but the lesson is the durable part, not the fix.
 
-SKILL.md stage 4 says to read a drain's evidence with query_weave_traces_tool over unit.attempt/close/park/halt spans. That query returns ZERO for a drain that emitted evidence perfectly. emit_span calls weave.publish(payload, name=name), which creates a weave OBJECT, not a call/trace span — objects and traces are different stores, and the trace query never sees them. Verified on drain 1: count_weave_traces_tool reported total_count 0 while six unit.close objects sat in the project. Read them instead via the weave client: weave.init(project) then client._objects(), filter object_id, and weave.ref(f'weave:///{entity}/{project}/object/{object_id}:{digest}').get() for each payload. Note every close is a new VERSION of one object named unit.close, not six distinct objects. Either fix stage 4's instruction or make emit_span open a real call; until then, a drain that looks perfectly instrumented is unreadable by its own documented procedure.
+`weave.publish(payload, name=...)` writes a weave OBJECT. Objects and calls are different
+stores, and `query_weave_traces_tool` sees only calls. So a drain that published every span
+perfectly returned `total_count 0` for stage 4's own documented query.
+
+The fix: a `@weave.op`-decorated function named for the transition, invoked once per span, so
+`op_name` is `unit.close` / `unit.park` / `unit.halt` and the call is queryable. Verified by
+querying back, not by reading code.
+
+Two lessons that outlive the bug:
+
+1. INSTRUMENTED AND READABLE ARE DIFFERENT PROPERTIES. Verify telemetry by querying it back,
+   never by inspecting the emitting code. `publish` succeeded and printed a confident URL the
+   entire time it was writing evidence nothing could read.
+2. `docs/spec.md` ALREADY PRESCRIBED `@weave.op` spans and the implementation used `publish`
+   instead. Nothing caught the drift, because the wrong call also "worked". When a spec names
+   a mechanism, the test should assert the mechanism's observable consequence, not that the
+   code ran.
+
+Drain 1's six closes remain objects and are reachable only via `weave.init()` +
+`client._objects()` + `weave.ref(...).get()`. Do NOT re-emit them as calls — that fabricates
+trace evidence with the wrong timestamps, asserted rather than observed.
+
+Tooling note: `instinct capture` on an existing name only REINFORCES it; it does not replace
+the body. To correct an instinct's text, edit the file.
