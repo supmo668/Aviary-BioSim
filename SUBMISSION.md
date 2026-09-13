@@ -71,6 +71,17 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 
 **Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop; all three deliverables. **117 tests green.**
 
+**The limitation that matters most.** Three defects surfaced today, and they are one shape:
+a mechanism reported success while the property it existed to guarantee was absent.
+`weave.publish()` succeeded and printed a confident URL while nothing could read the traces.
+The register pinned three inputs and not the per-unit prompts, which is where the difficulty
+actually lives. The instinct pin was computed correctly and does not identify what it names,
+because Stop-hook reinforcement rewrites the store's frontmatter whether or not anything was
+learned. **All three were caught by hand, not by the loop.** The sealed gate is built to catch
+a build unit that fails; it is blind to a mechanism that passes for the wrong reason. We think
+that is the honest frontier of this design, and we would rather state it than have a judge
+find it.
+
 **Not claimed:** ESM-2 has certainly seen insulin — this is recovery of known constraint, not discovery of new biology. No wet experiment has been run. A trace shows what an agent *said* its reasons were, not what caused the output. The register pins the instinct set, seed and register hash but **not the per-unit prompts**, which is where difficulty actually lives — our own worker agent found this, and we narrowed the documented claim from reproduction to attribution rather than leave an overclaim in a public repo.
 
 ## Run it

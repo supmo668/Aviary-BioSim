@@ -359,6 +359,7 @@
     <li><b>A trace shows stated reasons, not causes.</b> We can read what the agent said it was doing. Whether that is why it did it is a different question, and not one a trace answers.</li>
     <li><b>No wet experiment has been run.</b> The pre-registered design is assessable from the literature; its conclusions are not, because there are none yet.</li>
     <li><b>Two of our sequence labels were wrong</b> &mdash; a rattlesnake fragment labelled chicken, <em>Xenopus</em> labelled zebrafish. The data caught it. Labels now come from the database, never from us.</li>
+    <li><b>And the one that matters most.</b> Three defects surfaced today and they are one shape: a mechanism reported success while the property it existed to guarantee was absent. All three were caught by hand. <b>The gate catches a unit that fails; it is blind to a mechanism that passes for the wrong reason.</b></li>
   </ul>
   <div class="cols" style="margin-top:8px">
     <div class="box hi"><div class="h">What we would do next</div><div class="b">Pin the per-unit prompts into the run record &mdash; they are where the difficulty lives, and until they are hashed the replay claim is attribution, not reproduction. We narrowed the claim rather than overstate it.</div></div>
@@ -412,6 +413,7 @@ const NOTES = {
     ["Lead with the limitation", "Say the memorisation point before a judge does. ESM-2 has certainly seen insulin. The claim is narrow on purpose."],
     ["“Did you seed the answer?”", "No. The objective names the protein and asks which residues are least tolerant. Cysteines, disulfides and the expected direction appear nowhere in the prompt. The audit trail of all 66 measurements ships with the run."],
     ["“What stops it building the wrong thing efficiently?”", "One human gate, before any code: you approve the spec, the register and the interface skeleton. Scope freezes there and no later drain can widen it. That is the one failure sealed tests cannot catch, which is exactly why a human sits at that point."],
+    ["The deepest limitation", "Say this one unprompted, it is the most credible thing in the talk. Three defects today, one shape: <code>weave.publish</code> succeeded while nothing could read the traces; the register pinned three inputs but not the prompts where difficulty lives; the instinct pin is computed correctly and does not identify what it names, because hooks rewrite the store whether or not anything was learned. <b>All three were caught by hand.</b> A sealed gate catches a unit that fails. It cannot catch a mechanism that passes for the wrong reason \u2014 and that is the frontier, not a bug list."],
     ["The prompt-pinning gap", "Our own worker agent found it. The register pins the instinct set, the seed and the register hash — not the per-unit prompts, which is where difficulty actually lives. We narrowed the documented claim from reproduction to attribution rather than leave an overclaim in a public repo."]
   ]
 };
