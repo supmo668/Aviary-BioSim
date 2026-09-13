@@ -11,8 +11,22 @@ def test_emit_span_is_a_noop_without_credentials(monkeypatch, capsys):
     assert capsys.readouterr().err == ""
 
 
+def test_emit_span_needs_explicit_opt_in_not_just_a_key(monkeypatch, capsys):
+    """An ambient key from an unrelated project must not publish our data."""
+    monkeypatch.setenv("WANDB_API_KEY", "fake")
+    monkeypatch.delenv("V2R_TRACE", raising=False)
+    monkeypatch.setattr(register, "_SPAN_SINK", None)
+    monkeypatch.setattr(register, "_SPAN_WARNED", False)
+    monkeypatch.setitem(sys.modules, "weave", None)
+
+    register.emit_span("unit.close", unit="U-001")
+
+    assert capsys.readouterr().err == ""
+
+
 def test_emit_span_reports_a_dropped_span_once(monkeypatch, capsys):
     monkeypatch.setenv("WANDB_API_KEY", "fake")
+    monkeypatch.setenv("V2R_TRACE", "1")
     monkeypatch.setattr(register, "_SPAN_SINK", None)
     monkeypatch.setattr(register, "_SPAN_WARNED", False)
     monkeypatch.setitem(sys.modules, "weave", None)  # `import weave` then raises

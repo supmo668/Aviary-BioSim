@@ -1,12 +1,16 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["pyyaml"]
+# dependencies = ["pyyaml", "pytest"]
 # ///
 """Register CLI for /v2r-loop.
 
-Owns every state transition. Contains no LLM call and no network call: the rest of
-the system trusts this file's correctness, so it must be verifiable by reading it.
+Owns every state transition. The rest of the system trusts this file without a
+human reading the register, so it must be verifiable by reading it.
+
+Contains no LLM call. The only network path is `emit_span`, which is fire-and-forget
+telemetry emitted strictly AFTER a decision is made, requires explicit opt-in via
+V2R_TRACE=1, and can never change a verdict.
 
 See docs/adr/0001-register-cli-owns-every-transition.md
 """
@@ -16,7 +20,9 @@ import hashlib
 import os
 import subprocess
 import sys
+import tempfile
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import yaml
@@ -92,26 +98,85 @@ def cmd_next(args) -> int:
     return 0
 
 
-PYTEST_PASSED = 0
-PYTEST_FAILED = 1
-EXIT_NO_SEALED_TEST = 90  # ours, deliberately outside pytest's 0-5 exit space
+PASS, FAIL, HALT = "pass", "fail", "halt"
 EXIT_CLOSED, EXIT_TEST_FAILED, EXIT_HALT = 0, 1, 3
 
 
-def run_sealed_test(path: str) -> tuple[int, str]:
-    """Run one sealed test. Returns (exit code, combined output).
+def _pytest_available() -> bool:
+    """Can the interpreter we shell out to actually import pytest?
 
-    Exit 5 (no tests collected) is NOT a pass: a sealed test that collects
-    nothing would otherwise close a build unit by never failing.
+    Not hypothetical: under `uv run --with pyyaml register.py` it cannot, and
+    `python -m pytest` then exits 1 — indistinguishable from a failing test.
+    A gate that never ran must never look like a gate that ran and failed.
+    """
+    probe = subprocess.run(
+        [sys.executable, "-c", "import pytest"], capture_output=True, text=True
+    )
+    return probe.returncode == 0
+
+
+def _parse_junit(xml_path: Path) -> dict[str, int] | None:
+    """Exact counts from pytest's own report. None if it wrote nothing."""
+    if not xml_path.exists():
+        return None
+    try:
+        root = ET.parse(xml_path).getroot()
+    except ET.ParseError:
+        return None
+    suite = root if root.tag == "testsuite" else root.find("testsuite")
+    if suite is None:
+        return None
+    get = lambda k: int(suite.get(k, 0))  # noqa: E731
+    total, failures, errors, skipped = get("tests"), get("failures"), get("errors"), get("skipped")
+    return {
+        "tests": total,
+        "failures": failures,
+        "errors": errors,
+        "skipped": skipped,
+        "passed": total - failures - errors - skipped,
+    }
+
+
+def run_sealed_test(path: str) -> tuple[str, str]:
+    """Run one sealed test and return (verdict, output), verdict in {pass, fail, halt}.
+
+    The verdict comes from pytest's junit-xml counts, NOT from its exit code.
+    Exit codes conflate too much: a missing pytest, an empty file and a real
+    failure all surface as 1 or 0. A unit may only close when at least one
+    assertion actually passed and nothing was skipped.
     """
     if not Path(path).exists():
-        return EXIT_NO_SEALED_TEST, f"sealed test not found: {path}"
-    completed = subprocess.run(
-        [sys.executable, "-m", "pytest", path, "-q", "--no-header", "-p", "no:cacheprovider"],
-        capture_output=True,
-        text=True,
-    )
-    return completed.returncode, completed.stdout + completed.stderr
+        return HALT, f"sealed test not found: {path}"
+    if not _pytest_available():
+        return HALT, f"pytest is not importable by {sys.executable}; the gate cannot execute"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        xml_path = Path(tmp) / "report.xml"
+        completed = subprocess.run(
+            [
+                sys.executable, "-m", "pytest", path,
+                "-q", "--no-header", "-p", "no:cacheprovider",
+                f"--junitxml={xml_path}",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        counts = _parse_junit(xml_path)
+
+    output = completed.stdout + completed.stderr
+    if counts is None:
+        return HALT, f"pytest produced no report (exit {completed.returncode})\n{output}"
+    if counts["errors"]:
+        return HALT, f"sealed test errored during collection or setup\n{output}"
+    if counts["tests"] == 0:
+        return HALT, f"sealed test collected nothing\n{output}"
+    if counts["skipped"]:
+        return HALT, f"sealed test skipped {counts['skipped']} of {counts['tests']} tests\n{output}"
+    if counts["failures"]:
+        return FAIL, output
+    if counts["passed"] == 0:
+        return HALT, f"sealed test asserted nothing\n{output}"
+    return PASS, output
 
 
 _SPAN_SINK = None  # tests install a callable here; production resolves weave lazily
@@ -130,7 +195,9 @@ def emit_span(name: str, **attrs) -> None:
     if _SPAN_SINK is not None:
         _SPAN_SINK(payload)
         return
-    if not os.environ.get("WANDB_API_KEY"):
+    # Explicit opt-in. An ambient WANDB_API_KEY from an unrelated project must
+    # never cause this file to publish unit statements and test output.
+    if os.environ.get("V2R_TRACE") != "1" or not os.environ.get("WANDB_API_KEY"):
         return
     try:
         import weave
@@ -163,8 +230,13 @@ def cmd_seal(args) -> int:
 
 
 def cmd_close(args) -> int:
+    """Close a build unit — but only by observing its sealed test pass, here, now."""
     data = load(REGISTER)
     unit = unit_by_id(data, args.unit)
+
+    if unit["state"] != CLAIMED:
+        print(f"{unit['id']} is {unit['state']}, not claimed", file=sys.stderr)
+        return 2
 
     recorded = unit.get("sealed_test_sha")
     if recorded and Path(unit["sealed_test"]).exists():
@@ -178,25 +250,34 @@ def cmd_close(args) -> int:
             emit_span("unit.halt", unit=unit["id"], reason="sealed-test-modified")
             return EXIT_HALT
 
-    code, output = run_sealed_test(unit["sealed_test"])
+    verdict, output = run_sealed_test(unit["sealed_test"])
 
-    if code not in (PYTEST_PASSED, PYTEST_FAILED):
-        print(f"HALT: gate could not execute for {unit['id']} (exit {code})", file=sys.stderr)
+    if verdict == HALT:
+        print(f"HALT: gate could not execute for {unit['id']}", file=sys.stderr)
         print(output, file=sys.stderr)
-        emit_span("unit.halt", unit=unit["id"], reason="gate-unexecutable", pytest_exit=code)
+        emit_span("unit.halt", unit=unit["id"], reason="gate-unexecutable")
         return EXIT_HALT
 
-    if code == PYTEST_FAILED:
+    if verdict == FAIL:
         unit["attempts"] += 1
         save(REGISTER, data)
         print(f"{unit['id']} failed its sealed test (attempt {unit['attempts']})", file=sys.stderr)
         emit_span("unit.attempt", unit=unit["id"], attempts=unit["attempts"], output=output[-2000:])
         return EXIT_TEST_FAILED
 
+    # Commit FIRST, persist the closed state only once it is durable. The reverse
+    # order can leave the register claiming `closed` with no commit behind it.
+    try:
+        git("add", "-A")
+        git("commit", "-q", "-m",
+            f"{unit['id']} {unit['statement']} (satisfies {unit['satisfies']})")
+    except (subprocess.CalledProcessError, KeyError) as exc:
+        print(f"HALT: could not commit {unit['id']}: {exc}", file=sys.stderr)
+        emit_span("unit.halt", unit=unit["id"], reason="commit-failed")
+        return EXIT_HALT
+
     unit["state"] = CLOSED
     save(REGISTER, data)
-    git("add", "-A")
-    git("commit", "-q", "-m", f"{unit['id']} {unit['statement']} (satisfies {unit['satisfies']})")
     print(f"closed {unit['id']}")
     emit_span("unit.close", unit=unit["id"], satisfies=unit["satisfies"], attempts=unit["attempts"])
     return EXIT_CLOSED
@@ -359,7 +440,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
-    return args.fn(args)
+    try:
+        return args.fn(args)
+    except KeyError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
