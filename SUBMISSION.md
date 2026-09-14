@@ -81,7 +81,9 @@ because Stop-hook reinforcement rewrites the store's frontmatter whether or not 
 learned. **All three were caught by hand, not by the loop.** The sealed gate is built to catch
 a build unit that fails; it is blind to a mechanism that passes for the wrong reason. We think
 that is the honest frontier of this design, and we would rather state it than have a judge
-find it.
+find it. It is also not only ours: applying the same lens to a mature, pre-existing quality
+gate elsewhere in our tooling found a suite of entirely skipped tests signing green — it had
+a self-test, and the self-test passed. The pattern is not a story about code written in a day.
 
 **Not claimed:** ESM-2 has certainly seen insulin — this is recovery of known constraint, not discovery of new biology. No wet experiment has been run. A trace shows what an agent *said* its reasons were, not what caused the output. The register pins the instinct set, seed and register hash but **not the per-unit prompts**, which is where difficulty actually lives — our own worker agent found this, and we narrowed the documented claim from reproduction to attribution rather than leave an overclaim in a public repo.
 

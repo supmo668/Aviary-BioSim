@@ -116,6 +116,11 @@ marimo dashboard       https://claude.ai/code/artifact/a5dd195c-e3f5-4d6b-a41d-4
 The dashboard link is the **evidence for the marimo track** — put it somewhere a judge will
 click. Without it the track rests on a Python file nobody will install.
 
+> **Note on the artifact links.** Once shared, the publishing session loses write access to
+> them — they stay live and public for judges, but they can no longer be edited in place. To
+> change a deck after sharing, it has to be republished to a **new** URL and the form updated.
+> The five URLs below are live and were confirmed in a private window; treat them as frozen.
+
 **Share all five** from each artifact's share menu, then open them in a private window to
 confirm. Artifacts are private by default; an unshared link shows a judge nothing.
 
