@@ -10,5 +10,6 @@ science/out/
 .claude/logs/
 .claude/usr/
 config/monitor-pids.json
+workstreams/
 .aiadlc-agent
 .aiadlc-coordinator
