@@ -18,7 +18,7 @@
 
 ## Summary
 
-**v2r-loop** takes one free-text vision and drives it to a reviewed branch of working, individually-tested code. What makes it self-improving is that it **cannot grade its own homework**: the implementer never sees its test, the test author never sees the implementation, and a 451-line register CLI with no LLM in it re-runs the sealed test before any unit may close. Today the loop built a spend meter under that gate — and then that component became a tool inside an **aviary `Environment`** whose other tools run **ESM-2 on GPU over real UniProt sequences**, where a second agent found insulin's disulfide constraint by taking 66 real measurements and running controls nobody asked it to run.
+**v2r-loop** takes one free-text vision and drives it to a reviewed branch of working, individually-tested code. What makes it self-improving is that it **cannot grade its own homework**: the implementer never sees its test, the test author never sees the implementation, and a 451-line register CLI with no LLM in it re-runs the sealed test before any unit may close. Today the loop built a spend meter under that gate — and then that component became the budget guard inside an **aviary `Environment`** whose tools run **ESM-2 on GPU over real UniProt sequences**, where a second agent found insulin's disulfide constraint by taking 66 real measurements and running controls nobody asked it to run.
 
 ## What it does
 
@@ -30,7 +30,7 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 
 **The loop.** `register.py` owns every transition — `status next claim seal close park check drain-start drain-end pin`. `close` re-runs the sealed test and refuses anything less than an observed pass. `park` preserves the failed attempt on `park/U-nnn`, resets the tree to the unit's pre-claim SHA, and records evidence — so **every commit on the branch is green by construction**.
 
-**RL environment — aviary.** [Future-House/aviary](https://github.com/Future-House/aviary) supplies the contract. `BioSimEnv` implements both abstract methods; `step()` runs a protein language model rather than a simulation. Its tool list is `score_variant`, `embed_sequence` (ESM-2 650M on Apple MPS over UniProt) and `record` — the spend meter drain 1 produced, exposed via `Tool.from_function`. The reward channel is wired to `0.0` deliberately: aviary carries a reward because it is an RL gym, this is tool-mediated discovery, and inventing a scalar would be a fabricated signal.
+**RL environment — aviary.** [Future-House/aviary](https://github.com/Future-House/aviary) supplies the contract. `BioSimEnv` implements both abstract methods; `step()` runs a protein language model rather than a simulation. Its tool list is `score_variant`, `embed_sequence` (ESM-2 650M on Apple MPS over UniProt) and `spend_remaining`, a read-only view of the budget. The budget itself is drain 1's `SpendTracker`, and only the harness writes it, through `charge()` for every model call it pays for: `step()` refuses to run a tool once spend passes the ceiling. The agent is the party being metered, so it is offered no tool that writes the ledger. The reward channel is wired to `0.0` deliberately: aviary carries a reward because it is an RL gym, this is tool-mediated discovery, and inventing a scalar would be a fabricated signal.
 
 **Agent protocol — MCP.** The W&B MCP server is how the loop reads its own execution traces between drains. The environment's tools are exposed through `reset`/`step`, not one endpoint per tool — deliberately, because aviary's own `make_tool_server` documents that calling tools directly bypasses the side effects that live in `step`.
 
@@ -45,7 +45,7 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 | Every other residue, mean score | **−5.85** |
 | Full 110-residue scan on Apple MPS | **7 s** |
 | Agent-chosen measurements | **66** |
-| Tests green across the loop | **117** |
+| Tests green across the loop | **158** |
 
 **Two known outcomes recovered from sequence alone.** *Sus scrofa* sits nearest human (0.55) — porcine insulin differs by a single residue, which is why it was the therapeutic before recombinant. *Cavia porcellus* sits furthest (2.69), beyond zebrafish and *Xenopus* — the known hystricomorph divergence.
 
@@ -70,7 +70,7 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 
 ## Status, stated honestly
 
-**Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop; all three deliverables. **117 tests green.**
+**Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop and its budget enforcement; all three deliverables. **158 tests green.**
 
 **The limitation that matters most.** Three defects surfaced today, and they are one shape:
 a mechanism reported success while the property it existed to guarantee was absent.
@@ -92,6 +92,8 @@ a self-test, and the self-test passed. The pattern is not a story about code wri
 ```bash
 cd .claude/skills/v2r-loop/scripts
 uv run --with pytest --with pyyaml pytest tests/ -q          # 42 passed
+uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave \
+  pytest science/tests -q                                    # 41 passed
 
 uv run --with pyyaml demo/gate_demo.py                       # the gate refusing, in 10 s
 
@@ -100,5 +102,7 @@ uv run --with marimo --with pyyaml --with pandas --with altair --with pyarrow \
   marimo run dashboard/v2r_dashboard.py
 
 uv run science/run_experiment.py                             # the real ESM-2 scan
-uv run science/run_discovery.py                              # the traced agent loop
+# The discovery loop meters every model call and has no default price: declare your
+# provider's USD price per 1M tokens in PRICE first, or it exits without running.
+BIOSIM_USD_PER_1M_TOKENS="$PRICE" uv run science/run_discovery.py   # the traced agent loop
 ```
