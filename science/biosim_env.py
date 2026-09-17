@@ -32,6 +32,7 @@ scalar to fill the slot would be a fabricated signal.
 """
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -42,6 +43,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "demo"))
 
 import esm_tool  # noqa: E402
 from spend_tracker import SpendTracker  # noqa: E402
+
+
+def _valid_cost(cost_usd) -> float:
+    """A cost the ledger may accept: a finite, non-negative number, not a bool.
+
+    Anything else is refused rather than coerced. A negative or NaN cost is not a
+    rounding problem, it is a way to switch the budget off: a negative lowers the
+    total below the ceiling, and a NaN total makes `total > ceiling` false forever.
+    """
+    if isinstance(cost_usd, bool):
+        raise ValueError(f"cost_usd must be a number, not {cost_usd!r}")
+    try:
+        cost = float(cost_usd)
+    except (TypeError, ValueError):
+        raise ValueError(f"cost_usd must be a number, not {cost_usd!r}") from None
+    if not math.isfinite(cost) or cost < 0:
+        raise ValueError(f"cost_usd must be finite and non-negative, not {cost_usd!r}")
+    return cost
 
 
 class BioSimState:
@@ -70,16 +89,27 @@ class BioSimEnv(Environment[BioSimState]):
         """Record spend on the environment's own ledger — the harness path.
 
         Call this for every model call the rollout pays for. It records only;
-        the refusal happens in `step()`, before the next tool runs.
+        the refusal happens in `step()`, before the next tool runs. A nonsense cost
+        raises ValueError here — a harness bug should be loud, not silently absorbed.
         """
-        self.tracker.record(call_id, cost_usd)
+        self.tracker.record(call_id, _valid_cost(cost_usd))
+
+    def _agent_record(self, call_id: str, cost_usd: float) -> None:
+        """Execution path for the agent's `record` tool.
+
+        The agent sees the schema derived from `SpendTracker.record`, but its calls
+        run through here, because the agent is the metered party and its arguments
+        are untrusted: without this, `record(cost_usd=-100)` or `record(cost_usd="nan")`
+        switches the budget off in a single tool call.
+        """
+        self.tracker.record(call_id, _valid_cost(cost_usd))
 
     async def reset(self) -> tuple[list[Message], list[Tool]]:
         self.state = BioSimState(self.state.max_rounds)
         fns = [esm_tool.score_variant, esm_tool.embed_sequence]
         self.tools = [Tool.from_function(fn) for fn in fns] + [self.tracker.as_tool()]
         self._fns = {fn.__name__: fn for fn in fns}
-        self._fns["record"] = self.tracker.record
+        self._fns["record"] = self._agent_record
         obs = [Message(content=(
             f"{self.objective}\n\n"
             "You have tools that run a real protein language model (ESM-2) over real "

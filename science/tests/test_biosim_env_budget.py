@@ -134,3 +134,47 @@ def test_an_ordinary_tool_failure_is_still_reported_not_raised():
     obs, reward, done, truncated = _step(env, ("embed_sequence", {"accession": "P01308"}))
     assert CALLS == ["embed_sequence"]
     assert "tool error" in str(obs[0].content)
+
+
+# --- QG finding: the agent-facing `record` tool must not be able to lower or poison
+# the ledger. The agent is the metered party and its tool arguments are untrusted.
+
+@pytest.mark.parametrize("bad_cost", [-100.0, float("nan"), "nan", float("-inf"), float("inf"), True, "abc"])
+def test_the_agent_cannot_lower_or_poison_the_ledger_through_record(bad_cost):
+    env = _env(ceiling=1.0)
+    env.charge("model-call-1", 5.0)          # genuinely over budget
+    before = env.tracker.total()
+    obs, *_ = _step_unchecked(env, ("record", {"call_id": "agent", "cost_usd": bad_cost}))
+    assert env.tracker.total() == before, f"record({bad_cost!r}) changed the ledger"
+    with pytest.raises(BudgetExceeded):     # still refused afterwards
+        _step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
+
+
+@pytest.mark.parametrize("bad_cost", [-1.0, float("nan"), float("-inf"), float("inf")])
+def test_the_harness_ledger_path_rejects_nonsense_loudly(bad_cost):
+    env = _env(ceiling=10.0)
+    with pytest.raises(ValueError):
+        env.charge("model-call-1", bad_cost)
+    assert env.tracker.total() == 0.0
+
+
+def test_a_valid_agent_report_still_counts_and_zero_is_allowed():
+    env = _env(ceiling=10.0)
+    _step(env, ("record", {"call_id": "agent-1", "cost_usd": 0.5}),
+               ("record", {"call_id": "agent-2", "cost_usd": 0}))
+    assert env.tracker.total() == pytest.approx(0.5)
+
+
+def _step_unchecked(env, *calls):
+    """Run a step whose single record call happens while already over budget.
+
+    step() refuses before every tool, so to reach record's own validation the
+    tracker must be under budget at the moment of the call: lift the ceiling for
+    the duration of the step, then restore it.
+    """
+    ceiling = env.tracker.ceiling_usd
+    env.tracker.ceiling_usd = float("inf")
+    try:
+        return _step(env, *calls)
+    finally:
+        env.tracker.ceiling_usd = ceiling
