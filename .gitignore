@@ -8,5 +8,6 @@ science/out/
 # aiadlc coordination internals — live in the private superproject, symlinked in
 .claude/agents/
 .claude/logs/
+.claude/usr/
 .aiadlc-agent
 .aiadlc-coordinator
