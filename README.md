@@ -54,7 +54,7 @@ The gate now ignores exit codes entirely. It parses pytest's junit-xml and requi
 
 **Requirements are standing; build units are derived.** A requirement like *"Modal spend is tracked and the run halts before exceeding the declared credit"* is never *done* — it must hold across every later refactor. Marking it closed stops it being enforced. So requirements stay open forever and build units, which close exactly once, carry `satisfies: R9` back to them. ([ADR-0002](docs/adr/0002-requirements-standing-build-units-derived.md))
 
-**A self-improving loop that refuses to improve mid-run.** Instincts are hash-pinned at drain start. Adopting them mid-drain would build `U-001` and `U-023` with materially different agents, so the same register replayed would produce different code with no recoverable cause. The pin is free: the instinct store is in-repo, so it is `git rev-parse HEAD:.aiadlc/instincts`. ([ADR-0003](docs/adr/0003-instincts-pinned-per-drain.md))
+**A self-improving loop that refuses to improve mid-run.** Instincts are pinned at drain start. Adopting them mid-drain would build `U-001` and `U-023` with materially different agents, so the same register replayed would produce different code with no recoverable cause. The pin is `git rev-parse HEAD:.aiadlc/instincts` — but it is only an approximate label: hook reinforcement rewrites the store with nothing learned, so the pin moves on its own, and nothing yet stops that happening mid-drain. ([ADR-0003](docs/adr/0003-instincts-pinned-per-drain.md))
 
 ## See it
 

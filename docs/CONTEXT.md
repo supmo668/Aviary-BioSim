@@ -71,9 +71,11 @@ test**, then **close** or **park** it.
 **Drain**:
 One complete pass over a **register** under a single pinned **instinct set** — every
 **iteration** from the first claim until no open **build unit** remains. The unit of
-**attribution**: a drain's closes and parks are pinned to an exact register digest, an exact
-instinct tree SHA and a seed, so a divergence between two drains can always be traced to
-which of the three changed. That is weaker than reproducibility and deliberately so — the
+**attribution**: a drain's closes and parks are pinned to an exact register digest and a seed,
+and labelled with the **instinct pin**, which identifies the instinct set only approximately
+(see **Instinct pin**). A changed digest or seed explains a divergence between two drains; an
+unchanged pair does not rule out instinct, prompt or builder variation. That is weaker than
+reproducibility and deliberately so — the
 work is done by LLM subagents and is not deterministic at the token level, so determinism of
 the *record* is assertable while determinism of the *builder* is not. Successive drains are
 how the loop improves; within a drain nothing about the pinned inputs changes.

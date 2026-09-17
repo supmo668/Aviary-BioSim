@@ -18,7 +18,7 @@
 
 ## Summary
 
-**v2r-loop** takes one free-text vision and drives it to a reviewed branch of working, individually-tested code. What makes it self-improving is that it **cannot grade its own homework**: the implementer never sees its test, the test author never sees the implementation, and a 451-line register CLI with no LLM in it re-runs the sealed test before any unit may close. Today the loop built a spend meter under that gate — and then that component became the budget guard inside an **aviary `Environment`** whose tools run **ESM-2 on GPU over real UniProt sequences**, where a second agent found insulin's disulfide constraint by taking 66 real measurements and running controls nobody asked it to run.
+**v2r-loop** takes one free-text vision and drives it to a reviewed branch of working, individually-tested code. What makes it self-improving is that it **cannot grade its own homework**: the implementer never sees its test, the test author never sees the implementation, and a 451-line register CLI with no LLM in it re-runs the sealed test before any unit may close. Today the loop built a spend meter under that gate — and then that component went into an **aviary `Environment`** (since hardened into its budget guard) whose tools run **ESM-2 on GPU over real UniProt sequences**, where a second agent found insulin's disulfide constraint by taking 66 real measurements and running controls nobody asked it to run.
 
 ## What it does
 
@@ -87,7 +87,7 @@ find it. It is also not only ours: applying the same lens to a mature, pre-exist
 gate elsewhere in our tooling found a suite of entirely skipped tests signing green — it had
 a self-test, and the self-test passed. The pattern is not a story about code written in a day.
 
-**Not claimed:** ESM-2 has certainly seen insulin — this is recovery of known constraint, not discovery of new biology. No wet experiment has been run. A trace shows what an agent *said* its reasons were, not what caused the output. The register pins the instinct set, seed and register hash but **not the per-unit prompts**, which is where difficulty actually lives — our own worker agent found this, and we narrowed the documented claim from reproduction to attribution rather than leave an overclaim in a public repo.
+**Not claimed:** ESM-2 has certainly seen insulin — this is recovery of known constraint, not discovery of new biology. No wet experiment has been run. A trace shows what an agent *said* its reasons were, not what caused the output. The register pins the seed and register hash, labels the instinct set only approximately, and does **not** pin the per-unit prompts, which is where difficulty actually lives — our own worker agent found this, and we narrowed the documented claim from reproduction to attribution rather than leave an overclaim in a public repo.
 
 ## Run it
 
