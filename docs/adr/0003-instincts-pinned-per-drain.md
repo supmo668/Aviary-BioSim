@@ -1,8 +1,13 @@
 # Instincts are pinned for the duration of a drain
 
-The loop improves across **drains** and refuses to improve during one. The instinct set is
-hashed at drain start, written to the **run record**, and does not change until the drain
-ends — even though aiadlc's Stop hook keeps reinforcing instincts throughout.
+_Amended after drain 1: the mechanism below does not enforce what this paragraph intends.
+See **Correction, after drain 1**._
+
+The loop is intended to improve across **drains** and to refuse to improve during one. The
+instinct set is hashed at drain start and written to the **run record**, and it is *intended*
+not to change until the drain ends — even though aiadlc's Stop hook keeps reinforcing
+instincts throughout. That intent is currently **not enforced**: the same Stop hook rewrites
+the store, so the pin can move with nothing learned, including mid-drain.
 
 The learning substrate is **aiadlc's existing instinct layer**, not a second system. It
 stores at `.aiadlc/instincts`, surfaces via the SessionStart hook, reinforces via the Stop
