@@ -201,3 +201,71 @@ def test_the_harness_ledger_path_rejects_nonsense_loudly(bad_cost):
     with pytest.raises(ValueError):
         env.charge("model-call-1", bad_cost)
     assert env.tracker.total() == 0.0
+
+
+# --- Re-gate test findings: spend_remaining must stay read-only however it is called,
+# and must be refused past the ceiling like every other tool.
+
+def _spend_remaining_tool(env):
+    return next(t for t in env.tools if t.info.name == "spend_remaining")
+
+
+def test_spend_remaining_takes_no_arguments():
+    """Pins the schema: a spend_remaining that grew a cost parameter would reintroduce
+    the record bypass under a name the agent is allowed to call."""
+    env = _env(ceiling=10.0)
+    params = _spend_remaining_tool(env).info.parameters
+    assert not (params.properties or {}), params
+    assert not (params.required or []), params
+
+
+@pytest.mark.parametrize("cost", [-100.0, float("nan"), "nan", 1e9])
+def test_arguments_to_spend_remaining_cannot_write_the_ledger(cost):
+    """Under budget, so check() cannot mask a write that did happen."""
+    env = _env(ceiling=10.0)
+    env.charge("model-call-1", 0.5)
+    obs, *_ = _step(env, ("spend_remaining", {"cost_usd": cost}))
+    assert env.tracker.total() == 0.5
+    assert "tool error" in str(obs[0].content)
+
+
+def test_a_record_call_under_budget_is_still_not_a_tool():
+    """The earlier record regression runs over budget, where check() would stop even a
+    restored record tool before it ran. Under budget, only its absence refuses it."""
+    env = _env(ceiling=10.0)
+    env.charge("model-call-1", 0.5)
+    obs, *_ = _step(env, ("record", {"call_id": "agent", "cost_usd": -100.0}))
+    assert "no such tool" in str(obs[0].content)
+    assert env.tracker.total() == 0.5
+
+
+def test_spend_remaining_never_calls_the_ledger_write_path(monkeypatch):
+    env = _env(ceiling=10.0)
+    env.charge("model-call-1", 0.5)
+    monkeypatch.setattr(env.tracker, "record",
+                        lambda *a, **k: pytest.fail("spend_remaining wrote the ledger"))
+    for _ in range(3):
+        _step(env, ("spend_remaining", {}))
+    assert env.tracker.total() == 0.5
+
+
+def test_over_budget_spend_remaining_is_refused_and_does_not_run():
+    env = _env(ceiling=1.0)
+    env.charge("model-call-1", 1.5)
+    ran = []
+    real = env._fns["spend_remaining"]
+    env._fns["spend_remaining"] = lambda: ran.append(1) or real()
+    with pytest.raises(BudgetExceeded):
+        _step(env, ("spend_remaining", {}))
+    assert ran == []
+
+
+def test_spend_remaining_is_exact_and_never_rounded_or_clamped():
+    env = _env(ceiling=1.0)
+    env.charge("model-call-1", 0.123)
+    obs, *_ = _step(env, ("spend_remaining", {}))
+    assert float(obs[0].content) == pytest.approx(0.877, abs=1e-9)
+
+    over = _env(ceiling=1.0)
+    over.charge("model-call-1", 1.5)
+    assert over.spend_remaining() == pytest.approx(-0.5)
