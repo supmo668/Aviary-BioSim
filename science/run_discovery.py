@@ -21,6 +21,7 @@ must be declared in BIOSIM_USD_PER_1M_TOKENS — there is no default, because a
 guessed or zero price would make the budget guard pass while metering nothing.
 """
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -49,8 +50,8 @@ def usd_per_1m_tokens() -> float:
         price = float(raw)
     except ValueError:
         sys.exit(f"BIOSIM_USD_PER_1M_TOKENS={raw!r} is not a number.")
-    if not price > 0:
-        sys.exit(f"BIOSIM_USD_PER_1M_TOKENS={raw!r} must be positive; a zero price meters nothing.")
+    if not (math.isfinite(price) and price > 0):
+        sys.exit(f"BIOSIM_USD_PER_1M_TOKENS={raw!r} must be finite and positive; a zero or infinite price meters nothing.")
     return price
 
 OBJECTIVE = (
@@ -101,11 +102,32 @@ def paid_turn(env: BioSimEnv, price: float, call_id: str, messages: list, tools:
 
 @weave.op()
 async def measure(env: BioSimEnv, calls: list) -> list:
-    """Hand the agent's chosen measurements to the environment and run them."""
-    action = ToolRequestMessage(content=None, tool_calls=[
-        ToolCall.from_name(c["name"], **json.loads(c["arguments"] or "{}")) for c in calls])
-    obs, reward, done, truncated = await env.step(action)
-    return [o.content for o in obs]
+    """Hand the agent's chosen measurements to the environment and run them.
+
+    Returns one result per requested call, in the order the agent asked for them,
+    matched by call id. The environment answers valid calls before invalid ones, so
+    pairing its responses by position would give one call's result to another.
+
+    Each call's arguments are parsed on their own: a model that emits truncated or
+    non-object JSON gets a tool error for that call, and the rest of the batch runs.
+    """
+    results: dict = {}
+    requests = []
+    for c in calls:
+        try:
+            args = json.loads(c["arguments"] or "{}")
+            if not isinstance(args, dict):
+                raise ValueError(f"expected a JSON object, got {type(args).__name__}")
+        except ValueError as exc:  # json.JSONDecodeError is a ValueError
+            results[c["id"]] = f"tool error: unparseable arguments: {exc}"
+            continue
+        requests.append(ToolCall.from_name(c["name"], id=c["id"], **args))
+    if requests:
+        obs, reward, done, truncated = await env.step(
+            ToolRequestMessage(content=None, tool_calls=requests))
+        for o in obs:
+            results[o.tool_call_id] = o.content
+    return [results.get(c["id"], "tool error: no response") for c in calls]
 
 
 @weave.op()

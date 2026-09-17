@@ -18,7 +18,7 @@ import run_discovery  # noqa: E402
 BudgetExceeded = envtests.BudgetExceeded
 
 
-@pytest.mark.parametrize("raw", [None, "0", "-1", "abc"])
+@pytest.mark.parametrize("raw", [None, "0", "-1", "abc", "inf", "nan"])  # F12: inf/nan too
 def test_an_undeclared_or_meaningless_price_refuses_to_start(monkeypatch, raw):
     if raw is None:
         monkeypatch.delenv("BIOSIM_USD_PER_1M_TOKENS", raising=False)
@@ -79,3 +79,81 @@ def test_a_real_rollout_stops_at_the_ceiling(monkeypatch):
         "the refused measurement must be visible in the transcript, not silently skipped"
     assert result["spend_usd"] == pytest.approx(3.0)
     assert result["ceiling_usd"] == pytest.approx(2.5)
+
+
+# --- QG findings on the harness: refusal branches that no test exercised (F06, F07)
+# and two defects in how the harness hands tool calls to the environment (F17, F18).
+
+def _rollout(monkeypatch, ceiling, turns):
+    """Run run_discovery with a scripted model. `turns` is a list of tool-call lists;
+    once exhausted the model stops calling tools. Returns (result, model_calls)."""
+    monkeypatch.setenv("BIOSIM_USD_PER_1M_TOKENS", "1.0")        # $1 per model call
+    monkeypatch.setattr(run_discovery.BioSimEnv.__init__, "__defaults__", (ceiling, 5))
+    script = list(turns)
+    model_calls = []
+
+    def fake_turn(messages, tools):
+        model_calls.append(1)
+        return _turn(script.pop(0) if script else [])
+
+    monkeypatch.setattr(run_discovery, "agent_turn", fake_turn)
+    envtests.CALLS.clear()
+    return asyncio.run(run_discovery.run_discovery()), model_calls
+
+
+def test_the_conclusion_call_is_refused_when_already_over_budget(monkeypatch):
+    """F06: round 1 costs $1 against a $0.50 ceiling and requests no tools, so the
+    only thing left is the conclusion — which must not be paid for."""
+    result, model_calls = _rollout(monkeypatch, ceiling=0.5, turns=[])
+    assert len(model_calls) == 1
+    assert result["conclusion"] is None
+    assert result["stopped"]
+    assert result["spend_usd"] == pytest.approx(1.0)
+
+
+def test_under_budget_the_conclusion_is_paid_for_and_returned(monkeypatch):
+    """Control for F06."""
+    result, model_calls = _rollout(monkeypatch, ceiling=10.0, turns=[])
+    assert len(model_calls) == 2
+    assert result["conclusion"] == "thinking"
+    assert not result["stopped"]
+
+
+def test_the_loop_head_refuses_when_step_never_had_a_tool_to_refuse(monkeypatch):
+    """F07: every call names a tool that does not exist, so step() runs nothing and
+    never checks the budget. The refusal must come from the next paid turn, and
+    must end the rollout cleanly rather than crash it."""
+    bogus = [{"id": "x", "name": "nope", "arguments": "{}"}]
+    result, model_calls = _rollout(monkeypatch, ceiling=2.5, turns=[bogus] * 5)
+    assert len(model_calls) == 3
+    assert result["stopped"]
+    assert result["conclusion"] is None
+    assert result["spend_usd"] == pytest.approx(3.0)
+    assert "no such tool" in result["rounds"][-1]["results"][0]
+
+
+def test_results_are_paired_with_the_calls_that_produced_them(monkeypatch):
+    """F17: step() answers valid calls first and invalid ones after, so pairing by
+    position hands the real score to the call that named a nonexistent tool."""
+    batch = [{"id": "bad", "name": "nosuch", "arguments": "{}"},
+             {"id": "good", "name": "score_variant",
+              "arguments": '{"accession": "P01308", "mutation": "C7S"}'}]
+    result, _ = _rollout(monkeypatch, ceiling=10.0, turns=[batch])
+    results = result["rounds"][0]["results"]
+    assert "no such tool" in results[0], results
+    assert results[1] == "-1.25", results
+
+
+def test_malformed_tool_arguments_do_not_crash_the_rollout(monkeypatch):
+    """F18: a model emitting truncated JSON must get a tool error for that call; the
+    rest of the batch still runs and the rollout still returns a result."""
+    batch = [{"id": "broken", "name": "score_variant", "arguments": '{"accession": "P0130'},
+             {"id": "list", "name": "score_variant", "arguments": "[1, 2]"},
+             {"id": "good", "name": "score_variant",
+              "arguments": '{"accession": "P01308", "mutation": "C7S"}'}]
+    result, _ = _rollout(monkeypatch, ceiling=10.0, turns=[batch])
+    results = result["rounds"][0]["results"]
+    assert "tool error" in results[0], results
+    assert "tool error" in results[1], results
+    assert results[2] == "-1.25", results
+    assert envtests.CALLS == ["score_variant:C7S"]
