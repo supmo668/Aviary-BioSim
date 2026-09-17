@@ -346,7 +346,7 @@
   <div class="stats">
     <div class="big g">4&nbsp;&rarr;&nbsp;1<small>rounds to find the pattern; reasoning cost fell 8&times;</small></div>
     <div class="big n">46k<small>completion tokens, end to end</small></div>
-    <div class="big n">117<small>tests passing</small></div>
+    <div class="big n">168<small>tests passing</small></div>
   </div>
 </section>
 
@@ -391,7 +391,7 @@ const NOTES = {
   method: [
     ["The separation", "Implementer never sees its test; test author never sees the implementation; the register CLI — 451 lines, no LLM in it — re-runs the sealed test before any unit may close. No agent can assert a close."],
     ["Aviary specifics", "Aviary's <code>Environment</code> contract is two abstract methods: <code>reset()</code> returning observations plus a tool list, and <code>step(action)</code> returning obs, reward, done, truncated. <code>BioSimEnv</code> implements both; <code>step()</code> runs ESM-2 rather than a simulation."],
-    ["The tools", "<code>score_variant</code> and <code>embed_sequence</code> run ESM-2 650M on Apple MPS over UniProt sequences. The third tool is <code>record</code> — the spend meter drain 1 produced, exposed through <code>Tool.from_function</code>. The loop's own output meters the agent that uses it."],
+    ["The tools", "<code>score_variant</code> and <code>embed_sequence</code> run ESM-2 650M on Apple MPS over UniProt sequences. The third tool is <code>spend_remaining</code>, a read-only view of the budget. The meter itself is the spend tracker drain 1 produced, and only the harness writes it — the agent is the party being metered, so it is offered no tool that writes the ledger."],
     ["If asked about reward", "Wired to <b>0.0 deliberately</b>. Aviary carries a reward channel because it is an RL gym. This is tool-mediated discovery, not training, and inventing a scalar to fill the slot would be a fabricated signal."]
   ],
   product1: [
@@ -406,7 +406,7 @@ const NOTES = {
     ["If asked about labels", "Two of our original accessions were wrong: one “chicken” entry was a rattlesnake fragment, one “zebrafish” was <i>Xenopus</i>. Every label now comes from the organism UniProt returns, and anything under 90 residues is dropped. A guessed label on a real sequence is a fabricated figure."]
   ],
   conclusion: [
-    ["The through-line", "Drain 1 built a spend meter under sealed tests. That component is now a tool inside the aviary environment, metering the agent that calls it — and has been ported into the aiadlc framework, where the autonomous loops declared a spend cap that nothing measured."],
+    ["The through-line", "Drain 1 built a spend meter under sealed tests. That component now enforces the ceiling inside the aviary environment from the harness side, with the agent given only a read-only view of what is left — and it has been ported into the aiadlc framework, where the autonomous loops declared a spend cap that nothing measured."],
     ["Termination", "A drain that closes zero new units ends the loop. Not a timeout. The loop stops because it stopped improving, and says so in the run record."],
     ["Traceability", "Every stage is a <code>@weave.op</code>. Rounds 1–4 spent 6,905 / 6,304 / 1,087 / 819 completion tokens while the measurement rate held flat — deliberation collapsed once the pattern was found. That is visible in the trace and not assertable without it."]
   ],

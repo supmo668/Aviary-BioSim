@@ -43,7 +43,7 @@ under an interpreter that happened to have pytest. The gate now ignores exit cod
 parses pytest's junit-xml, requiring tests>0, errors==0, skipped==0, passed>0.
 
 Then we pointed the loop at biology. Drain 1 built a spend meter under that sealed gate;
-that component then became a tool inside an aviary Environment whose other tools run
+that component now enforces the ceiling inside an aviary Environment, written only by the harness, whose other tools run
 ESM-2 (650M) on GPU over real UniProt sequences. A second agent, given only "which
 residues of human proinsulin are least tolerant of substitution", took 66 real
 measurements and found the six disulfide cysteines — mean score -13.02 against -5.85 for
@@ -60,7 +60,7 @@ hystricomorph divergence, recovered from sequence alone.
 
 Every stage of both agents is a @weave.op, so the full decision tree is queryable: which
 hypotheses were discarded, on what stated grounds, and what each fork cost. 46,250
-completion tokens end to end. 117 tests green. Zero fabricated numbers.
+completion tokens end to end. 168 tests green. Zero fabricated numbers.
 
 Honest limits, stated up front: ESM-2 has seen insulin, so this recovers known constraint
 rather than discovering new biology; no wet experiment has been run; and a trace shows
@@ -133,7 +133,7 @@ confirm. Artifacts are private by default; an unshared link shows a judge nothin
 | **Best Loop Design** | ✅ | Everyone joins. Also our strongest claim: a gate the coordinator itself could not wave through. |
 | **Best Use of Weave** | ✅ | Every stage of both agents is a `@weave.op`; the traces are the entire basis of the interpretability deliverable. We also found and fixed a real Weave defect — `weave.publish()` writes an object, not a call, so it succeeded while returning zero to the trace query. |
 | **Best Use of marimo** | ✅ | `dashboard/v2r_dashboard.py` — reactive dashboard over the loop's own state files, shown running against the real run: [a5dd195c…](https://claude.ai/code/artifact/a5dd195c-e3f5-4d6b-a41d-4ce2f1531c0b) |
-| **Most Production-Ready** | ✅ | 117 tests, sealed-referee gate, four ADRs, a glossary resolving four terminology collisions, and a component already ported upstream into a plugin framework. This is the 2-weeks-later award and the work genuinely stands up. |
+| **Most Production-Ready** | ✅ | 168 tests, sealed-referee gate, four ADRs, a glossary resolving four terminology collisions, and a component already ported upstream into a plugin framework. This is the 2-weeks-later award and the work genuinely stands up. |
 
 **Do not select:**
 
