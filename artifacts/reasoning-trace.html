@@ -1,0 +1,461 @@
+<title>The Decision Tree Behind One Experiment</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F4F6F9;--surface:#FFFFFF;--ink:#111620;--muted:#586274;--faint:#8B94A3;
+    --rule:#DCE1E9;--rule-strong:#BFC7D3;--accent:#17518C;--accent-soft:#E7EFF8;
+    --accent-ink:#0E3A66;--kept:#2E7D74;--kept-soft:#E3F0EE;--cut:#9B2C3F;--cut-soft:#F8E8EB;
+    --track:#E3E8EF;
+    --sans:"IBM Plex Sans",Arial,sans-serif;--mono:"IBM Plex Mono",Menlo,monospace;
+    --serif:"Source Serif 4",Georgia,serif;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ground:#0C1016;--surface:#141A22;--ink:#E9ECF1;--muted:#99A3B2;--faint:#6C7686;
+    --rule:#242B36;--rule-strong:#38414E;--accent:#7CB0E6;--accent-soft:#142435;
+    --accent-ink:#A9CAEF;--kept:#67B8AE;--kept-soft:#112421;--cut:#D98695;--cut-soft:#291418;
+    --track:#212936;}}
+  :root[data-theme="dark"]{
+    --ground:#0C1016;--surface:#141A22;--ink:#E9ECF1;--muted:#99A3B2;--faint:#6C7686;
+    --rule:#242B36;--rule-strong:#38414E;--accent:#7CB0E6;--accent-soft:#142435;
+    --accent-ink:#A9CAEF;--kept:#67B8AE;--kept-soft:#112421;--cut:#D98695;--cut-soft:#291418;
+    --track:#212936;}
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;
+    line-height:1.6;padding:0 20px;padding-block:0 70px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto}
+
+  header{padding-block:46px 24px;border-bottom:2px solid var(--ink);margin-bottom:8px}
+  .eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);margin-bottom:15px}
+  .eyebrow b{color:var(--accent);font-weight:600}
+  h1{font-size:clamp(28px,4.3vw,42px);line-height:1.08;font-weight:700;letter-spacing:-.024em;
+    margin:0 0 15px;text-wrap:balance}
+  .sub{font-family:var(--serif);font-size:18.5px;color:var(--muted);max-width:63ch;margin:0}
+
+  /* ── the tree ── */
+  .layer{display:grid;grid-template-columns:132px minmax(0,1fr);gap:26px;
+    border-bottom:1px solid var(--rule);padding-block:26px}
+  .layer:last-of-type{border-bottom:0}
+
+  .cost{position:relative;padding-top:3px}
+  .cost .step{font-family:var(--mono);font-size:19px;font-weight:500;color:var(--ink);
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .cost .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+  .cost .track{height:5px;background:var(--track);border-radius:3px;margin:11px 0 6px;overflow:hidden}
+  .cost .track i{display:block;height:100%;background:var(--accent);border-radius:3px}
+  .cost .cum{font-family:var(--mono);font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+  .node .q{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+    font-weight:600;margin-bottom:5px}
+  .node h2{font-size:21px;font-weight:600;letter-spacing:-.014em;margin:0 0 14px;text-wrap:balance}
+  .node .gloss{font-family:var(--serif);font-size:16px;color:var(--muted);margin:0 0 15px;max-width:66ch}
+
+  .opts{display:grid;gap:10px}
+  .opts.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .opts.three{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+  .opt{border:1px solid var(--rule);border-left-width:4px;border-radius:0 4px 4px 0;
+    padding:13px 16px;background:var(--surface)}
+  .opt.kept{border-left-color:var(--kept);background:var(--kept-soft)}
+  .opt.cut{border-left-color:var(--cut);background:var(--cut-soft)}
+  .opt .top{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+  .opt .id{font-family:var(--mono);font-size:13px;font-weight:500}
+  .opt .v{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:700}
+  .opt.kept .v{color:var(--kept)} .opt.cut .v{color:var(--cut)}
+  .opt .claim{font-family:var(--serif);font-size:15.5px;color:var(--ink);margin:0 0 8px;line-height:1.45}
+  .opt .why{font-size:13.5px;color:var(--muted);margin:0;line-height:1.5}
+  .opt .why b{color:var(--ink);font-weight:600}
+
+  .findings{display:grid;gap:9px;margin-top:12px}
+  .fnd{display:grid;grid-template-columns:74px minmax(0,1fr);gap:14px;align-items:start;
+    border:1px solid var(--rule);border-radius:4px;padding:11px 14px;background:var(--surface)}
+  .fnd .m{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);
+    font-variant-numeric:tabular-nums}
+  .fnd .m.g{color:var(--kept)}
+  .fnd .t{font-size:13.5px;color:var(--muted);line-height:1.5}
+  .fnd .t b{color:var(--ink)}
+
+  .pull{border-top:2px solid var(--accent);padding:18px 0 0;margin:20px 0 0}
+  .pull p{font-family:var(--serif);font-size:19px;line-height:1.45;color:var(--ink);
+    margin:0 0 7px;max-width:60ch;text-wrap:balance}
+  .pull cite{font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+
+  .sec{border-top:2px solid var(--ink);margin-top:38px;padding-top:24px}
+  .sec h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin:0 0 16px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:14px}
+  .card{border:1px solid var(--rule);border-radius:4px;padding:16px 18px;background:var(--surface)}
+  .card h3{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+    margin:0 0 9px;font-weight:600}
+  .card p{font-size:14px;color:var(--muted);margin:0 0 9px;line-height:1.52}
+  .card p:last-child{margin:0}
+  .card b{color:var(--ink)} 
+  code{font-family:var(--mono);font-size:12.5px;color:var(--accent)}
+
+  .limits{border:1px dashed var(--rule-strong);border-radius:4px;padding:18px 20px;
+    margin-top:16px;background:var(--surface)}
+  .limits h3{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--cut);
+    margin:0 0 10px;font-weight:600}
+  .limits ul{margin:0;padding-left:19px;font-size:14px;color:var(--muted);line-height:1.55}
+  .limits li{margin-bottom:8px} .limits li:last-child{margin:0}
+  .limits b{color:var(--ink)}
+
+  footer{border-top:1px solid var(--rule);margin-top:34px;padding-top:18px;font-size:12.5px;
+    color:var(--faint);max-width:66ch}
+
+  @media (max-width:720px){
+    .layer{grid-template-columns:1fr;gap:14px}
+    .cost{display:flex;align-items:center;gap:12px}
+    .cost .track{flex:1;margin:0}
+    .fnd{grid-template-columns:1fr;gap:4px}
+  }
+
+  /* ── the drawn tree ── */
+  .treefig{margin:22px 0 6px}
+  .treefig .scroll{overflow-x:auto}
+  .treefig svg{display:block;max-width:100%;height:auto;color:var(--muted);min-width:660px}
+  .treefig figcaption{font-size:13px;color:var(--faint);margin-top:12px;max-width:70ch}
+  .treefig figcaption b{color:var(--ink)}
+  .rail{stroke:var(--rule-strong);stroke-width:1}
+  .tick{fill:var(--accent)}
+  .railhd{font-family:var(--sans);font-size:9.5px;fill:var(--faint);
+    letter-spacing:.1em;text-transform:uppercase}
+  .step{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+  .cum{font-family:var(--mono);font-size:10px;fill:var(--faint)}
+  .nk{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+  .nc{fill:var(--surface);stroke:var(--rule-strong);stroke-width:1;stroke-dasharray:4 3}
+  .fin{fill:var(--kept-soft);stroke:var(--kept);stroke-width:2}
+  .arm{fill:var(--surface);stroke:var(--rule-strong);stroke-width:1}
+  .lb{font-family:var(--sans);font-size:13.5px;font-weight:600;fill:var(--ink)}
+  .sb{font-family:var(--sans);font-size:11px;fill:var(--muted)}
+  .ar{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+  .fl{font-family:var(--sans);font-size:14px;font-weight:700;fill:var(--kept)}
+  .fs{font-family:var(--sans);font-size:11px;fill:var(--muted)}
+  .cl{font-family:var(--sans);font-size:12.5px;font-weight:600;fill:var(--muted)}
+  .cw{font-family:var(--sans);font-size:11px;fill:var(--faint)}
+  .ek{stroke:var(--accent);stroke-width:2.5;fill:none}
+  .kf{fill:var(--accent)}
+  .ec{stroke:var(--rule-strong);stroke-width:1.5;fill:none;stroke-dasharray:5 4}
+  .el{font-family:var(--sans);font-size:10.5px;fill:var(--faint);font-style:italic}
+  .x{font-family:var(--sans);font-size:15px;fill:var(--cut);font-weight:700}
+  .fk{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Interpretability · <b>10 traced decisions</b> · 46,250 completion tokens · deepseek-ai/DeepSeek-V4-Pro-0813</div>
+  <h1>Every fork, what it cost, and why the other branch lost</h1>
+  <p class="sub">Two agents took one topic to a designed experiment and a real measurement. Because every step was traced, the whole tree can be drawn — the path taken, the branches killed, the stated reason for each, and what had been spent by the time the fork arrived.</p>
+</header>
+
+
+<figure class="treefig">
+  <div class="scroll">
+<svg viewBox="0 0 900 960" role="img" aria-label="Decision tree: a spine of taken decisions descends while rejected options branch off from each fork and dead-end, with cumulative token cost on the left">
+<defs><marker id="arK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="kf"/></marker></defs>
+<line class="rail" x1="86" y1="70" x2="86" y2="882"/>
+<text class="railhd" x="86" y="44" text-anchor="middle">cost</text>
+<text class="railhd" x="86" y="57" text-anchor="middle">tokens</text>
+<circle class="tick" cx="86" cy="186" r="3.5"/>
+<text class="step" x="74" y="183" text-anchor="end">+1,329</text>
+<text class="cum"  x="74" y="197" text-anchor="end">1,329</text>
+<circle class="tick" cx="86" cy="314" r="3.5"/>
+<text class="step" x="74" y="311" text-anchor="end">+6,692</text>
+<text class="cum"  x="74" y="325" text-anchor="end">8,021</text>
+<circle class="tick" cx="86" cy="446" r="3.5"/>
+<text class="step" x="74" y="443" text-anchor="end">+6,554</text>
+<text class="cum"  x="74" y="457" text-anchor="end">14,575</text>
+<circle class="tick" cx="86" cy="590" r="3.5"/>
+<text class="step" x="74" y="587" text-anchor="end">+6,918</text>
+<text class="cum"  x="74" y="601" text-anchor="end">21,493</text>
+<circle class="tick" cx="86" cy="714" r="3.5"/>
+<text class="step" x="74" y="711" text-anchor="end">+9,642</text>
+<text class="cum"  x="74" y="725" text-anchor="end">31,135</text>
+<circle class="tick" cx="86" cy="812" r="3.5"/>
+<text class="step" x="74" y="809" text-anchor="end">+15,115</text>
+<text class="cum"  x="74" y="823" text-anchor="end">46,250</text>
+<rect class="nk" x="150" y="47" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="67" text-anchor="middle">Raise folded insulin yield</text>
+<text class="sb" x="300" y="83" text-anchor="middle">the vision, as given</text>
+<line class="ek" x1="300" y1="93" x2="300" y2="163" marker-end="url(#arK)"/>
+<circle class="fk" cx="300" cy="124" r="4.5"/>
+<path class="ec" d="M 305 124 C 430 124, 416 84, 526 84"/>
+<rect class="nc" x="556" y="59" width="300" height="50" rx="5"/>
+<text class="cl" x="570" y="77">Which host is best?</text>
+<text class="cw" x="570" y="95">too broad to falsify in one study</text>
+<text class="x" x="532" y="90" text-anchor="middle">&#10005;</text>
+<path class="ec" d="M 305 124 C 430 124, 416 232, 526 232"/>
+<rect class="nc" x="556" y="207" width="300" height="50" rx="5"/>
+<text class="cl" x="570" y="225">Optimise refolding buffers</text>
+<text class="cw" x="570" y="243">downstream of the question asked</text>
+<text class="x" x="532" y="238" text-anchor="middle">&#10005;</text>
+<rect class="nk" x="150" y="163" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="183" text-anchor="middle">Does PDI1 raise it 2&#215;?</text>
+<text class="sb" x="300" y="199" text-anchor="middle">tractable &#183; falsifiable</text>
+<line class="ek" x1="300" y1="209" x2="300" y2="291" marker-end="url(#arK)"/>
+<rect class="nk" x="150" y="291" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="311" text-anchor="middle">What is already known</text>
+<text class="sb" x="300" y="327" text-anchor="middle">Goeddel 79 &#183; Robinson 94 &#183; Shusta 98</text>
+<line class="ek" x1="300" y1="337" x2="300" y2="423" marker-end="url(#arK)"/>
+<text class="el" x="314" y="350">three hypotheses</text>
+<circle class="fk" cx="300" cy="376" r="4.5"/>
+<path class="ec" d="M 305 376 C 430 376, 416 350, 526 350"/>
+<rect class="nc" x="556" y="325" width="300" height="50" rx="5"/>
+<text class="cl" x="570" y="343">H2 &#183; PDI1 + Ero1</text>
+<text class="cw" x="570" y="361">a null would be confounded</text>
+<text class="x" x="532" y="356" text-anchor="middle">&#10005;</text>
+<path class="ec" d="M 305 376 C 430 376, 416 492, 526 492"/>
+<rect class="nc" x="556" y="467" width="300" height="50" rx="5"/>
+<text class="cl" x="570" y="485">H3 &#183; lower temperature</text>
+<text class="cw" x="570" y="503">cheapest &#8212; and rules nothing out</text>
+<text class="x" x="532" y="498" text-anchor="middle">&#10005;</text>
+<rect class="nk" x="150" y="423" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="443" text-anchor="middle">H1 &#183; PDI1 alone</text>
+<text class="sb" x="300" y="459" text-anchor="middle">a null here stays interpretable</text>
+<line class="ek" x1="300" y1="469" x2="300" y2="558" marker-end="url(#arK)"/>
+<rect class="nk" x="118" y="558" width="364" height="64" rx="5"/>
+<text class="lb" x="300" y="579" text-anchor="middle">Four arms, one variable</text>
+<rect class="arm" x="134" y="589" width="75" height="24" rx="3"/>
+<text class="ar" x="171" y="600" text-anchor="middle">A&#8202;&#183;&#8202;baseline</text>
+<rect class="arm" x="217" y="589" width="75" height="24" rx="3"/>
+<text class="ar" x="254" y="600" text-anchor="middle">B&#8202;&#183;&#8202;PDI1</text>
+<rect class="arm" x="300" y="589" width="75" height="24" rx="3"/>
+<text class="ar" x="337" y="600" text-anchor="middle">C&#8202;&#183;&#8202;host</text>
+<rect class="arm" x="383" y="589" width="75" height="24" rx="3"/>
+<text class="ar" x="420" y="600" text-anchor="middle">D&#8202;&#183;&#8202;PDI1 only</text>
+<line class="ek" x1="300" y1="622" x2="300" y2="691" marker-end="url(#arK)"/>
+<rect class="nk" x="150" y="691" width="300" height="46" rx="5"/>
+<text class="lb" x="300" y="711" text-anchor="middle">R &lt; 2.0 falsifies H1</text>
+<text class="sb" x="300" y="727" text-anchor="middle">written before any measurement</text>
+<line class="ek" x1="300" y1="737" x2="300" y2="789" marker-end="url(#arK)"/>
+<text class="el" x="314" y="752">second agent, given tools</text>
+<rect class="nk" x="140" y="789" width="320" height="46" rx="5"/>
+<text class="lb" x="300" y="809" text-anchor="middle">66 measurements, real sequences</text>
+<text class="sb" x="300" y="825" text-anchor="middle">ESM-2 on GPU, agent chose each one</text>
+<line class="ek" x1="300" y1="835" x2="300" y2="877" marker-end="url(#arK)"/>
+<rect class="fin" x="110" y="877" width="380" height="46" rx="5"/>
+<text class="fl" x="300" y="897" text-anchor="middle">The six disulfide cysteines</text>
+<text class="fs" x="300" y="913" text-anchor="middle">&#8722;13.02 against &#8722;5.85 &#183; plus a control it chose itself</text>
+</svg>
+
+  </div>
+  <figcaption><b>The solid spine is the path taken; every dashed branch is an option the agent
+  considered and killed, with the reason it gave.</b> Cost on the left accumulates down the
+  tree — the two forks that decided the science cost 7,883 tokens between them, less than
+  drafting the paper that reported them.</figcaption>
+</figure>
+
+<!-- L1 -->
+<div class="layer">
+  <div class="cost">
+    <div class="step">1,329</div><div class="lbl">tokens</div>
+    <div class="track"><i style="width:2.9%"></i></div>
+    <div class="cum">1,329 cumulative</div>
+  </div>
+  <div class="node">
+    <div class="q">Fork 1 · scope</div>
+    <h2>Which question is worth one experiment?</h2>
+    <p class="gloss">The topic was "improving soluble yield of correctly-folded recombinant human insulin." Three readings were available; only one can be falsified by a single study.</p>
+    <div class="opts three">
+      <div class="opt cut"><div class="top"><span class="id">Host comparison</span><span class="v">cut</span></div>
+        <p class="claim">"Which microbial host is best?"</p>
+        <p class="why"><b>Too broad to falsify</b> in one experiment. No single result could settle it.</p></div>
+      <div class="opt cut"><div class="top"><span class="id">Refolding buffers</span><span class="v">cut</span></div>
+        <p class="claim">Optimise the in-vitro refolding step.</p>
+        <p class="why"><b>Downstream</b> of whether soluble folding can be shifted in vivo at all — wrong order.</p></div>
+      <div class="opt kept"><div class="top"><span class="id">PDI1 dosage</span><span class="v">taken</span></div>
+        <p class="claim">Does PDI1 co-expression raise folded proinsulin ≥2-fold in <em>P. pastoris</em>?</p>
+        <p class="why"><b>Tractable and falsifiable:</b> dosage is controllable by promoter and copy number, and the product is measurable by RP-HPLC.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- L2 -->
+<div class="layer">
+  <div class="cost">
+    <div class="step">6,692</div><div class="lbl">tokens</div>
+    <div class="track"><i style="width:17.3%"></i></div>
+    <div class="cum">8,021 cumulative</div>
+  </div>
+  <div class="node">
+    <div class="q">Not a fork · grounding</div>
+    <h2>Establish what is already known.</h2>
+    <p class="gloss">The most expensive step per word produced in the whole run — 0.46 characters per token, meaning most of the budget went to deliberation rather than text. It located the yield-limiting step and marked its own inferences as <code>[inference]</code> where it was reasoning rather than reporting.</p>
+    <div class="findings">
+      <div class="fnd"><div class="m">1979</div><div class="t"><b>Goeddel et al.</b> — the <em>E. coli</em> route: separate A and B chains, inclusion bodies, in-vitro refolding. The refolding step is where yield is lost.</div></div>
+      <div class="fnd"><div class="m">1994</div><div class="t"><b>Robinson et al.</b> — PDI overexpression raises secretion of disulfide-containing proteins in <em>S. cerevisiae</em>.</div></div>
+      <div class="fnd"><div class="m">1998</div><div class="t"><b>Shusta et al.</b> — but the effect is <b>substrate-specific</b>. This is the finding that makes the experiment necessary rather than assumable.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- L3 -->
+<div class="layer">
+  <div class="cost">
+    <div class="step">4,382</div><div class="lbl">tokens</div>
+    <div class="track"><i style="width:26.8%"></i></div>
+    <div class="cum">12,403 cumulative</div>
+  </div>
+  <div class="node">
+    <div class="q">Fork 2 · mechanism</div>
+    <h2>Three ways the yield could be raised.</h2>
+    <p class="gloss">Each hypothesis was generated with its mechanism, its strongest prior evidence, and — notably — its most likely failure mode, before any was chosen.</p>
+    <div class="opts three">
+      <div class="opt"><div class="top"><span class="id">H1</span></div>
+        <p class="claim">PDI1 co-expression, alone.</p>
+        <p class="why"><b>Mechanism:</b> more ER oxidoreductase capacity accelerates native disulfide formation.<br><b>Likely failure:</b> proinsulin may not be PDI-limited.</p></div>
+      <div class="opt"><div class="top"><span class="id">H2</span></div>
+        <p class="claim">PDI1 together with Ero1.</p>
+        <p class="why"><b>Mechanism:</b> Ero1 reoxidises PDI, sustaining the oxidised pool.<br><b>Likely failure:</b> ER hyperoxidation and UPR.</p></div>
+      <div class="opt"><div class="top"><span class="id">H3</span></div>
+        <p class="claim">Lower induction temperature to 20–25 °C.</p>
+        <p class="why"><b>Mechanism:</b> slower folding kinetics, less aggregation.<br><b>Likely failure:</b> lower specific productivity.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- L4 -->
+<div class="layer">
+  <div class="cost">
+    <div class="step">2,172</div><div class="lbl">tokens</div>
+    <div class="track"><i style="width:31.5%"></i></div>
+    <div class="cum">14,575 cumulative</div>
+  </div>
+  <div class="node">
+    <div class="q">Fork 3 · selection — the interpretable one</div>
+    <h2>It did not pick the most likely. It picked the most informative if wrong.</h2>
+    <div class="opts three">
+      <div class="opt kept"><div class="top"><span class="id">H1</span><span class="v">taken</span></div>
+        <p class="claim">PDI1 alone.</p>
+        <p class="why">One genetic change against an identical comparator. <b>A negative result stays interpretable:</b> either proinsulin is not PDI-limited, or excess PDI retains misfolded protein.</p></div>
+      <div class="opt cut"><div class="top"><span class="id">H2</span><span class="v">deferred</span></div>
+        <p class="claim">PDI1 + Ero1.</p>
+        <p class="why">Two variables and higher cost. <b>A null would be confounded</b> by Ero1-induced oxidative stress. Held as the follow-up <em>conditional on H1 showing an effect.</em></p></div>
+      <div class="opt cut"><div class="top"><span class="id">H3</span><span class="v">cut</span></div>
+        <p class="claim">Lower temperature.</p>
+        <p class="why">Acknowledged as <b>the cheapest to run</b> — and still cut. It tests a generic kinetic effect, so a null could just mean lower productivity, ruling nothing out.</p></div>
+    </div>
+    <div class="pull">
+      <p>Both rejections turn on one criterion, and it is not likelihood of success. It is <em>how interpretable the failure would be.</em></p>
+      <cite>The selection rule, recovered from the trace — it was not specified in the prompt</cite>
+    </div>
+  </div>
+</div>
+
+<!-- L5 -->
+<div class="layer">
+  <div class="cost">
+    <div class="step">6,918</div><div class="lbl">tokens</div>
+    <div class="track"><i style="width:46.5%"></i></div>
+    <div class="cum">21,493 cumulative</div>
+  </div>
+  <div class="node">
+    <div class="q">Fork 4 · design</div>
+    <h2>Four arms, because two would not have been enough.</h2>
+    <p class="gloss">Having chosen H1, the remaining decision was what to compare it against. It added two controls beyond the obvious pair, each ruling out a specific alternative explanation.</p>
+    <div class="opts two">
+      <div class="opt kept"><div class="top"><span class="id">A vs B</span><span class="v">the test</span></div>
+        <p class="claim">Proinsulin + empty vector, against proinsulin + PDI1.</p>
+        <p class="why">The intervention against an otherwise identical strain — same selection, integration and induction.</p></div>
+      <div class="opt kept"><div class="top"><span class="id">C and D</span><span class="v">the controls</span></div>
+        <p class="claim">Empty/empty, and PDI1 alone.</p>
+        <p class="why"><b>C</b> rules out host background peaks in RP-HPLC. <b>D</b> rules out PDI1 alone producing a peak that could be mistaken for proinsulin.</p></div>
+    </div>
+    <div class="findings">
+      <div class="fnd"><div class="m">R &lt; 2.0</div><div class="t"><b>The falsification criterion, written before any measurement.</b> H1 fails if the titer ratio is not ≥2.0 and the upper 95% bound is below 2.0 — and the criterion is void unless PDI1 expression is confirmed by immunoblot.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- L6 -->
+<div class="layer">
+  <div class="cost">
+    <div class="step">9,642</div><div class="lbl">tokens</div>
+    <div class="track"><i style="width:67.3%"></i></div>
+    <div class="cum">31,135 cumulative</div>
+  </div>
+  <div class="node">
+    <div class="q">Not a fork · drafting</div>
+    <h2>The cheapest thinking in the run.</h2>
+    <p class="gloss">18,554 characters from 9,642 tokens — <b>1.92 characters per token</b>, four times the ratio of the hypothesis stages. By this point every decision had been made; drafting was transcription. That profile is exactly what you would want, and you cannot assert it without the trace.</p>
+  </div>
+</div>
+
+<!-- L7 -->
+<div class="layer">
+  <div class="cost">
+    <div class="step">6,905</div><div class="lbl">tokens</div>
+    <div class="track"><i style="width:82.2%"></i></div>
+    <div class="cum">38,040 cumulative</div>
+  </div>
+  <div class="node">
+    <div class="q">Second agent · round 1</div>
+    <h2>A different agent, handed an instrument.</h2>
+    <p class="gloss">The second run placed an agent inside an aviary <code>Environment</code> whose tools run ESM-2 over real UniProt sequences. Its objective named the protein and asked which residues are least tolerant of substitution. <b>Cysteines, disulfides and the expected direction appear nowhere in the prompt.</b></p>
+    <div class="findings">
+      <div class="fnd"><div class="m">26</div><div class="t">Measurements requested in the first round — a broad sweep across the sequence, chosen by the agent.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- L8 -->
+<div class="layer">
+  <div class="cost">
+    <div class="step">8,210</div><div class="lbl">tokens · rounds 2–4</div>
+    <div class="track"><i style="width:100%"></i></div>
+    <div class="cum">46,250 cumulative</div>
+  </div>
+  <div class="node">
+    <div class="q">Second agent · convergence</div>
+    <h2>Measurement held steady. Deliberation collapsed eightfold.</h2>
+    <div class="findings">
+      <div class="fnd"><div class="m">6,304</div><div class="t"><b>Round 2 · 12 measurements.</b> Still exploring — narrowing toward the positions that scored worst.</div></div>
+      <div class="fnd"><div class="m">1,087</div><div class="t"><b>Round 3 · 16 measurements.</b> The pattern is found. Reasoning cost drops sixfold while the measurement rate rises.</div></div>
+      <div class="fnd"><div class="m g">819</div><div class="t"><b>Round 4 · 12 measurements.</b> Confirmation, and the controls — <b>unprompted</b>.</div></div>
+    </div>
+    <div class="pull">
+      <p>Having found the cysteines, it probed the C‑peptide — cleaved out of mature insulin, poorly conserved — and got scores at or above zero. The correct negative control, chosen by the agent.</p>
+      <cite>Gln62A +1.53 · Pro79A +1.08 · Gly70A +0.18 · Glu83A −0.10</cite>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Two findings about the instrumentation itself</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>Instrumented ≠ readable</h3>
+      <p>The build loop emits a span per iteration and <b>publishes successfully</b> — yet querying its traces returned <b>zero</b>.</p>
+      <p><code>weave.publish()</code> writes an <b>object</b>, not a call: different store, invisible to the trace query. Six closes also landed as six <em>versions of one object</em>.</p>
+      <p>Worse: the spec already prescribed <code>@weave.op</code>. The code drifted from it silently, because the wrong call succeeded and printed a confident URL. Fixed; the query now returns 19.</p>
+    </div>
+    <div class="card">
+      <h3>The budget hid the answer</h3>
+      <p>The first runs returned <b>empty content</b> with <code>finish_reason: length</code>. Nothing was wrong with the prompt — reasoning tokens bill against <code>max_tokens</code>, so a ceiling sized for the <em>answer</em> is consumed by the thinking.</p>
+      <p>Fixed by escalating the budget on empty content rather than guessing. Grounding needed <b>6,692</b> tokens to emit 3,072 characters.</p>
+    </div>
+    <div class="card">
+      <h3>Two labels were wrong</h3>
+      <p>Our ortholog set labelled <code>P01334</code> "chicken" — it is a <b>rattlesnake fragment</b> — and <code>P12706</code> "zebrafish", which is <em>Xenopus</em>.</p>
+      <p>Labels now come from the organism UniProt returns, and anything under 90 residues is dropped. <b>A guessed label on a real sequence is a fabricated figure.</b></p>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>What this does and does not show</h2>
+  <div class="limits">
+    <h3>Read this before trusting the above</h3>
+    <ul>
+      <li>The trace shows what each agent <b>said</b> its reasons were, not what caused the output. Stated rationale and actual mechanism are different things; only the first is captured.</li>
+      <li>Three hypotheses were requested, so three appeared. The hypothesis space was <b>bounded by the prompt</b>, and the trace cannot show what a wider request would have surfaced.</li>
+      <li>Tokens are a proxy for deliberation, not a measure of it. They separate reasoning-heavy from transcription-heavy steps; they say nothing about whether the reasoning was good.</li>
+      <li><b>ESM-2 has seen insulin.</b> The measurement recovers known constraint; it does not discover new biology.</li>
+      <li>No wet experiment has been run. The design is assessable from the literature; its conclusions are not, because there are none.</li>
+    </ul>
+  </div>
+  <p style="font-family:var(--serif);font-size:16.5px;color:var(--muted);max-width:66ch;margin-top:18px">The honest claim is narrow and still worth something: for these runs the decision structure is <b style="color:var(--ink)">recoverable</b>. Which alternatives existed, which were discarded, on what stated grounds, and what each fork cost — without re-running anything.</p>
+</div>
+
+<footer>
+  <p>Traces in <code>3m-m/Aviary-BioSim</code> on Weights &amp; Biases Weave. Ten <code>@weave.op</code> stages across two agents, 46,250 completion tokens, 66 real measurements. Companion documents: the pre-registered design, and the presentation deck.</p>
+</footer>
+</div>

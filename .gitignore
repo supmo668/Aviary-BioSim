@@ -3,6 +3,7 @@
 __pycache__/
 .pytest_cache/
 __marimo__/
+science/out/
 
 # aiadlc coordination internals — live in the private superproject, symlinked in
 .claude/agents/

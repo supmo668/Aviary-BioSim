@@ -1,3 +1,11 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["marimo", "pyyaml", "pandas", "altair", "pyarrow"]
+# ///
+# Run:  uv run --with marimo --with pyyaml --with pandas --with altair --with pyarrow \
+#         marimo run dashboard/v2r_dashboard.py
+# pyarrow is not imported directly — altair uses it to serialise data frames, and
+# without it every chart falls back to CSV with a warning.
 import marimo
 
 __generated_with = "0.24.2"
