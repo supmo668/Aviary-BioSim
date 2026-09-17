@@ -965,7 +965,7 @@ git add .claude/skills/v2r-loop/scripts/
 - Consumes: `git`, `load`, `save` from Tasks 1–2.
 - Produces: `instinct_pin() -> str | None` (the git tree SHA of `.aiadlc/instincts`, or `None` when the store does not exist yet), `cmd_pin(args) -> int`, `cmd_drain_start(args) -> int`, `cmd_drain_end(args) -> int` writing `.v2r/run-record-<drain>.yaml` with keys `drain`, `register_sha`, `instinct_pin`, `seed`, `ceilings`, `closed`, `parked`, `outcome`.
 
-Per ADR-0003 the pin needs no new machinery: `.aiadlc/instincts` is in-repo and not gitignored, so a tree SHA identifies the instinct set exactly.
+Per ADR-0003 the pin reuses the in-repo `.aiadlc/instincts` store and records its tree SHA. That SHA does **not** identify the instinct set exactly: hook reinforcement rewrites instinct frontmatter, so it moves when nothing was learned (corrected after drain 1 — see ADR-0003's correction and the flagged ambiguity in `docs/CONTEXT.md`).
 
 **A deliberate narrowing of the spec's testing claim.** The spec asks that "a drain replays:
 same register, same instinct pin, same seed → same closed and parked sets." That cannot be

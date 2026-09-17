@@ -41,7 +41,7 @@ altitude down:
 | Invariant | Mechanism | Precedent in this repo |
 |---|---|---|
 | The actor that does the work never records that the work passed | `register.py close` re-runs the **sealed test** itself | ChipSim's **frozen evaluator** — "outside the agent's write scope" |
-| A **drain** is attributable to exactly one builder | **instinct pin**, hashed at drain start | The **replay test**; audit R2 pre-registration |
+| A **drain** is attributable to its pinned inputs | register digest and seed exactly; the **instinct pin** only approximately — hooks rewrite the store (ADR-0003 correction) | The **replay test**; audit R2 pre-registration |
 | Declared floors stop the run | ceilings checked every **iteration** | Audit R1 preflight gate, R9 budget guard |
 
 ## Architecture
@@ -252,8 +252,10 @@ outcome: completed          # completed | halted
 - `park` leaves the tree byte-identical to its pre-claim state.
 - `park` preserves the attempt on `park/U-nnn`.
 - Ceiling breach produces a halt, never a park.
-- A drain is attributable: the run record pins an exact register digest, instinct tree SHA
-  and seed, so a divergence traces to which of the three changed. Determinism of the
+- A drain is attributable: the run record pins an exact register digest and seed, and records
+  the instinct tree SHA. The SHA is only an approximate label for the instinct set — hook
+  reinforcement rewrites the store with nothing learned (ADR-0003 correction) — so a changed pin
+  alone does not show that the instincts changed; a divergence traces to the digest or seed. Determinism of the
   *record* is asserted; determinism of the *builder* is not, and must not be claimed —
   see `docs/plan.md` Task 7 and the flagged ambiguity in `docs/CONTEXT.md`.
 
