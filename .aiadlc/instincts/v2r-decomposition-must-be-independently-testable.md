@@ -1,8 +1,8 @@
 ---
 name: v2r-decomposition-must-be-independently-testable
-confidence: 1.000
+confidence: 0.900
 created: 2026-09-13T18:49:54Z
-last_reinforced: 2026-09-13T19:51:59Z
+last_reinforced: 2026-09-13T18:49:54Z
 ttl_days: 30
 triggers: [.v2r/register.yaml, docs/CONTEXT.md]
 tags: [v2r-loop, register, decomposition]

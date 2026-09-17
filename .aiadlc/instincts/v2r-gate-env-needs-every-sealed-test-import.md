@@ -1,8 +1,8 @@
 ---
 name: v2r-gate-env-needs-every-sealed-test-import
-confidence: 0.900
+confidence: 0.850
 created: 2026-09-13T18:49:55Z
-last_reinforced: 2026-09-13T18:56:40Z
+last_reinforced: 2026-09-13T18:49:55Z
 ttl_days: 30
 triggers: [.claude/skills/v2r-loop/scripts/register.py, .claude/skills/v2r-loop/SKILL.md]
 tags: [v2r-loop, tooling]

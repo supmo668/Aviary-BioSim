@@ -2,12 +2,11 @@
 name: v2r-stage4-cannot-read-stage3-evidence
 confidence: 1.000
 created: 2026-09-13T18:49:53Z
-last_reinforced: 2026-09-13T18:56:40Z
+last_reinforced: 2026-09-13T18:55:56Z
 ttl_days: 30
 triggers: [.claude/skills/v2r-loop/scripts/register.py, .claude/skills/v2r-loop/SKILL.md, emit_span, weave]
 tags: [v2r-loop, observability, defect, fixed]
 ---
-
 FIXED after drain 1 — but the lesson is the durable part, not the fix.
 
 `weave.publish(payload, name=...)` writes a weave OBJECT. Objects and calls are different
