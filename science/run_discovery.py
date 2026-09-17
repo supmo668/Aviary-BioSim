@@ -120,10 +120,12 @@ async def measure(env: BioSimEnv, calls: list) -> list:
             args = json.loads(c["arguments"] or "{}")
             if not isinstance(args, dict):
                 raise ValueError(f"expected a JSON object, got {type(args).__name__}")
-        except ValueError as exc:  # json.JSONDecodeError is a ValueError
-            results[c["id"]] = f"tool error: unparseable arguments: {exc}"
-            continue
-        requests.append(ToolCall.from_name(c["name"], id=c["id"], **args))
+            # TypeError: an argument named like from_name's own parameters (`id`,
+            # `function_name`) collides with them. That is the model's malformed call,
+            # not a reason to end the rollout.
+            requests.append(ToolCall.from_name(c["name"], id=c["id"], **args))
+        except (ValueError, TypeError) as exc:  # json.JSONDecodeError is a ValueError
+            results[c["id"]] = f"tool error: unusable arguments: {exc}"
     if requests:
         obs, reward, done, truncated = await env.step(
             ToolRequestMessage(content=None, tool_calls=requests))
