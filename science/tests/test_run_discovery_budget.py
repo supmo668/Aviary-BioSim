@@ -167,3 +167,18 @@ def test_malformed_tool_arguments_do_not_crash_the_rollout(monkeypatch):
     assert "tool error" in results[1], results
     assert results[2] == "-1.25", results
     assert envtests.CALLS == ["score_variant:C7S"]
+
+
+def test_tool_arguments_that_collide_with_the_call_constructor_do_not_crash_the_rollout(monkeypatch):
+    """Re-gate own finding: ToolCall.from_name(name, id=..., **args) raises TypeError when
+    the model's arguments include `id` or `function_name`. That escaped the per-call
+    ValueError handler added for F18 and crashed the rollout the same way."""
+    batch = [{"id": "c1", "name": "score_variant", "arguments": '{"id": 1}'},
+             {"id": "c2", "name": "score_variant", "arguments": '{"function_name": "x"}'},
+             {"id": "c3", "name": "score_variant",
+              "arguments": '{"accession": "P01308", "mutation": "C7S"}'}]
+    result, _ = _rollout(monkeypatch, ceiling=10.0, turns=[batch])
+    results = result["rounds"][0]["results"]
+    assert "tool error" in results[0], results
+    assert "tool error" in results[1], results
+    assert results[2] == "-1.25", results
