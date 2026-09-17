@@ -10,21 +10,22 @@ them: `step` does not simulate, it runs ESM-2 over a real UniProt sequence and
 returns the number that comes out. An agent using this environment is not
 reasoning about protein stability, it is measuring it.
 
-The environment enforces a spend ceiling with the SpendTracker built by /v2r-loop
-drain 1. Two halves, stated separately because only one is sealed-tested:
+The environment refuses to run tools once recorded spend passes a ceiling, using
+the SpendTracker built by /v2r-loop drain 1. Two halves, stated separately because
+only one is sealed-tested:
 
 - The COMPONENT — `SpendTracker` recording, totalling and refusing past its ceiling
-  (`demo/spend_tracker.py`) — was proven by independent sealed tests.
+  (`demo/spend_tracker.py`) — is covered by independent sealed tests.
 - The ENFORCEMENT here is not covered by those tests; it is covered by
   `science/tests/test_biosim_env_budget.py`. `step()` checks the ceiling before every
   tool call, outside the tool-error handler, so an over-budget rollout stops with
   `BudgetExceeded` instead of reporting it as a tool failure and carrying on.
 
-Spend reaches the ledger through `charge()`, called by whatever pays for model
-calls (the rollout harness), so metering does not depend on the agent choosing to
-report its own cost. The agent-facing `record` tool from `as_tool()` stays in the
-tool list, but it is not the ledger's only path, and nothing here assumes the agent
-calls it.
+The environment does not observe model calls. Spend reaches the ledger only through
+`charge()`, called by whatever pays for them — the rollout harness — so a harness
+that never calls `charge()` gets no budget at all. The agent, the party being
+metered, cannot write the ledger: it is offered a read-only `spend_remaining` tool,
+and no tool that records spend.
 
 The reward channel is wired to 0.0 deliberately. aviary carries a reward because
 it is an RL gym; this is tool-mediated discovery, not training, and inventing a
@@ -94,28 +95,30 @@ class BioSimEnv(Environment[BioSimState]):
         """
         self.tracker.record(call_id, _valid_cost(cost_usd))
 
-    def _agent_record(self, call_id: str, cost_usd: float) -> None:
-        """Execution path for the agent's `record` tool.
+    def spend_remaining(self) -> float:
+        """Report how much of the spend budget is left, in US dollars.
 
-        The agent sees the schema derived from `SpendTracker.record`, but its calls
-        run through here, because the agent is the metered party and its arguments
-        are untrusted: without this, `record(cost_usd=-100)` or `record(cost_usd="nan")`
-        switches the budget off in a single tool call.
+        Read-only: this reports the ledger and never writes it. The value is the
+        ceiling minus recorded spend, so it is zero or negative once the budget is
+        spent, and it is never rounded up.
         """
-        self.tracker.record(call_id, _valid_cost(cost_usd))
+        return self.tracker.ceiling_usd - self.tracker.total()
 
     async def reset(self) -> tuple[list[Message], list[Tool]]:
         self.state = BioSimState(self.state.max_rounds)
-        fns = [esm_tool.score_variant, esm_tool.embed_sequence]
-        self.tools = [Tool.from_function(fn) for fn in fns] + [self.tracker.as_tool()]
-        self._fns = {fn.__name__: fn for fn in fns}
-        self._fns["record"] = self._agent_record
+        # One list builds both the offered tools and the callables that run them, so
+        # the two cannot drift. No entry writes the ledger: spend is the harness's to
+        # record, through charge().
+        fns = [esm_tool.score_variant, esm_tool.embed_sequence, self.spend_remaining]
+        self.tools = [Tool.from_function(fn) for fn in fns]
+        self._fns = {tool.info.name: fn for tool, fn in zip(self.tools, fns)}
         obs = [Message(content=(
             f"{self.objective}\n\n"
             "You have tools that run a real protein language model (ESM-2) over real "
             "UniProt sequences. score_variant returns a log-likelihood ratio: negative "
             "means the model finds the substitution disruptive, and magnitude matters. "
             "Call a tool to obtain a number; do not guess one. "
+            "spend_remaining reports how much of your budget is left. "
             f"You have {self.state.max_rounds} rounds."
         ))]
         return obs, self.tools

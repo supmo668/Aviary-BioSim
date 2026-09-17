@@ -1,8 +1,8 @@
 """BioSimEnv must ENFORCE its budget, not merely carry a tracker.
 
 Each test targets a way the fix could look done while the refusal is still absent:
-a check() swallowed by step()'s generic tool-error handler, a ledger only the
-metered actor can write to, or a refusal that fires after the next tool has
+a check() swallowed by step()'s generic tool-error handler, a ledger the metered
+actor can write to, or a refusal that fires after the next tool has
 already run. Assertions are about whether the rollout STOPS and whether the tool
 RAN — never about a string appearing in a response.
 """
@@ -112,12 +112,22 @@ def test_env_side_charge_records_without_the_agent_reporting_anything():
 
 
 def test_crossing_the_ceiling_mid_batch_refuses_the_remaining_calls():
+    """check() runs before EVERY call in a batch, not once per batch. No offered tool
+    spends today, so a paid tool is simulated: its first call charges past the ceiling
+    and the second call in the same batch must not run."""
     env = _env(ceiling=1.0)
+    real = env._fns["score_variant"]
+
+    def paid_score_variant(**kwargs):
+        env.charge("paid-tool", 5.0)
+        return real(**kwargs)
+
+    env._fns["score_variant"] = paid_score_variant
     with pytest.raises(BudgetExceeded):
         _step(env,
-              ("record", {"call_id": "agent-reported", "cost_usd": 5.0}),
-              ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
-    assert CALLS == [], "the call after the one that crossed the ceiling must not run"
+              ("score_variant", {"accession": "P01308", "mutation": "A12G"}),
+              ("score_variant", {"accession": "P01308", "mutation": "C7S"}))
+    assert CALLS == ["score_variant:A12G"], "the call after the crossing one must not run"
 
 
 def test_once_over_budget_every_later_step_keeps_refusing():
@@ -136,45 +146,58 @@ def test_an_ordinary_tool_failure_is_still_reported_not_raised():
     assert "tool error" in str(obs[0].content)
 
 
-# --- QG finding: the agent-facing `record` tool must not be able to lower or poison
-# the ledger. The agent is the metered party and its tool arguments are untrusted.
+# --- Principal ruling (#152): the actor being metered must not be able to write the
+# ledger that meters it. The agent gets a read-only `spend_remaining`; every write
+# goes through the harness's charge().
 
-@pytest.mark.parametrize("bad_cost", [-100.0, float("nan"), "nan", float("-inf"), float("inf"), True, "abc"])
-def test_the_agent_cannot_lower_or_poison_the_ledger_through_record(bad_cost):
+def _tool_names(env):
+    return {t.info.name for t in env.tools}
+
+
+def test_the_agent_is_offered_no_tool_that_writes_the_ledger():
     env = _env(ceiling=1.0)
-    env.charge("model-call-1", 5.0)          # genuinely over budget
-    before = env.tracker.total()
-    obs, *_ = _step_unchecked(env, ("record", {"call_id": "agent", "cost_usd": bad_cost}))
-    assert env.tracker.total() == before, f"record({bad_cost!r}) changed the ledger"
-    with pytest.raises(BudgetExceeded):     # still refused afterwards
+    assert _tool_names(env) == {"score_variant", "embed_sequence", "spend_remaining"}
+
+
+@pytest.mark.parametrize("cost", [-100.0, float("nan"), "nan", float("-inf"), 0.5, 1e9])
+def test_a_record_call_from_the_agent_is_not_a_tool_and_cannot_touch_the_ledger(cost):
+    """Regression for the bypass: record(cost_usd=-100) or 'nan' used to switch the
+    budget off. It must now be refused as an unknown tool, whatever the cost."""
+    env = _env(ceiling=1.0)
+    env.charge("model-call-1", 5.0)                 # genuinely over budget
+    obs, *_ = _step(env, ("record", {"call_id": "agent", "cost_usd": cost}))
+    assert "no such tool" in str(obs[0].content)
+    assert env.tracker.total() == pytest.approx(5.0)
+    with pytest.raises(BudgetExceeded):
         _step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
 
 
-@pytest.mark.parametrize("bad_cost", [-1.0, float("nan"), float("-inf"), float("inf")])
+def test_spend_remaining_reports_the_ceiling_minus_recorded_spend():
+    env = _env(ceiling=2.0)
+    env.charge("model-call-1", 0.5)
+    obs, *_ = _step(env, ("spend_remaining", {}))
+    assert float(obs[0].content) == pytest.approx(1.5)
+
+
+def test_spend_remaining_is_read_only():
+    env = _env(ceiling=2.0)
+    env.charge("model-call-1", 0.5)
+    for _ in range(3):
+        _step(env, ("spend_remaining", {}))
+    assert env.tracker.total() == pytest.approx(0.5)
+
+
+def test_spend_remaining_does_not_overstate_what_is_left():
+    """At the ceiling nothing is left, and it must say so rather than round up."""
+    env = _env(ceiling=1.0)
+    env.charge("model-call-1", 1.0)
+    obs, *_ = _step(env, ("spend_remaining", {}))
+    assert float(obs[0].content) == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize("bad_cost", [-1.0, float("nan"), float("-inf"), float("inf"), True, "abc"])
 def test_the_harness_ledger_path_rejects_nonsense_loudly(bad_cost):
     env = _env(ceiling=10.0)
     with pytest.raises(ValueError):
         env.charge("model-call-1", bad_cost)
     assert env.tracker.total() == 0.0
-
-
-def test_a_valid_agent_report_still_counts_and_zero_is_allowed():
-    env = _env(ceiling=10.0)
-    _step(env, ("record", {"call_id": "agent-1", "cost_usd": 0.5}),
-               ("record", {"call_id": "agent-2", "cost_usd": 0}))
-    assert env.tracker.total() == pytest.approx(0.5)
-
-
-def _step_unchecked(env, *calls):
-    """Run a step whose single record call happens while already over budget.
-
-    step() refuses before every tool, so to reach record's own validation the
-    tracker must be under budget at the moment of the call: lift the ceiling for
-    the duration of the step, then restore it.
-    """
-    ceiling = env.tracker.ceiling_usd
-    env.tracker.ceiling_usd = float("inf")
-    try:
-        return _step(env, *calls)
-    finally:
-        env.tracker.ceiling_usd = ceiling
