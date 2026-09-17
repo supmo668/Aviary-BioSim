@@ -45,7 +45,7 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 | Every other residue, mean score | **−5.85** |
 | Full 110-residue scan on Apple MPS | **7 s** |
 | Agent-chosen measurements | **66** |
-| Tests green across the loop | **158** |
+| Tests green across the loop | **159** |
 
 **Two known outcomes recovered from sequence alone.** *Sus scrofa* sits nearest human (0.55) — porcine insulin differs by a single residue, which is why it was the therapeutic before recombinant. *Cavia porcellus* sits furthest (2.69), beyond zebrafish and *Xenopus* — the known hystricomorph divergence.
 
@@ -70,7 +70,7 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 
 ## Status, stated honestly
 
-**Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop and its budget enforcement; all three deliverables. **158 tests green.**
+**Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop and its budget enforcement; all three deliverables. **159 tests green.**
 
 **The limitation that matters most.** Three defects surfaced today, and they are one shape:
 a mechanism reported success while the property it existed to guarantee was absent.
@@ -93,7 +93,7 @@ a self-test, and the self-test passed. The pattern is not a story about code wri
 cd .claude/skills/v2r-loop/scripts
 uv run --with pytest --with pyyaml pytest tests/ -q          # 42 passed
 uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave \
-  pytest science/tests -q                                    # 41 passed
+  pytest science/tests -q                                    # 42 passed
 
 uv run --with pyyaml demo/gate_demo.py                       # the gate refusing, in 10 s
 
