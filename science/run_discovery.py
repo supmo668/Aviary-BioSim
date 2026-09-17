@@ -16,9 +16,10 @@ load-bearing — and has to find it by measuring.
 
 Spend is metered by the harness, not by the agent: every model call is charged to
 the environment's ledger from the provider's own token counts, and the rollout
-refuses before paying for another call once the ceiling is passed. The token price
-must be declared in BIOSIM_USD_PER_1M_TOKENS — there is no default, because a
-guessed or zero price would make the budget guard pass while metering nothing.
+refuses before paying for another call once the ceiling is passed. The operator
+must declare their provider's price per million tokens in BIOSIM_USD_PER_1M_TOKENS.
+There is no default and no figure in this repo, because a guessed or zero price
+would make the budget guard pass while metering nothing.
 """
 import json
 import math
@@ -43,7 +44,8 @@ OUT = Path(__file__).parent / "out" / "discovery"
 def usd_per_1m_tokens() -> float:
     """The declared token price. Refuses to guess: no price means no budget guard."""
     raw = os.environ.get("BIOSIM_USD_PER_1M_TOKENS")
-    if raw is None:
+    # Empty counts as unset: BIOSIM_USD_PER_1M_TOKENS="$PRICE" with PRICE unset is "".
+    if raw is None or not raw.strip():
         sys.exit("BIOSIM_USD_PER_1M_TOKENS is not set. Declare the model's price per "
                  "million tokens; the budget cannot be enforced without it.")
     try:

@@ -28,6 +28,16 @@ def test_an_undeclared_or_meaningless_price_refuses_to_start(monkeypatch, raw):
         run_discovery.usd_per_1m_tokens()
 
 
+@pytest.mark.parametrize("raw", ["", "   "])
+def test_an_empty_price_is_reported_as_undeclared_not_as_malformed(monkeypatch, capsys, raw):
+    """The documented command passes BIOSIM_USD_PER_1M_TOKENS="$PRICE"; with PRICE
+    unset that is an empty string, and the operator must be told to declare a price."""
+    monkeypatch.setenv("BIOSIM_USD_PER_1M_TOKENS", raw)
+    with pytest.raises(SystemExit) as refused:
+        run_discovery.usd_per_1m_tokens()
+    assert "is not set" in str(refused.value.code)
+
+
 def test_a_declared_price_is_used(monkeypatch):
     monkeypatch.setenv("BIOSIM_USD_PER_1M_TOKENS", "2.5")
     assert run_discovery.usd_per_1m_tokens() == 2.5
