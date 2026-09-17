@@ -13,6 +13,12 @@ trace records which measurement it asked for and what it did with the answer.
 Nothing here is seeded with the expected result. The agent is pointed at a
 question whose answer is independently known — that the disulfide cysteines are
 load-bearing — and has to find it by measuring.
+
+Spend is metered by the harness, not by the agent: every model call is charged to
+the environment's ledger from the provider's own token counts, and the rollout
+refuses before paying for another call once the ceiling is passed. The token price
+must be declared in BIOSIM_USD_PER_1M_TOKENS — there is no default, because a
+guessed or zero price would make the budget guard pass while metering nothing.
 """
 import json
 import os
@@ -26,10 +32,26 @@ from aviary.core import Message, ToolCall, ToolRequestMessage
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "demo"))
 from biosim_env import BioSimEnv  # noqa: E402
+from spend_tracker import BudgetExceeded  # noqa: E402
 
 MODEL = os.environ.get("WANDB_INFERENCE_MODEL", "deepseek-ai/DeepSeek-V4-Pro-0813")
 PROJECT = os.environ.get("WANDB_PROJECT", "3m-m/Aviary-BioSim")
 OUT = Path(__file__).parent / "out" / "discovery"
+
+
+def usd_per_1m_tokens() -> float:
+    """The declared token price. Refuses to guess: no price means no budget guard."""
+    raw = os.environ.get("BIOSIM_USD_PER_1M_TOKENS")
+    if raw is None:
+        sys.exit("BIOSIM_USD_PER_1M_TOKENS is not set. Declare the model's price per "
+                 "million tokens; the budget cannot be enforced without it.")
+    try:
+        price = float(raw)
+    except ValueError:
+        sys.exit(f"BIOSIM_USD_PER_1M_TOKENS={raw!r} is not a number.")
+    if not price > 0:
+        sys.exit(f"BIOSIM_USD_PER_1M_TOKENS={raw!r} must be positive; a zero price meters nothing.")
+    return price
 
 OBJECTIVE = (
     "Human preproinsulin is UniProt P01308, 110 residues. Identify which residues "
@@ -63,8 +85,18 @@ def agent_turn(messages: list, tools: list) -> dict:
         "content": m.content,
         "tool_calls": [{"id": c.id, "name": c.function.name, "arguments": c.function.arguments}
                        for c in (m.tool_calls or [])],
+        "prompt_tokens": resp.usage.prompt_tokens,
         "completion_tokens": resp.usage.completion_tokens,
     }
+
+
+def paid_turn(env: BioSimEnv, price: float, call_id: str, messages: list, tools: list) -> dict:
+    """Refuse before paying for a model call once over budget; charge it after."""
+    env.tracker.check()
+    turn = agent_turn(messages, tools)
+    tokens = turn["prompt_tokens"] + turn["completion_tokens"]
+    env.charge(call_id, tokens * price / 1_000_000)
+    return turn
 
 
 @weave.op()
@@ -78,6 +110,7 @@ async def measure(env: BioSimEnv, calls: list) -> list:
 
 @weave.op()
 async def run_discovery() -> dict:
+    price = usd_per_1m_tokens()
     env = BioSimEnv(OBJECTIVE, max_rounds=5)
     obs, tools = await env.reset()
     schema = openai_tools(tools)
@@ -89,8 +122,13 @@ async def run_discovery() -> dict:
                 {"role": "user", "content": obs[0].content}]
 
     transcript = []
+    stopped = None
     for rnd in range(1, env.state.max_rounds + 1):
-        turn = agent_turn(messages, schema)
+        try:
+            turn = paid_turn(env, price, f"round-{rnd}", messages, schema)
+        except BudgetExceeded as exc:
+            stopped = str(exc)
+            break
         if turn["content"]:
             print(f"\n── round {rnd} ──\n{turn['content'][:700]}", flush=True)
         if not turn["tool_calls"]:
@@ -99,7 +137,13 @@ async def run_discovery() -> dict:
 
         names = [f"{c['name']}({c['arguments']})" for c in turn["tool_calls"]]
         print(f"   measuring: {'; '.join(n[:70] for n in names)}", flush=True)
-        results = await measure(env, turn["tool_calls"])
+        try:
+            results = await measure(env, turn["tool_calls"])
+        except BudgetExceeded as exc:
+            stopped = str(exc)
+            transcript.append({"round": rnd, "reasoning": turn["content"],
+                               "requested": names, "refused": stopped})
+            break
         for r in results:
             print(f"     -> {r}", flush=True)
 
@@ -115,14 +159,24 @@ async def run_discovery() -> dict:
                            "requested": names, "results": results,
                            "completion_tokens": turn["completion_tokens"]})
 
-    messages.append({"role": "user", "content":
-                     "State your conclusion from the numbers you measured. Name the positions, "
-                     "quote their scores, and say what it implies about the fold. Be brief."})
-    final = agent_turn(messages, schema)
-    print(f"\n── conclusion ──\n{final['content']}", flush=True)
+    conclusion = None
+    if stopped is None:
+        messages.append({"role": "user", "content":
+                         "State your conclusion from the numbers you measured. Name the positions, "
+                         "quote their scores, and say what it implies about the fold. Be brief."})
+        try:
+            final = paid_turn(env, price, "conclusion", messages, schema)
+            conclusion = final["content"]
+            print(f"\n── conclusion ──\n{conclusion}", flush=True)
+        except BudgetExceeded as exc:
+            stopped = str(exc)
+    if stopped:
+        print(f"\n── stopped: {stopped} ──", flush=True)
 
     return {"objective": OBJECTIVE, "model": MODEL, "rounds": transcript,
-            "conclusion": final["content"], "audit_trail": env.state.scored}
+            "conclusion": conclusion, "audit_trail": env.state.scored,
+            "spend_usd": env.tracker.total(), "ceiling_usd": env.tracker.ceiling_usd,
+            "stopped": stopped}
 
 
 def main() -> int:

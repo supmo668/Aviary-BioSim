@@ -10,9 +10,21 @@ them: `step` does not simulate, it runs ESM-2 over a real UniProt sequence and
 returns the number that comes out. An agent using this environment is not
 reasoning about protein stability, it is measuring it.
 
-The tool list also carries the SpendTracker built by /v2r-loop drain 1, exposed
-through `as_tool()`. Every model call the agent makes is metered by a component
-that an independent sealed test proved correct.
+The environment enforces a spend ceiling with the SpendTracker built by /v2r-loop
+drain 1. Two halves, stated separately because only one is sealed-tested:
+
+- The COMPONENT — `SpendTracker` recording, totalling and refusing past its ceiling
+  (`demo/spend_tracker.py`) — was proven by independent sealed tests.
+- The ENFORCEMENT here is not covered by those tests; it is covered by
+  `science/tests/test_biosim_env_budget.py`. `step()` checks the ceiling before every
+  tool call, outside the tool-error handler, so an over-budget rollout stops with
+  `BudgetExceeded` instead of reporting it as a tool failure and carrying on.
+
+Spend reaches the ledger through `charge()`, called by whatever pays for model
+calls (the rollout harness), so metering does not depend on the agent choosing to
+report its own cost. The agent-facing `record` tool from `as_tool()` stays in the
+tool list, but it is not the ledger's only path, and nothing here assumes the agent
+calls it.
 
 The reward channel is wired to 0.0 deliberately. aviary carries a reward because
 it is an RL gym; this is tool-mediated discovery, not training, and inventing a
@@ -50,14 +62,24 @@ class BioSimEnv(Environment[BioSimState]):
         self.tracker = SpendTracker(ceiling_usd)
         self.state = BioSimState(max_rounds)
         self.tools: list[Tool] = []
+        # name -> callable, held here rather than read back off Tool: aviary exposes
+        # no public accessor for a Tool's function, only the private `_tool_fn`.
+        self._fns: dict = {}
+
+    def charge(self, call_id: str, cost_usd: float) -> None:
+        """Record spend on the environment's own ledger — the harness path.
+
+        Call this for every model call the rollout pays for. It records only;
+        the refusal happens in `step()`, before the next tool runs.
+        """
+        self.tracker.record(call_id, cost_usd)
 
     async def reset(self) -> tuple[list[Message], list[Tool]]:
         self.state = BioSimState(self.state.max_rounds)
-        self.tools = [
-            Tool.from_function(esm_tool.score_variant),
-            Tool.from_function(esm_tool.embed_sequence),
-            self.tracker.as_tool(),
-        ]
+        fns = [esm_tool.score_variant, esm_tool.embed_sequence]
+        self.tools = [Tool.from_function(fn) for fn in fns] + [self.tracker.as_tool()]
+        self._fns = {fn.__name__: fn for fn in fns}
+        self._fns["record"] = self.tracker.record
         obs = [Message(content=(
             f"{self.objective}\n\n"
             "You have tools that run a real protein language model (ESM-2) over real "
@@ -76,7 +98,11 @@ class BioSimEnv(Environment[BioSimState]):
         valid, invalid = self.filter_invalid_tool_calls(action)
         responses: list[Message] = []
         for call in valid.tool_calls:
-            fn = {t.info.name: t._tool_fn for t in self.tools}[call.function.name]
+            # Refuse BEFORE the tool runs, and OUTSIDE the handler below. BudgetExceeded
+            # is a RuntimeError, so a check inside that `except Exception` would turn the
+            # refusal into a "tool error" string and let the rollout continue.
+            self.tracker.check()
+            fn = self._fns[call.function.name]
             try:
                 result = fn(**call.function.arguments)
             except Exception as exc:  # a tool that fails says so; it never returns a number
