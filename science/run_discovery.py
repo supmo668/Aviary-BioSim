@@ -44,7 +44,8 @@ OUT = Path(__file__).parent / "out" / "discovery"
 def usd_per_1m_tokens() -> float:
     """The declared token price. Refuses to guess: no price means no budget guard."""
     raw = os.environ.get("BIOSIM_USD_PER_1M_TOKENS")
-    # Empty counts as unset: BIOSIM_USD_PER_1M_TOKENS="$PRICE" with PRICE unset is "".
+    # An empty or whitespace value counts as unset: a shell expansion of an unset
+    # variable produces "", and the operator should be told to declare a price.
     if raw is None or not raw.strip():
         sys.exit("BIOSIM_USD_PER_1M_TOKENS is not set. Declare the model's price per "
                  "million tokens; the budget cannot be enforced without it.")

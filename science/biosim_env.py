@@ -99,8 +99,10 @@ class BioSimEnv(Environment[BioSimState]):
         """Report how much of the spend budget is left, in US dollars.
 
         Read-only: this reports the ledger and never writes it. The value is the
-        ceiling minus recorded spend, so it is zero or negative once the budget is
-        spent, and it is never rounded up.
+        ceiling minus recorded spend, never rounded up. Through the agent's tool it
+        is never negative: step() refuses every tool call, this one included, once
+        spend passes the ceiling, so an over-budget agent gets BudgetExceeded rather
+        than a number. Harness callers can see a negative value.
         """
         return self.tracker.ceiling_usd - self.tracker.total()
 

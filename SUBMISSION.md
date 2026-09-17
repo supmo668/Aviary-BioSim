@@ -65,12 +65,14 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 
 - **Self-correcting by construction.** Three independent precedents in our tooling say the same thing: the actor doing the work must not record that the work passed. We enforce it mechanically.
 - **It knows when to stop.** A drain closing zero new units ends the loop — a convergence signal, not a timeout.
-- **It refuses to improve mid-run.** Instincts are hash-pinned per drain; adopting them mid-drain would make the run unattributable.
+- **It refuses to improve mid-run.** Instincts are pinned per drain — approximately, since hooks rewrite the store (see the limitation below); adopting them mid-drain would make the run unattributable.
 - **Our own agent corrected us, twice.** It refused a scope change the coordinator asked for — quoting the rule that only the human gate fixes scope — and routed it to the human. It then refused to manufacture a park for the demo, because an engineered park is indistinguishable from an earned one in the register.
 
 ## Status, stated honestly
 
-**Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop and its budget enforcement; all three deliverables. **159 tests green.**
+**Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop; all three deliverables. **159 tests green** — 42 register, 42 science, and 75 sealed component tests last run at drain 1's close (`demo/spend_tracker.py` is unchanged since).
+
+**Built and tested, not yet run end to end:** `BioSimEnv`'s budget enforcement. The discovery loop refuses to start without a declared token price, and none has been supplied yet. The 66-measurement run above predates it, so its traces show the earlier tool list, which still offered the agent `record`.
 
 **The limitation that matters most.** Three defects surfaced today, and they are one shape:
 a mechanism reported success while the property it existed to guarantee was absent.
@@ -90,8 +92,8 @@ a self-test, and the self-test passed. The pattern is not a story about code wri
 ## Run it
 
 ```bash
-cd .claude/skills/v2r-loop/scripts
-uv run --with pytest --with pyyaml pytest tests/ -q          # 42 passed
+# Everything below runs from the repository root.
+uv run --with pytest --with pyyaml pytest .claude/skills/v2r-loop/scripts/tests -q   # 42 passed
 uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave \
   pytest science/tests -q                                    # 42 passed
 
@@ -102,7 +104,8 @@ uv run --with marimo --with pyyaml --with pandas --with altair --with pyarrow \
   marimo run dashboard/v2r_dashboard.py
 
 uv run science/run_experiment.py                             # the real ESM-2 scan
-# The discovery loop meters every model call and has no default price: declare your
-# provider's USD price per 1M tokens in PRICE first, or it exits without running.
-BIOSIM_USD_PER_1M_TOKENS="$PRICE" uv run science/run_discovery.py   # the traced agent loop
+# The discovery loop meters every model call and has no default price. Set PRICE to your
+# provider's USD price per 1M tokens, and WANDB_API_KEY for inference, or it will not start.
+BIOSIM_USD_PER_1M_TOKENS="${PRICE:?set PRICE to the USD price per 1M tokens from your provider}" \
+  uv run science/run_discovery.py                            # the traced agent loop
 ```

@@ -255,7 +255,8 @@ outcome: completed          # completed | halted
 - A drain is attributable: the run record pins an exact register digest and seed, and records
   the instinct tree SHA. The SHA is only an approximate label for the instinct set — hook
   reinforcement rewrites the store with nothing learned (ADR-0003 correction) — so a changed pin
-  alone does not show that the instincts changed; a divergence traces to the digest or seed. Determinism of the
+  alone does not show that the instincts changed. A changed digest or seed explains a divergence;
+  an unchanged pair does not rule out instinct, prompt or builder variation. Determinism of the
   *record* is asserted; determinism of the *builder* is not, and must not be claimed —
   see `docs/plan.md` Task 7 and the flagged ambiguity in `docs/CONTEXT.md`.
 
