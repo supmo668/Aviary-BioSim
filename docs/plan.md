@@ -971,9 +971,10 @@ Per ADR-0003 the pin reuses the in-repo `.aiadlc/instincts` store and records it
 same register, same instinct pin, same seed → same closed and parked sets." That cannot be
 asserted in a test, because a drain's work is done by LLM subagents and is not deterministic
 at the token level. What the run record delivers, and what Task 7 actually tests, is
-**attributability**: any drain's result is pinned to an exact register digest, an exact
-instinct tree SHA, and a seed, so a divergence can always be traced to which of the three
-changed. Determinism of the *record* is testable; determinism of the *builder* is not, and
+**attributability**: any drain's result is pinned to an exact register digest and a seed, and
+labelled with the instinct tree SHA, which identifies the instinct set only approximately
+(corrected after drain 1, see ADR-0003). A changed digest or seed explains a divergence; an
+unchanged pair does not rule out instinct, prompt or builder variation. Determinism of the *record* is testable; determinism of the *builder* is not, and
 claiming otherwise in a test would be theatre. The end-to-end invariant that Task 10 does
 assert — every commit on the branch is green — is the one that actually protects the branch.
 

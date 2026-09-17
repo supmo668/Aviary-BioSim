@@ -19,7 +19,7 @@ Every finding below is one failure mode, and it is the honest limitation of this
 > **A mechanism reports success while the property it exists to guarantee is absent.**
 
 `weave.publish` succeeded and printed a confident URL while writing evidence nothing could
-read. The register pins the instinct set, the seed and the register digest, but not the two
+read. The register pins the seed and the register digest and labels the instinct set, but not the two
 per-unit prompts where the difficulty actually lives. The instinct pin is computed exactly and
 does not identify what it names. In each case the mechanism ran, returned, and looked right.
 
@@ -44,8 +44,8 @@ single operation that either fully happens or does not"). That is most of the an
 neutral prompt stating only the requirement would very plausibly have parked.
 
 This is the drain's most useful finding, and it is about the loop rather than about
-SpendTracker: **the register pins the instinct set, the seed and the register hash, but
-nothing pins the two prompts**, and the prompts are where the difficulty actually lives.
+SpendTracker: **the register pins the seed and the register hash (and labels the instinct set,
+only approximately — see the pin finding below), but nothing pins the two prompts**, and the prompts are where the difficulty actually lives.
 `docs/CONTEXT.md` claims a drain is replayable — "the same register, the same instinct pin
 and the same seed must reproduce the same closes and parks". That claim does not hold while
 the prompts are free variables. Either template them per unit and hash them into the run
