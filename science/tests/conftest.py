@@ -34,10 +34,13 @@ DEMO = SCIENCE.parent / "demo"
 
 IS_TEST_STUB = "__aviary_test_stub__"
 
-# Every name a fixture here swaps, plus every name the modules under test import for
-# real. A name missing from this list is a name the guard cannot see.
+# Names a fixture here swaps, plus the third-party names the modules under test
+# import for real. THIS LIST IS THE GUARD'S ENTIRE REACH: a fake installed under any
+# other name is invisible, and the failure then looks like an unexplained cascade
+# rather than a leak. Add the name when you add the import.
 WATCHED = ("esm_tool", "biosim_env", "run_discovery", "spend_tracker",
-           "aviary.core", "torch", "transformers", "requests")
+           "aviary.core", "torch", "transformers", "requests",
+           "openai", "weave", "yaml")
 
 # What sys.modules held for each watched name BEFORE collection imported anything.
 _BASELINE: dict = {}
@@ -62,6 +65,17 @@ def _stub(name: str) -> types.ModuleType:
     return module
 
 
+def _path_leaks() -> list:
+    """sys.path entries that were not there before collection.
+
+    Without this the guard closes only the sys.modules half of the ordering problem:
+    an import-time `sys.path.insert` that is never unwound changes what a later bare
+    import resolves to, which is the same defect wearing different clothes.
+    """
+    baseline = set(_BASELINE_SYSPATH)
+    return [entry for entry in sys.path if entry not in baseline]
+
+
 def _leaked() -> list:
     """Watched names whose entry is not what it was before collection.
 
@@ -73,6 +87,12 @@ def _leaked() -> list:
     A name that was absent at baseline and is now a real importable module (it has a
     __file__) is not a leak: the suite legitimately imports aviary.core, requests and
     others as it runs.
+
+    KNOWN HOLE, accepted: that exemption also lets a test module pin the REAL module
+    at a watched name (import it at module scope and never unwind) without being
+    reported. The alternatives false-positive on the suite's own legitimate imports,
+    and a real module pinned under its own name cannot fake behaviour — only its
+    presence. The sys.path half of such a module's setup IS caught, by _path_leaks.
     """
     out = []
     for name in WATCHED:
@@ -100,29 +120,52 @@ def _repair() -> None:
     sys.path[:] = list(_BASELINE_SYSPATH)
 
 
+def pytest_collection_finish(session):
+    """Report an import-time leak HERE, where it is actually attributable.
+
+    Collection is what imports test modules, so a module that writes sys.modules or
+    sys.path at import time has already done it by the time any test runs. Reporting
+    it at the first test's setup blames a file that did nothing wrong; reporting it
+    here names the phase that caused it, before any test is marked red.
+    """
+    leaked, paths = _leaked(), _path_leaks()
+    if leaked or paths:
+        _repair()
+        raise pytest.UsageError(
+            "a test module changed global import state while being COLLECTED — "
+            f"sys.modules: {leaked or 'clean'}; sys.path additions: {paths or 'none'}. "
+            "The offender is a module imported during collection, not the first test "
+            "that runs. Never write sys.modules or sys.path from a test module: ask for "
+            "a fixture (esm_stub / esm / bio / disc), or add one to conftest."
+        )
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
-    """Before fixtures run: sys.modules must look like it did before collection."""
-    leaked = _leaked()
-    if leaked:
+    """Before fixtures run: global import state must match the pre-collection snapshot."""
+    leaked, paths = _leaked(), _path_leaks()
+    if leaked or paths:
         _repair()
         pytest.fail(
-            f"{item.nodeid}: {leaked} was replaced in sys.modules before this test ran. "
-            "Either a test module wrote sys.modules at import/collection time, or an "
-            "earlier test leaked. Ask for a fixture (esm_stub / esm / bio / disc) or add "
-            "one here; never assign sys.modules from a test module."
+            f"{item.nodeid} ran with global import state already dirty — "
+            f"sys.modules: {leaked or 'clean'}; sys.path additions: {paths or 'none'}. "
+            "An earlier test leaked (collection-time writes are reported at collection). "
+            "Ask for a fixture (esm_stub / esm / bio / disc) or add one here; never "
+            "assign sys.modules or sys.path from a test module."
         )
 
 
 @pytest.hookimpl(trylast=True)
 def pytest_runtest_teardown(item, nextitem):
     """After fixtures are torn down: nothing may still be replaced."""
-    leaked = _leaked()
-    if leaked:
+    leaked, paths = _leaked(), _path_leaks()
+    if leaked or paths:
         _repair()
         pytest.fail(
-            f"{item.nodeid} left {leaked} replaced in sys.modules. Install fakes with "
-            "monkeypatch.setitem(sys.modules, ...) so they unwind."
+            f"{item.nodeid} left global import state dirty — sys.modules: "
+            f"{leaked or 'clean'}; sys.path additions: {paths or 'none'}. Install fakes "
+            "with monkeypatch.setitem(sys.modules, ...) and paths with "
+            "monkeypatch.syspath_prepend(...) so they unwind."
         )
 
 
@@ -143,10 +186,10 @@ def _load_by_path(name: str, path: Path) -> types.ModuleType:
         # resolves differently depending on what ran first — the same order-dependence
         # this file exists to remove, moved from sys.modules into sys.path.
         #
-        # Redundant TODAY, and deliberately kept: monkeypatch.syspath_prepend restores
-        # the whole sys.path list on undo, so the fixtures already cover this and no
-        # test can distinguish its removal. It is here for the fixture that forgets to
-        # use monkeypatch — which is how this defect arrived the first time.
+        # NOT redundant: the `esm` fixture calls this loader without ever calling
+        # monkeypatch.syspath_prepend, so no monkeypatch snapshot of sys.path exists
+        # for it and this `finally` is the only thing unwinding a sys.path write by the
+        # module it loads. test_load_by_path_restores_sys_path pins it directly.
         exec(compile(path.read_text(), str(path), "exec"), module.__dict__)
     finally:
         sys.path[:] = saved
@@ -169,6 +212,8 @@ def stub_contract():
         watched = WATCHED
         science_dir = str(SCIENCE)
         demo_dir = str(DEMO)
+        load_by_path = staticmethod(_load_by_path)
+        bio_class = _Bio
 
         @staticmethod
         def stubbed() -> list:

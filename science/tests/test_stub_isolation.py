@@ -99,7 +99,12 @@ def _run(pytester, module_source):
 
 def test_the_guard_catches_an_unmarked_stub_installed_at_import_time(pytester):
     """The original F08 shape, and the one a marker-based guard misses: a plain
-    ModuleType written by someone who never heard of our marker."""
+    ModuleType written by someone who never heard of our marker.
+
+    Reported at COLLECTION, before any test runs — an import-time write is caused by
+    collection, so blaming whichever test happened to run first marks an innocent file
+    red and hides the real offender.
+    """
     result = _run(pytester, """
         import sys, types
         sys.modules["esm_tool"] = types.ModuleType("esm_tool")
@@ -107,8 +112,39 @@ def test_the_guard_catches_an_unmarked_stub_installed_at_import_time(pytester):
         def test_harmless():
             assert True
     """)
-    result.assert_outcomes(errors=1)
-    assert "esm_tool" in result.stdout.str()
+    assert result.ret != 0
+    result.assert_outcomes(passed=0, failed=0, errors=0)
+    out = result.stdout.str() + result.stderr.str()
+    assert "esm_tool" in out
+    assert "COLLECTED" in out
+
+
+def test_the_guard_catches_a_sys_path_write_at_import_time(pytester):
+    """The sys.path half of the same shape — previously invisible to the guard."""
+    result = _run(pytester, """
+        import sys
+        sys.path.insert(0, "/scorer-probe-shadow-dir")
+
+        def test_harmless():
+            assert True
+    """)
+    assert result.ret != 0
+    out = result.stdout.str() + result.stderr.str()
+    assert "/scorer-probe-shadow-dir" in out
+
+
+def test_the_guard_catches_a_sys_path_leak_from_a_test_body(pytester):
+    result = _run(pytester, """
+        import sys
+
+        def test_leaks_a_path():
+            sys.path.insert(0, "/leaked-by-a-test-body")
+
+        def test_next():
+            assert True
+    """)
+    result.assert_outcomes(errors=1, passed=2)
+    assert "/leaked-by-a-test-body" in result.stdout.str()
 
 
 def test_the_guard_catches_a_stub_leaked_by_a_test_body(pytester):
@@ -138,8 +174,13 @@ def test_a_fixture_stub_does_not_leak_to_the_next_test(pytester):
 
 
 def test_sys_path_is_restored_after_a_fixture_loaded_a_module_by_path(pytester):
-    """The in-file sys.path assertion above runs before any `bio` test, so alone it
-    passes trivially. This orders the two explicitly: load by path, then check."""
+    """Orders the two explicitly: load by path, then check.
+
+    The in-file assertion above cannot carry this on its own — whether a `bio` test has
+    already run depends on how the suite was invoked (trivially true for this file alone,
+    false in a full run). An assertion whose meaning depends on collection order is the
+    defect this unit exists to remove, so the ordered version lives here.
+    """
     result = _run(pytester, """
         import sys
 
@@ -152,3 +193,31 @@ def test_sys_path_is_restored_after_a_fixture_loaded_a_module_by_path(pytester):
             assert stub_contract.science_dir not in sys.path
     """)
     result.assert_outcomes(passed=2)
+
+
+def test_load_by_path_restores_sys_path(stub_contract, tmp_path):
+    """Pins the loader's own sys.path restore, which was previously commented as
+    untestable. The `esm` fixture never calls monkeypatch.syspath_prepend, so for that
+    fixture this `finally` is the only thing unwinding a module's sys.path write."""
+    module = tmp_path / "writes_sys_path.py"
+    module.write_text("import sys\nsys.path.insert(0, '/inserted-by-the-loaded-module')\n")
+    before = list(sys.path)
+
+    stub_contract.load_by_path("loaded_under_test", module)
+
+    assert sys.path == before
+    assert "/inserted-by-the-loaded-module" not in sys.path
+
+
+def test_the_bundle_imports_its_classes_rather_than_reading_sys_modules(bio, stub_contract, monkeypatch):
+    """Distinguishes an import from a sys.modules lookup, which are otherwise
+    indistinguishable: with the entry removed, an import re-imports and a lookup raises
+    KeyError. That latent dependency on another function's imports is why this changed."""
+    monkeypatch.delitem(sys.modules, "spend_tracker", raising=False)
+    monkeypatch.delitem(sys.modules, "aviary.core", raising=False)
+
+    rebuilt = stub_contract.bio_class(bio.module, [])
+
+    import spend_tracker
+    assert rebuilt.BudgetExceeded is spend_tracker.BudgetExceeded
+    assert rebuilt.BudgetExceeded is not Exception

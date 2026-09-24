@@ -162,16 +162,19 @@ def score_variant(accession: str, position: int, mutant: str) -> str:
         position: 1-based residue position in the full sequence to substitute.
         mutant: Single-letter amino acid code to substitute in at that position.
     """
+    # Validate here too, and report THIS value: on the cached branch rec is file
+    # content, so rec["accession"] is not necessarily what the caller asked for.
+    accession = valid_accession(accession)
     rec = fetch_sequence(accession)
     seq = rec["sequence"]
     if not 1 <= position <= len(seq):
-        return f"position {position} is outside {rec['accession']} (length {len(seq)})"
+        return f"position {position} is outside {accession} (length {len(seq)})"
     wt = seq[position - 1]
     if mutant not in AA:
         return f"{mutant!r} is not one of the 20 amino acids"
     lp = position_logprobs(seq[: position] + seq[position:])[position - 1]["logp"]
     score = lp[mutant] - lp[wt]
-    return (f"{rec['accession']} {wt}{position}{mutant}: score {score:.3f} "
+    return (f"{accession} {wt}{position}{mutant}: score {score:.3f} "
             f"(negative means the model finds the substitution disruptive)")
 
 
@@ -181,7 +184,8 @@ def embed_sequence(accession: str) -> str:
     Args:
         accession: UniProt accession of the protein to embed, for example P01308.
     """
+    accession = valid_accession(accession)
     rec = fetch_sequence(accession)
     vec = embed(rec["sequence"])
-    return (f"{rec['accession']} ({rec['organism']}, {rec['length']} aa) embedded: "
+    return (f"{accession} ({rec['organism']}, {rec['length']} aa) embedded: "
             f"{len(vec)}-dimensional representation")

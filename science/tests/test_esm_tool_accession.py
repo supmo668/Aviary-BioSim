@@ -252,3 +252,24 @@ def test_embed_sequence_reports_the_validated_accession(esm, tmp_path, monkeypat
     out = esm.embed_sequence(_Evil("P01308"))
     assert "../secret" not in out, out
     assert out.startswith("P01308 (Testus fictus, 4 aa)"), out
+
+
+def test_the_tools_do_not_echo_an_accession_taken_from_the_cache_file(esm, tmp_path, monkeypatch):
+    """A cached record is file content, not validated input. Reporting rec["accession"]
+    puts whatever the file says in front of the operator — including escape sequences."""
+    cache = tmp_path / "seqs"
+    cache.mkdir()
+    (cache / "P01308.json").write_text(json.dumps(
+        {"accession": "\x1b[2K OPERATOR-SPOOF", "name": "EXMP",
+         "organism": "Testus fictus", "sequence": "MALW", "length": 4}))
+    monkeypatch.setattr(esm, "CACHE", cache)
+    monkeypatch.setattr(esm, "embed", lambda seq: [0.0] * 8)
+
+    out = esm.score_variant("P01308", 99, "A")
+    assert "OPERATOR-SPOOF" not in out, out
+    assert "\x1b" not in out, repr(out)
+    assert out.startswith("position 99 is outside P01308"), out
+
+    out = esm.embed_sequence("P01308")
+    assert "OPERATOR-SPOOF" not in out, out
+    assert out.startswith("P01308 ("), out
