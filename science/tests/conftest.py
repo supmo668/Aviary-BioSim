@@ -9,13 +9,18 @@ library to borrow its stub. The symptom was two failures under
 `--import-mode=importlib`; the real problem was that a green run proved nothing
 about isolation, only that the ordering happened to be favourable.
 
-Everything here is installed with `monkeypatch.setitem(sys.modules, ...)`, so it
-is torn down after each test. Nothing is installed at import time.
+Fakes are installed with `monkeypatch.setitem(sys.modules, ...)` and `sys.path` is
+restored around every by-path load, so both unwind after each test.
 
-Every fake carries `IS_TEST_STUB`, and `pytest_runtest_setup` / `_teardown` fail a
-test that finds one in `sys.modules` outside the fixture that owns it. That guard
-is the part that keeps this from decaying: without it, the next module to install
-a global stub reintroduces the defect silently, which is exactly how it arrived.
+RULE FOR TEST MODULES: never assign `sys.modules` yourself. Ask for a fixture
+(`esm_stub`, `esm`, `bio`, `disc`) or add one here. An import-time write to any
+watched name fails the run.
+
+That rule is enforced, not merely stated. `pytest_configure` snapshots what each
+watched name held before collection, and the setup/teardown hooks fail a test whose
+`sys.modules` no longer matches. The check is by IDENTITY rather than by a marker,
+because a marker would only catch fakes written here — and the contributor who
+reintroduces this defect will write a plain ModuleType and never have heard of it.
 """
 import importlib.util
 import sys
@@ -28,7 +33,27 @@ SCIENCE = Path(__file__).resolve().parents[1]
 DEMO = SCIENCE.parent / "demo"
 
 IS_TEST_STUB = "__aviary_test_stub__"
-WATCHED = ("esm_tool", "torch", "transformers", "requests")
+
+# Every name a fixture here swaps, plus every name the modules under test import for
+# real. A name missing from this list is a name the guard cannot see.
+WATCHED = ("esm_tool", "biosim_env", "run_discovery", "spend_tracker",
+           "aviary.core", "torch", "transformers", "requests")
+
+# What sys.modules held for each watched name BEFORE collection imported anything.
+_BASELINE: dict = {}
+_BASELINE_SYSPATH: list = []
+
+
+def pytest_configure(config):
+    """Snapshot the real world before any test module is imported.
+
+    Collection imports every test module before the first test runs, so this has to
+    happen at configure time: a module that installs a fake at import time has
+    already done so by the time any fixture or hook for a test runs.
+    """
+    _BASELINE.clear()
+    _BASELINE.update({n: sys.modules.get(n) for n in WATCHED})
+    _BASELINE_SYSPATH[:] = list(sys.path)
 
 
 def _stub(name: str) -> types.ModuleType:
@@ -37,32 +62,67 @@ def _stub(name: str) -> types.ModuleType:
     return module
 
 
-def _leaked() -> list[str]:
-    return [n for n in WATCHED
-            if getattr(sys.modules.get(n), IS_TEST_STUB, False)]
+def _leaked() -> list:
+    """Watched names whose entry is not what it was before collection.
+
+    Deliberately IDENTITY-based, not marker-based. A marker only finds fakes this
+    file created, which is the one population that cannot cause the defect — the
+    contributor who reintroduces it will write a plain ModuleType and never hear of
+    the marker. Identity finds theirs too.
+
+    A name that was absent at baseline and is now a real importable module (it has a
+    __file__) is not a leak: the suite legitimately imports aviary.core, requests and
+    others as it runs.
+    """
+    out = []
+    for name in WATCHED:
+        current, base = sys.modules.get(name), _BASELINE.get(name)
+        if base is not None:
+            if current is not base:
+                out.append(name)
+        elif current is not None and getattr(current, "__file__", None) is None:
+            out.append(name)
+    return out
+
+
+def _repair() -> None:
+    """Put the watched names back, so ONE leak fails ONE test.
+
+    Without this a single leaked module fails every test after it, and the offender
+    is buried under hundreds of identical errors.
+    """
+    for name in WATCHED:
+        base = _BASELINE.get(name)
+        if base is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = base
+    sys.path[:] = list(_BASELINE_SYSPATH)
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
-    """Before fixtures run: nothing may already be stubbed."""
+    """Before fixtures run: sys.modules must look like it did before collection."""
     leaked = _leaked()
     if leaked:
+        _repair()
         pytest.fail(
-            f"test stub(s) {leaked} were in sys.modules BEFORE {item.name} ran. "
-            "A stub outlived the test that installed it, so this test may be "
-            "exercising a fake it never asked for."
+            f"{item.nodeid}: {leaked} was replaced in sys.modules before this test ran. "
+            "Either a test module wrote sys.modules at import/collection time, or an "
+            "earlier test leaked. Ask for a fixture (esm_stub / esm / bio / disc) or add "
+            "one here; never assign sys.modules from a test module."
         )
 
 
 @pytest.hookimpl(trylast=True)
 def pytest_runtest_teardown(item, nextitem):
-    """After fixtures are torn down: nothing may still be stubbed."""
+    """After fixtures are torn down: nothing may still be replaced."""
     leaked = _leaked()
     if leaked:
+        _repair()
         pytest.fail(
-            f"test stub(s) {leaked} were still in sys.modules AFTER {item.name}. "
-            "Install fakes with monkeypatch.setitem(sys.modules, ...) so they "
-            "unwind; a leaked stub silently reaches later tests."
+            f"{item.nodeid} left {leaked} replaced in sys.modules. Install fakes with "
+            "monkeypatch.setitem(sys.modules, ...) so they unwind."
         )
 
 
@@ -76,8 +136,25 @@ def _load_by_path(name: str, path: Path) -> types.ModuleType:
     """
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
-    exec(compile(path.read_text(), str(path), "exec"), module.__dict__)
+    saved = list(sys.path)
+    try:
+        # The modules under test insert their own directories into sys.path at import.
+        # Unwound here: otherwise every test grows the path, and a later bare import
+        # resolves differently depending on what ran first — the same order-dependence
+        # this file exists to remove, moved from sys.modules into sys.path.
+        #
+        # Redundant TODAY, and deliberately kept: monkeypatch.syspath_prepend restores
+        # the whole sys.path list on undo, so the fixtures already cover this and no
+        # test can distinguish its removal. It is here for the fixture that forgets to
+        # use monkeypatch — which is how this defect arrived the first time.
+        exec(compile(path.read_text(), str(path), "exec"), module.__dict__)
+    finally:
+        sys.path[:] = saved
     return module
+
+    # NOTE: each call returns a DISTINCT module object. Anything that must share class
+    # identity with another fixture's module has to be pinned into sys.modules (see
+    # `disc`) or imported normally (see spend_tracker in _Bio).
 
 
 @pytest.fixture
@@ -90,6 +167,8 @@ def stub_contract():
     class Contract:
         marker = IS_TEST_STUB
         watched = WATCHED
+        science_dir = str(SCIENCE)
+        demo_dir = str(DEMO)
 
         @staticmethod
         def stubbed() -> list:
@@ -138,9 +217,15 @@ class _Bio:
     def __init__(self, module, calls):
         self.module = module
         self.calls = calls
-        self.BudgetExceeded = sys.modules["spend_tracker"].BudgetExceeded
-        self.ToolCall = sys.modules["aviary.core"].ToolCall
-        self.ToolRequestMessage = sys.modules["aviary.core"].ToolRequestMessage
+        # Imported, not read out of sys.modules: the import system caches, so these are
+        # the same objects the code under test raises and constructs, without depending
+        # on another function having imported them first.
+        from aviary.core import ToolCall, ToolRequestMessage
+        from spend_tracker import BudgetExceeded
+
+        self.BudgetExceeded = BudgetExceeded
+        self.ToolCall = ToolCall
+        self.ToolRequestMessage = ToolRequestMessage
 
     def env(self, ceiling: float = 1.0, max_rounds: int = 10):
         import asyncio
@@ -159,9 +244,7 @@ class _Bio:
 @pytest.fixture
 def bio(esm_stub, monkeypatch):
     """`biosim_env` loaded against the fake tool, with env/step helpers."""
-    sys.path.insert(0, str(DEMO)) if str(DEMO) not in sys.path else None
-    import aviary.core  # noqa: F401  ensure the real package is resolvable
-    import spend_tracker  # noqa: F401
+    monkeypatch.syspath_prepend(str(DEMO))
     module = _load_by_path("biosim_env_under_test", SCIENCE / "biosim_env.py")
     return _Bio(module, esm_stub.calls)
 

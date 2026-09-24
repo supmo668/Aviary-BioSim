@@ -12,10 +12,6 @@ per-test fixtures (`bio`), so nothing is installed into sys.modules at import ti
 import pytest
 
 
-def _tool_names(env):
-    return {t.info.name for t in env.tools}
-
-
 def test_within_budget_the_step_runs_the_tool(bio):
     env = bio.env(ceiling=1.0)
     obs, reward, done, truncated = bio.step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
@@ -42,7 +38,7 @@ def test_over_budget_the_rollout_stops_and_the_tool_never_runs(bio):
 
 def test_the_refusal_is_not_converted_into_a_tool_error_string(bio):
     """The trap: check() inside step()'s `except Exception` would return
-    'tool error: bio.BudgetExceeded: ...' and let the rollout continue."""
+    'tool error: BudgetExceeded: ...' and let the rollout continue."""
     env = bio.env(ceiling=1.0)
     env.charge("model-call-1", 2.0)
     try:

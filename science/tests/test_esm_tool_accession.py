@@ -176,8 +176,8 @@ class _FakeResponse:
 
 @pytest.mark.parametrize("accession", ["P01308", "O73727", "A0A0B4J2D5"])
 def test_a_valid_accession_is_fetched_from_the_right_url_and_cached(esm, accession, tmp_path, monkeypatch):
-    """The happy path: nothing previously reached it, because the module-level stub
-    always raises. Pins that the VALIDATED value is the one that reaches the URL —
+    """The happy path: nothing previously reached it, because the `esm` fixture's
+    requests.get always raises. Pins that the VALIDATED value is the one that reaches the URL —
     parametrized, because a single accession cannot tell a correct URL from one
     hardcoded to that same accession.
     """
