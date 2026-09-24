@@ -56,6 +56,11 @@ PROJECT_ORIGINS = {
 # What sys.modules held for each watched name BEFORE collection imported anything.
 _BASELINE: dict = {}
 _BASELINE_SYSPATH: list = []
+# Where each watched name RESOLVED before collection, recorded separately because the
+# search path is not trustworthy by itself: a directory already on sys.path when the
+# session starts can GAIN a shadowing file later, and any resolution performed after
+# that finds the shadow and calls it authentic.
+_BASELINE_ORIGIN: dict = {}
 
 
 def pytest_configure(config):
@@ -67,6 +72,13 @@ def pytest_configure(config):
     """
     _BASELINE.clear()
     _BASELINE.update({n: sys.modules.get(n) for n in WATCHED})
+    _BASELINE_ORIGIN.clear()
+    for _name in WATCHED:
+        try:
+            _found = importlib.util.find_spec(_name)
+        except Exception:                 # an unimportable name resolves to nothing
+            _found = None
+        _BASELINE_ORIGIN[_name] = (getattr(_found, "origin", None), _found is not None)
     _BASELINE_SYSPATH[:] = list(sys.path)
 
 
@@ -76,15 +88,36 @@ def _stub(name: str) -> types.ModuleType:
     return module
 
 
-def _path_leaks() -> list:
-    """sys.path entries that were not there before collection.
+def _shadows_a_watched_name(entry: str) -> bool:
+    """Does this directory contain something that could answer to a watched name?"""
+    try:
+        directory = pathlib.Path(entry)
+        if not directory.is_dir():
+            return False
+        for name in WATCHED:
+            top = name.split(".")[0]
+            if (directory / f"{top}.py").exists() or (directory / top).is_dir():
+                return True
+    except OSError:
+        return False
+    return False
 
-    Without this the guard closes only the sys.modules half of the ordering problem:
-    an import-time `sys.path.insert` that is never unwound changes what a later bare
-    import resolves to, which is the same defect wearing different clothes.
+
+def _path_leaks() -> list:
+    """Added sys.path entries that could change what a WATCHED name resolves to.
+
+    Not "every entry added since collection": pytest inserts directories itself, and
+    other suites collected in the same session insert their own. Flagging those made
+    this conftest abort whole sessions over other people's code — a directory-level
+    plugin has no business policing them.
+
+    What matters is shadowing. An added directory containing `yaml.py` can change what
+    `import yaml` resolves to for everyone; an added directory containing neither a
+    watched module nor a watched package cannot, whoever added it.
     """
     baseline = set(_BASELINE_SYSPATH)
-    return [entry for entry in sys.path if entry not in baseline]
+    return [entry for entry in sys.path
+            if entry not in baseline and _shadows_a_watched_name(entry)]
 
 
 def _leaked() -> list:
@@ -139,6 +172,13 @@ def _is_the_real_module(name: str, module) -> bool:
     if origin in ("built-in", "frozen"):
         return True
 
+    recorded, resolvable = _BASELINE_ORIGIN.get(name, (None, False))
+    if resolvable:
+        # Where it resolved BEFORE collection. A resolution done now can be answered by
+        # a file that did not exist then, including one written into a directory that
+        # was already on the path.
+        return origin == recorded
+
     expected = PROJECT_ORIGINS.get(name)
     if expected is not None:
         # Our own modules have exactly one legitimate location. Checking against it is
@@ -146,10 +186,27 @@ def _is_the_real_module(name: str, module) -> bool:
         # now — it is not, between tests, because the fixtures unwind it.
         return pathlib.Path(origin).resolve() == expected
 
-    if "." in name:                       # submodule: parent package governs the path
-        return True
+    if "." in name:
+        # Only reached when the name did NOT resolve at configure time (an uninstalled
+        # optional dependency, say) — otherwise the origin baseline above answers first.
+        # Resolve the submodule against its parent package's real __path__ rather than
+        # exempting it. aviary.core is where the Environment and Tool classes come
+        # from: a substituted one makes an enforcement test pass against a stub.
+        parent_name, _, leaf = name.rpartition(".")
+        parent = sys.modules.get(parent_name)
+        search = getattr(parent, "__path__", None)
+        if search is None or not _is_the_real_module(parent_name, parent):
+            return False
+        try:
+            found = importlib.machinery.PathFinder.find_spec(name, list(search))
+        except Exception:
+            return False
+        return found is not None and getattr(found, "origin", None) == origin
     try:
-        found = importlib.machinery.PathFinder.find_spec(name, sys.path)
+        # Resolved against the BASELINE path, never the current one: a fake that also
+        # inserted its own directory would otherwise be found by the search it is
+        # being checked against, and validate itself.
+        found = importlib.machinery.PathFinder.find_spec(name, list(_BASELINE_SYSPATH))
     except Exception:                     # a broken finder must not mask a leak
         return False
     return found is not None and getattr(found, "origin", None) == origin
@@ -167,7 +224,11 @@ def _repair() -> None:
             sys.modules.pop(name, None)
         else:
             sys.modules[name] = base
-    sys.path[:] = list(_BASELINE_SYSPATH)
+    # Only the shadowing entries: another suite collected in the same session may
+    # legitimately have added its own, and this plugin does not own those.
+    for entry in _path_leaks():
+        while entry in sys.path:
+            sys.path.remove(entry)
 
 
 def pytest_collection_finish(session):
@@ -178,15 +239,6 @@ def pytest_collection_finish(session):
     it at the first test's setup blames a file that did nothing wrong; reporting it
     here names the phase that caused it, before any test is marked red.
     """
-    # In prepend import mode pytest inserts each collected file's directory into
-    # sys.path DURING collection, after the configure snapshot. Those entries are
-    # pytest's, not a test module's: accept them and re-baseline, or collecting this
-    # suite alongside any other test root aborts the run and blames innocent code.
-    collected = {str(pathlib.Path(str(item.path)).parent) for item in session.items}
-    collected.add(str(session.config.rootpath))
-    expected = [entry for entry in _path_leaks() if entry in collected]
-    _BASELINE_SYSPATH.extend(expected)
-
     leaked, paths = _leaked(), _path_leaks()
     if leaked or paths:
         _repair()
@@ -275,6 +327,8 @@ def stub_contract():
         load_by_path = staticmethod(_load_by_path)
         bio_class = _Bio
         runtest_setup = staticmethod(pytest_runtest_setup)
+        path_leaks = staticmethod(_path_leaks)
+        baseline_origin = _BASELINE_ORIGIN
         is_the_real_module = staticmethod(_is_the_real_module)
 
         @staticmethod

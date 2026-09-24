@@ -7,6 +7,7 @@ survives a hook refactor, and pin the fixture wiring the rest of the suite trust
 This is the regression guard for F08. Without it the fix decays the first time
 someone adds a module that installs a global stub — which is how F08 arrived.
 """
+import importlib.util
 import pathlib
 import sys
 
@@ -44,12 +45,13 @@ def test_a_test_that_did_not_ask_for_bio_has_a_clean_sys_path(stub_contract):
     directories at import; if that is not unwound, what a later bare import resolves
     to depends on what ran first — the same order-dependence, moved to sys.path.
 
-    Asserted on sys.path itself, not via find_spec: find_spec answers from
-    sys.modules for anything already imported, so it reports a module the suite
-    legitimately imported and says nothing about the search path.
+    Asserted as a DELTA against the pre-collection baseline, not as "this directory is
+    absent from sys.path": the absolute form depended on how the suite was launched
+    (`cd science && python -m pytest tests` puts science on the path before pytest
+    starts), making the suite's colour a property of the invocation rather than of the
+    code — the inverse of the defect this unit removes.
     """
-    assert stub_contract.demo_dir not in sys.path
-    assert stub_contract.science_dir not in sys.path
+    assert stub_contract.path_leaks() == []
 
 
 def test_the_fake_tool_is_visible_only_while_a_fixture_holds_it(esm_stub, stub_contract):
@@ -90,6 +92,14 @@ def test_the_harness_shares_the_environment_the_bundle_built(disc, bio):
 # Run as their own pytest sessions, so the assertions do not depend on this file's
 # collection order the way a "runs after the one above" test would.
 
+def _shadow_dir(pytester, module_name):
+    """A directory that would answer to a watched name — what makes a path entry
+    dangerous. An added directory shadowing nothing cannot change any resolution."""
+    directory = pytester.mkdir(f"shadow_{module_name}")
+    (directory / f"{module_name}.py").write_text("FAKE = True\n")
+    return directory
+
+
 def _run(pytester, module_source):
     conftest = pathlib.Path(__file__).parent / "conftest.py"
     pytester.makeconftest(CONFTEST_SHIM.format(conftest=str(conftest)))
@@ -123,14 +133,14 @@ def test_the_guard_catches_a_sys_path_write_at_import_time(pytester):
     """The sys.path half of the same shape — previously invisible to the guard."""
     result = _run(pytester, """
         import sys
-        sys.path.insert(0, "/scorer-probe-shadow-dir")
+        sys.path.insert(0, SHADOW)
 
         def test_harmless():
             assert True
-    """)
+    """.replace("SHADOW", repr(str(_shadow_dir(pytester, "yaml")))))
     assert result.ret != 0
     out = result.stdout.str() + result.stderr.str()
-    assert "/scorer-probe-shadow-dir" in out
+    assert "shadow_yaml" in out
 
 
 def test_the_guard_catches_a_sys_path_leak_from_a_test_body(pytester):
@@ -138,13 +148,13 @@ def test_the_guard_catches_a_sys_path_leak_from_a_test_body(pytester):
         import sys
 
         def test_leaks_a_path():
-            sys.path.insert(0, "/leaked-by-a-test-body")
+            sys.path.insert(0, SHADOW)
 
         def test_next():
             assert True
-    """)
+    """.replace("SHADOW", repr(str(_shadow_dir(pytester, "requests")))))
     result.assert_outcomes(errors=1, passed=2)
-    assert "/leaked-by-a-test-body" in result.stdout.str()
+    assert "shadow_requests" in result.stdout.str()
 
 
 def test_the_guard_catches_a_stub_leaked_by_a_test_body(pytester):
@@ -223,23 +233,26 @@ def test_the_bundle_imports_its_classes_rather_than_reading_sys_modules(bio, stu
     assert rebuilt.BudgetExceeded is not Exception
 
 
-def test_the_setup_hook_fails_a_test_that_starts_with_dirty_state(stub_contract):
+def test_the_setup_hook_fails_a_test_that_starts_with_dirty_state(stub_contract, tmp_path):
     """The sibling hooks repair before failing, so this one cannot fire through the
     suite and no suite-level test can pin it. Called directly instead: without this,
     deleting it entirely leaves the suite green."""
     class _Item:
         nodeid = "probe::item"
 
-    sys.path.insert(0, "/dirtied-before-setup")
+    shadow = tmp_path / "shadowing"
+    shadow.mkdir()
+    (shadow / "torch.py").write_text("FAKE = True\n")
+    sys.path.insert(0, str(shadow))
     try:
         # pytest.fail raises Failed, which derives from BaseException, not Exception.
         with pytest.raises(BaseException) as refused:
             stub_contract.runtest_setup(_Item())
     finally:
-        if "/dirtied-before-setup" in sys.path:
-            sys.path.remove("/dirtied-before-setup")
+        while str(shadow) in sys.path:
+            sys.path.remove(str(shadow))
     message = str(refused.value)
-    assert "/dirtied-before-setup" in message
+    assert str(shadow) in message
     assert "not necessarily the one that caused it" in message, \
         "the hook must not assert a cause it cannot know"
 
@@ -287,3 +300,70 @@ def test_collecting_alongside_another_test_root_is_not_treated_as_a_leak(pyteste
     pytester.makeconftest(CONFTEST_SHIM.format(conftest=str(conftest)))
     result = pytester.runpytest_subprocess("-q", ".", str(other))
     result.assert_outcomes(passed=2)
+
+
+@pytest.mark.parametrize("name", ["esm_tool", "biosim_env", "run_discovery",
+                                  "spend_tracker", "aviary", "aviary.core", "torch",
+                                  "transformers", "requests", "openai", "weave", "yaml"])
+def test_every_name_the_guard_must_watch_is_watched(name, stub_contract):
+    """WATCHED could be cut from twelve names to four with the suite green: it was the
+    guard's entire reach, pinned by nothing. Each name here is either swapped by a
+    fixture or imported for real by a module under test."""
+    assert name in stub_contract.watched
+
+
+def test_a_fake_at_a_dotted_watched_name_is_caught(pytester, tmp_path):
+    """aviary.core is where the Environment and Tool classes come from; substituting it
+    makes a budget-enforcement test pass while measuring a stub. Dotted names were
+    exempted outright."""
+    fake = tmp_path / "core.py"
+    fake.write_text("Environment = object\n")
+    result = _run(pytester, """
+        import importlib.util, sys
+        _spec = importlib.util.spec_from_file_location("aviary.core", FAKE)
+        _m = importlib.util.module_from_spec(_spec)
+        sys.modules["aviary.core"] = _m
+        _spec.loader.exec_module(_m)
+
+        def test_harmless():
+            assert True
+    """.replace("FAKE", repr(str(fake))))
+    assert result.ret != 0
+    assert "aviary.core" in result.stdout.str() + result.stderr.str()
+
+
+def test_a_shadowing_directory_cannot_validate_its_own_fake(pytester):
+    """The composed bypass: drop yaml.py beside the test file and insert that directory.
+    A guard resolving against the CURRENT sys.path finds the shadow and agrees with
+    itself; resolution happens against the pre-collection baseline instead."""
+    result = _run(pytester, """
+        import os, sys
+        _here = os.path.dirname(__file__)
+        with open(os.path.join(_here, "yaml.py"), "w") as fh:
+            fh.write("FAKE = True\\n")
+        sys.path.insert(0, _here)
+        import yaml
+
+        def test_harmless():
+            assert getattr(yaml, "FAKE", False)
+    """)
+    assert result.ret != 0, "a fake resolved through a directory it inserted itself"
+
+
+def test_a_dotted_name_that_did_not_resolve_at_configure_is_still_checked(
+        stub_contract, tmp_path, monkeypatch):
+    """The dotted-name branch is only reachable when the name was unresolvable before
+    collection — an optional dependency that is not installed. aviary IS installed here,
+    so the origin baseline answers first and the branch would otherwise go unexercised.
+    """
+    monkeypatch.setitem(stub_contract.baseline_origin, "aviary.core", (None, False))
+
+    fake_file = tmp_path / "core.py"
+    fake_file.write_text("Environment = object\n")
+    spec = importlib.util.spec_from_file_location("aviary.core", fake_file)
+    fake = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fake)
+    assert not stub_contract.is_the_real_module("aviary.core", fake)
+
+    import aviary.core
+    assert stub_contract.is_the_real_module("aviary.core", aviary.core)
