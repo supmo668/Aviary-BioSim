@@ -8,7 +8,7 @@ triggers: [science/tests, demo/tests, pytest, parametrize]
 tags: [testing, mutation, method]
 ---
 
-A single-value test cannot distinguish a correct computation from a constant that happens to equal it. Found live: a test asserted fetch_sequence requested https://rest.uniprot.org/uniprotkb/P01308.fasta, and a mutant that HARDCODED that exact URL passed it — the test fixed one input, so the two implementations were indistinguishable to it. Parametrizing over three accessions killed the mutant immediately.
+A single-value test cannot distinguish a correct computation from a constant that happens to equal it. Found live: a test asserted that fetch_sequence requested the URL built from a single accession constant, and a mutant that HARDCODED that exact URL passed it — the test fixed one input, so the two implementations were indistinguishable to it. Parametrizing over three accessions killed the mutant immediately.
 
 The shape generalises well beyond URLs: any assertion pinning one input cannot separate f(x) from "return the value f(x) happens to produce". It is most dangerous where the single value is the obvious example everyone reaches for — the canonical id, the first record, the happy-path default — because that is exactly the constant a careless or malicious implementation would hardcode.
 

@@ -124,7 +124,7 @@ MALICIOUS = [
     "P01308 ",                      # trailing space
 ]
 
-MALFORMED = ["", "   ", "p01308", "P0130", "ZZZZZZZZZZZZ", "P01308-1", "INS_HUMAN"]
+MALFORMED = ["", "   ", "p01308", "P0130", "ZZZZZZZZZZZZ", "P01308-1", "ABCD_WXYZ"]
 
 # Uppercase-alphanumeric but NOT UniProt accessions. Harmless as paths, so a loose
 # ^[A-Z0-9]{6,10}$ check accepts them; UniProt's own grammar does not. Pinned so the
@@ -183,7 +183,7 @@ def test_a_traversal_cannot_read_a_json_file_outside_the_cache(tmp_path, monkeyp
 def test_a_cached_valid_accession_is_still_served_from_disk(tmp_path, monkeypatch):
     cache = tmp_path / "seqs"
     cache.mkdir()
-    rec = {"accession": "P01308", "name": "INS", "organism": "Homo sapiens",
+    rec = {"accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
            "sequence": "MALW", "length": 4}
     (cache / "P01308.json").write_text(json.dumps(rec))
     monkeypatch.setattr(esm_tool, "CACHE", cache)
@@ -274,7 +274,7 @@ def test_a_valid_accession_is_fetched_from_the_right_url_and_cached(accession, t
     def fake_get(url, **kwargs):
         urls.append(url)
         return _FakeResponse(
-            f">sp|{accession}|INS_X Insulin OS=Homo sapiens OX=9606\nMALWMRLL\n")
+            f">sp|{accession}|EXMP_TEST Example protein OS=Testus fictus OX=9606\nMALWMRLL\n")
 
     monkeypatch.setattr(esm_tool.requests, "get", fake_get)
 
@@ -282,7 +282,7 @@ def test_a_valid_accession_is_fetched_from_the_right_url_and_cached(accession, t
 
     assert urls == [f"https://rest.uniprot.org/uniprotkb/{accession}.fasta"]
     assert rec["accession"] == accession
-    assert rec["organism"] == "Homo sapiens"
+    assert rec["organism"] == "Testus fictus"
     assert rec["sequence"] == "MALWMRLL"
     assert rec["length"] == 8
 
@@ -303,7 +303,7 @@ def test_the_tools_report_the_validated_accession_not_the_callers_object(tmp_pat
     cache = tmp_path / "seqs"
     cache.mkdir()
     (cache / "P01308.json").write_text(json.dumps(
-        {"accession": "P01308", "name": "INS", "organism": "Homo sapiens",
+        {"accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
          "sequence": "MALW", "length": 4}))
     monkeypatch.setattr(esm_tool, "CACHE", cache)
     out = esm_tool.score_variant(_Evil("P01308"), 99, "A")
@@ -315,7 +315,7 @@ def _seed_cache(tmp_path, monkeypatch):
     cache = tmp_path / "seqs"
     cache.mkdir()
     (cache / "P01308.json").write_text(json.dumps(
-        {"accession": "P01308", "name": "INS", "organism": "Homo sapiens",
+        {"accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
          "sequence": "MALW", "length": 4}))
     monkeypatch.setattr(esm_tool, "CACHE", cache)
     return cache
@@ -337,4 +337,4 @@ def test_embed_sequence_reports_the_validated_accession(tmp_path, monkeypatch):
     monkeypatch.setattr(esm_tool, "embed", lambda seq: [0.0] * 8)
     out = esm_tool.embed_sequence(_Evil("P01308"))
     assert "../secret" not in out, out
-    assert out.startswith("P01308 (Homo sapiens, 4 aa)"), out
+    assert out.startswith("P01308 (Testus fictus, 4 aa)"), out
