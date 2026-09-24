@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import requests
@@ -27,6 +28,29 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 MODEL_ID = os.environ.get("ESM_MODEL", "facebook/esm2_t33_650M_UR50D")
 CACHE = Path(__file__).parent / "out" / "seqs"
 AA = "ACDEFGHIKLMNPQRSTVWY"
+
+# UniProtKB's own accession grammar (the pattern UniProt publishes), anchored.
+# The accession is chosen by an untrusted agent and is interpolated into BOTH a
+# cache path and a request URL, so it is validated once, here, before either.
+ACCESSION = re.compile(
+    r"\A(?:[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9](?:[A-Z][A-Z0-9]{2}[0-9]){1,2})\Z"
+)
+
+
+def valid_accession(accession: object) -> str:
+    """Return `accession` if it is a UniProtKB accession; raise ValueError otherwise.
+
+    Rejecting is the whole point: `../../x` escapes the cache directory and reads
+    any .json on the host, and a value carrying `/`, `?` or `#` steers the UniProt
+    request somewhere other than the entry asked for. Nothing is sanitised or
+    trimmed — a value that is not an accession is refused, not repaired.
+    """
+    if not isinstance(accession, str) or not ACCESSION.match(accession):
+        raise ValueError(
+            f"not a UniProt accession: {accession!r} "
+            "(expected e.g. P01308 — 6 or 10 uppercase alphanumerics)"
+        )
+    return accession
 
 _model = None
 _tok = None
@@ -52,6 +76,7 @@ def load_model():
 
 def fetch_sequence(accession: str) -> dict:
     """Fetch one UniProt entry. Cached on disk; never fabricated."""
+    accession = valid_accession(accession)
     CACHE.mkdir(parents=True, exist_ok=True)
     cached = CACHE / f"{accession}.json"
     if cached.exists():
