@@ -42,4 +42,16 @@ Two commits in one session carried messages that described states the evidence d
    overwrite the evidence that contradicts it. Print the verdict from the captured result, never
    beside it. (Both sides of this exchange committed this one on the same day.)
 
+7. MUTATION TESTING LEAVES STALE __pycache__, AND THE RESTORE CHECK DOES NOT CATCH IT. Editing a
+   module in place, running the suite, then restoring it with `cp` can leave a .pyc compiled from
+   the MUTANT. Python reuses a .pyc when the source's recorded mtime and size match, and a
+   mutate-run-restore cycle inside one second can satisfy both — so the next run executes the
+   mutant while the file on disk is correct. Observed: two tests failed against a source that was
+   demonstrably right, and `inspect.getsource` showed the CORRECT body because it reads the FILE,
+   not the loaded code object. Comparing the restored source with the backup (`cmp`) does not
+   detect it either, because the source is genuinely identical; the divergence is in the cache.
+   Run mutants with `python -B` / PYTHONDONTWRITEBYTECODE=1 and delete __pycache__ between
+   mutations. Same family as the rest: the check verified an artifact ADJACENT to the thing that
+   actually executes.
+
 General rule: a commit message is a claim. Gate it on the observed property (tests passed with the expected count; sweep output is empty; the documented command runs verbatim), never on 'the previous command exited 0'. And before correcting a bad commit, check whether it was pushed; if not, add a corrective commit whose message says what the earlier one got wrong — do not rewrite history to hide it.

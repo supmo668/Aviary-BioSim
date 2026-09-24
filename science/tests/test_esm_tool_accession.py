@@ -43,6 +43,9 @@ def _stub_heavy_imports() -> list:
     return attempts
 
 
+PREV_REQUESTS = sys.modules.get("requests")
+
+
 ATTEMPTS = _stub_heavy_imports()
 
 
@@ -62,6 +65,22 @@ def _load_real_esm_tool():
 
 
 esm_tool = _load_real_esm_tool()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _restore_requests_stub():
+    """Unwind the sys.modules stub so it cannot leak into later test modules.
+
+    The stub must be installed at import time, before esm_tool is loaded, so it
+    cannot live in a fixture — but it can be torn down in one. Without this it
+    stays installed for the rest of the session and a sibling test needing the
+    real `requests` would silently get a stub that only defines `get`.
+    """
+    yield
+    if PREV_REQUESTS is None:
+        sys.modules.pop("requests", None)
+    else:
+        sys.modules["requests"] = PREV_REQUESTS
 
 # Every accession the real experiment uses (science/run_experiment.py ORTHOLOGS).
 REAL = ["P01308", "P01326", "P01322", "P01315", "P01317",
@@ -141,3 +160,34 @@ def test_a_cached_valid_accession_is_still_served_from_disk(tmp_path, monkeypatc
     (cache / "P01308.json").write_text(json.dumps(rec))
     monkeypatch.setattr(esm_tool, "CACHE", cache)
     assert esm_tool.fetch_sequence("P01308") == rec
+
+
+# --- Gate finding: isinstance() admits str SUBCLASSES, and returning the caller's
+# object lets one override __format__ so the f-string builds a different path than
+# the regex inspected. Not reachable through json.loads today; defence in depth.
+
+class _Evil(str):
+    """Passes the regex as its value, but formats as something else entirely."""
+
+    def __format__(self, spec):  # noqa: D105
+        return "../secret"
+
+    def __str__(self):  # str() is not a fix either
+        return "../secret"
+
+
+def test_validation_returns_plain_text_not_the_callers_object():
+    out = esm_tool.valid_accession(_Evil("P01308"))
+    assert type(out) is str, type(out)
+    assert f"{out}.json" == "P01308.json"
+
+
+def test_a_str_subclass_cannot_steer_the_cache_path(tmp_path, monkeypatch):
+    secret = tmp_path / "secret.json"
+    secret.write_text(json.dumps({"sequence": "PWNED", "length": 5}))
+    cache = tmp_path / "seqs"
+    cache.mkdir()
+    (cache / "P01308.json").write_text(json.dumps({"sequence": "REAL", "length": 4}))
+    monkeypatch.setattr(esm_tool, "CACHE", cache)
+    rec = esm_tool.fetch_sequence(_Evil("P01308"))
+    assert rec["sequence"] == "REAL", "the formatted value, not the validated one, reached the path"

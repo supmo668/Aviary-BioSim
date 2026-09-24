@@ -45,12 +45,17 @@ def valid_accession(accession: object) -> str:
     request somewhere other than the entry asked for. Nothing is sanitised or
     trimmed — a value that is not an accession is refused, not repaired.
     """
-    if not isinstance(accession, str) or not ACCESSION.match(accession):
+    match = ACCESSION.match(accession) if isinstance(accession, str) else None
+    if match is None:
         raise ValueError(
             f"not a UniProt accession: {accession!r} "
             "(expected e.g. P01308 — 6 or 10 uppercase alphanumerics)"
         )
-    return accession
+    # Return the MATCHED TEXT, not the caller's object. isinstance admits str
+    # subclasses, and a subclass can override __format__/__str__ so the f-string
+    # below builds a different path than the regex just inspected. re gives back a
+    # plain str, so the value that was validated is the value that gets used.
+    return match.group(0)
 
 _model = None
 _tok = None
