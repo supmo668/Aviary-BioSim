@@ -56,12 +56,15 @@ Two commits in one session carried messages that described states the evidence d
    mutations. Same family as the rest: the check verified an artifact ADJACENT to the thing that
    actually executes.
 
-8. WHEN THE THING YOU ARE SEARCHING FOR IS THE THING YOU MUST NOT REPRODUCE, GREP FOR ITS
-   LOCATION, NEVER ITS CONTENT. Checking whether a constraint is violated can violate it: the
+8. VERIFY THE PROPERTY, NEVER DISPLAY THE VALUE. When the thing you are checking is the thing you
+   must not reproduce, confirm it by location, count or predicate — never by printing it. Checking whether a constraint is violated can violate it: the
    matching line lands in a transcript that is retained. Safe forms are `grep -c`, `grep -l`, and
    `grep -n ... | cut -d: -f1`; unsafe forms are `grep -n` printing the line and anything with
    -A/-B/-C. The unsafe ones are the ergonomic ones, which is why this has to be a rule and not a
-   habit. Applies to secrets, credentials, PII, and any constraint about what must not be written
-   down. Observed twice in one session, on both sides of a review.
+   habit. The same asymmetry applies to the TOOL, not just the flag: printing a file to inspect it,
+   echoing a variable to check it is set, and pasting a config to confirm a field are the ergonomic
+   form of the same mistake; `test -n "$VAR" && echo set`, `wc -c`, and listing field NAMES are the
+   safe forms. Applies to secrets, credentials, PII, and any constraint about what must not be
+   written down. Observed twice in one session, on both sides of a review.
 
 General rule: a commit message is a claim. Gate it on the observed property (tests passed with the expected count; sweep output is empty; the documented command runs verbatim), never on 'the previous command exited 0'. And before correcting a bad commit, check whether it was pushed; if not, add a corrective commit whose message says what the earlier one got wrong — do not rewrite history to hide it.
