@@ -19,8 +19,15 @@ Two commits in one session carried messages that described states the evidence d
 4. QUOTING: A DOUBLE-QUOTED ARGUMENT SILENTLY EATS BACKTICKS AND $. Sending a dispatch body as
    "$BODY" or as a double-quoted literal ran its backticked phrase as command substitution: the
    shell printed 'command not found', substituted empty, and the send still reported success — a
-   message delivered with text I never wrote. Pass any body containing backticks, $, or quotes via
-   a single-quoted heredoc (BODY=$(cat <<'EOF' ... EOF)), and read the written artifact back before
-   trusting the ✓.
+   message delivered with text I never wrote. USE `dispatch create --body-file <path>` — it reads the
+   body with zero shell interpolation. It exists in 0.56.0-0.60.0 but is MISSING from the tool's
+   usage line, which is why it is easy to miss; `--body-file -` also reads stdin. Failing that, a
+   single-quoted heredoc (BODY=$(cat <<'EOF' ... EOF)). Either way, read the written artifact back
+   before trusting the ✓.
+
+   DO NOT rely on dispatch's metacharacter warning: it is ANTI-CORRELATED with the fault. It fires
+   when metachars are still PRESENT, i.e. when quoting worked; when substitution already consumed
+   them the body is wrong and the warning is silent. Its silence reads as assurance and means the
+   opposite.
 
 General rule: a commit message is a claim. Gate it on the observed property (tests passed with the expected count; sweep output is empty; the documented command runs verbatim), never on 'the previous command exited 0'. And before correcting a bad commit, check whether it was pushed; if not, add a corrective commit whose message says what the earlier one got wrong — do not rewrite history to hide it.
