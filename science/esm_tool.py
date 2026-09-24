@@ -165,13 +165,13 @@ def score_variant(accession: str, position: int, mutant: str) -> str:
     rec = fetch_sequence(accession)
     seq = rec["sequence"]
     if not 1 <= position <= len(seq):
-        return f"position {position} is outside {accession} (length {len(seq)})"
+        return f"position {position} is outside {rec['accession']} (length {len(seq)})"
     wt = seq[position - 1]
     if mutant not in AA:
         return f"{mutant!r} is not one of the 20 amino acids"
     lp = position_logprobs(seq[: position] + seq[position:])[position - 1]["logp"]
     score = lp[mutant] - lp[wt]
-    return (f"{accession} {wt}{position}{mutant}: score {score:.3f} "
+    return (f"{rec['accession']} {wt}{position}{mutant}: score {score:.3f} "
             f"(negative means the model finds the substitution disruptive)")
 
 
@@ -183,5 +183,5 @@ def embed_sequence(accession: str) -> str:
     """
     rec = fetch_sequence(accession)
     vec = embed(rec["sequence"])
-    return (f"{accession} ({rec['organism']}, {rec['length']} aa) embedded: "
+    return (f"{rec['accession']} ({rec['organism']}, {rec['length']} aa) embedded: "
             f"{len(vec)}-dimensional representation")

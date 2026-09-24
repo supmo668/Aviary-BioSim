@@ -9,7 +9,8 @@ torch, transformers and requests are stubbed: these tests load no model and make
 no network call. The stubbed requests.get RAISES AssertionError, which pytest.raises
 (ValueError) does not catch — that raise, not the ATTEMPTS list, is what fails a test
 whose validation let a request through. ATTEMPTS is belt-and-braces and only becomes
-load-bearing for tests that install their own non-raising fake (see the fetch test).
+load-bearing: no test in this file both installs a non-raising fake and asserts on
+ATTEMPTS — the fetch test asserts on its own recorded URLs instead.
 """
 import json
 import sys
@@ -75,7 +76,16 @@ esm_tool = _load_real_esm_tool()
 
 @pytest.fixture(scope="module", autouse=True)
 def _restore_requests_stub():
-    """Unwind the sys.modules stub so it cannot leak into later test modules.
+    """Unwind the sys.modules stubs after this module's tests.
+
+    SCOPE, stated exactly: this removes the stubs before later test modules RUN. It
+    does NOT protect the collection phase — pytest imports every test module before
+    any test executes, so the stubs are live for that whole window, and a module that
+    does `import requests` at module scope would bind the stub object permanently.
+    Nothing in this suite does today (siblings use openai/weave/aviary.core), and a
+    post-run sweep found no live reference to a stub. Moving the install into a
+    conftest would close the window but make the stubs global to the session, which is
+    the shape this file exists to avoid.
 
     The stubs must be installed at import time, before esm_tool is loaded, so they
     cannot live in a fixture — but they can be torn down in one. Without this they
@@ -283,3 +293,48 @@ def test_a_valid_accession_is_fetched_from_the_right_url_and_cached(accession, t
     again = esm_tool.fetch_sequence(accession)
     assert again == rec
     assert len(urls) == 1, "a cached accession must not be re-fetched"
+
+
+def test_the_tools_report_the_validated_accession_not_the_callers_object(tmp_path, monkeypatch):
+    """Same residual class as the cache-path bypass: both tools interpolated the
+    PARAMETER into the string handed back to the agent, so a str subclass could put
+    ANSI escapes (or any text) into what the operator reads. Report rec['accession'],
+    which came from the validated value."""
+    cache = tmp_path / "seqs"
+    cache.mkdir()
+    (cache / "P01308.json").write_text(json.dumps(
+        {"accession": "P01308", "name": "INS", "organism": "Homo sapiens",
+         "sequence": "MALW", "length": 4}))
+    monkeypatch.setattr(esm_tool, "CACHE", cache)
+    out = esm_tool.score_variant(_Evil("P01308"), 99, "A")
+    assert "../secret" not in out, out
+    assert "P01308" in out, out
+
+
+def _seed_cache(tmp_path, monkeypatch):
+    cache = tmp_path / "seqs"
+    cache.mkdir()
+    (cache / "P01308.json").write_text(json.dumps(
+        {"accession": "P01308", "name": "INS", "organism": "Homo sapiens",
+         "sequence": "MALW", "length": 4}))
+    monkeypatch.setattr(esm_tool, "CACHE", cache)
+    return cache
+
+
+def test_score_variant_reports_the_validated_accession_on_its_normal_path(tmp_path, monkeypatch):
+    """The success branch, reachable only with the model stubbed — the 'position
+    outside' branch alone does not pin it."""
+    _seed_cache(tmp_path, monkeypatch)
+    monkeypatch.setattr(esm_tool, "position_logprobs",
+                        lambda seq: [{"logp": {a: -1.0 for a in esm_tool.AA}} for _ in seq])
+    out = esm_tool.score_variant(_Evil("P01308"), 2, "G")
+    assert "../secret" not in out, out
+    assert out.startswith("P01308 A2G"), out
+
+
+def test_embed_sequence_reports_the_validated_accession(tmp_path, monkeypatch):
+    _seed_cache(tmp_path, monkeypatch)
+    monkeypatch.setattr(esm_tool, "embed", lambda seq: [0.0] * 8)
+    out = esm_tool.embed_sequence(_Evil("P01308"))
+    assert "../secret" not in out, out
+    assert out.startswith("P01308 (Homo sapiens, 4 aa)"), out
