@@ -16,4 +16,11 @@ Two commits in one session carried messages that described states the evidence d
 
 3. PUT MULTI-LINE EDITS IN A SCRIPT FILE, NOT AN INLINE HEREDOC WITH NESTED QUOTES. Triple-quoted Python inside a bash heredoc is where the first failure came from. Write the patch to a file, run it, assert each anchor matched exactly once.
 
+4. QUOTING: A DOUBLE-QUOTED ARGUMENT SILENTLY EATS BACKTICKS AND $. Sending a dispatch body as
+   "$BODY" or as a double-quoted literal ran its backticked phrase as command substitution: the
+   shell printed 'command not found', substituted empty, and the send still reported success — a
+   message delivered with text I never wrote. Pass any body containing backticks, $, or quotes via
+   a single-quoted heredoc (BODY=$(cat <<'EOF' ... EOF)), and read the written artifact back before
+   trusting the ✓.
+
 General rule: a commit message is a claim. Gate it on the observed property (tests passed with the expected count; sweep output is empty; the documented command runs verbatim), never on 'the previous command exited 0'. And before correcting a bad commit, check whether it was pushed; if not, add a corrective commit whose message says what the earlier one got wrong — do not rewrite history to hide it.
