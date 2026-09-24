@@ -221,3 +221,69 @@ def test_the_bundle_imports_its_classes_rather_than_reading_sys_modules(bio, stu
     import spend_tracker
     assert rebuilt.BudgetExceeded is spend_tracker.BudgetExceeded
     assert rebuilt.BudgetExceeded is not Exception
+
+
+def test_the_setup_hook_fails_a_test_that_starts_with_dirty_state(stub_contract):
+    """The sibling hooks repair before failing, so this one cannot fire through the
+    suite and no suite-level test can pin it. Called directly instead: without this,
+    deleting it entirely leaves the suite green."""
+    class _Item:
+        nodeid = "probe::item"
+
+    sys.path.insert(0, "/dirtied-before-setup")
+    try:
+        # pytest.fail raises Failed, which derives from BaseException, not Exception.
+        with pytest.raises(BaseException) as refused:
+            stub_contract.runtest_setup(_Item())
+    finally:
+        if "/dirtied-before-setup" in sys.path:
+            sys.path.remove("/dirtied-before-setup")
+    message = str(refused.value)
+    assert "/dirtied-before-setup" in message
+    assert "not necessarily the one that caused it" in message, \
+        "the hook must not assert a cause it cannot know"
+
+
+def test_a_fabricated_dunder_file_does_not_make_a_fake_look_real(bio, stub_contract):
+    """__file__ is one line to set and comes free from spec_from_file_location, so it
+    is not evidence. Identity is checked against where the module must actually live."""
+    import types
+
+    fake = types.ModuleType("esm_tool")
+    fake.__file__ = "/not/a/real/file.py"
+    assert not stub_contract.is_the_real_module("esm_tool", fake)
+
+    import spend_tracker
+    assert stub_contract.is_the_real_module("spend_tracker", spend_tracker)
+
+
+def test_the_guard_catches_a_file_backed_fake_at_import_time(pytester, tmp_path):
+    """The other half: a fake loaded exactly the way conftest loads modules, which gets
+    a real __spec__ and a real __file__ for free."""
+    fake = tmp_path / "esm_tool.py"
+    fake.write_text("def score_variant(**kwargs):\n    return 'fabricated'\n")
+    result = _run(pytester, f"""
+        import importlib.util, sys
+        _spec = importlib.util.spec_from_file_location("esm_tool", {str(fake)!r})
+        _m = importlib.util.module_from_spec(_spec)
+        sys.modules["esm_tool"] = _m
+        _spec.loader.exec_module(_m)
+
+        def test_harmless():
+            assert True
+    """)
+    assert result.ret != 0
+    assert "esm_tool" in result.stdout.str() + result.stderr.str()
+
+
+def test_collecting_alongside_another_test_root_is_not_treated_as_a_leak(pytester):
+    """pytest inserts each collected file's directory into sys.path during collection
+    in prepend mode. Treating that as a leak aborted the whole run and blamed a test
+    module for pytest's own behaviour."""
+    pytester.makepyfile(test_probe="def test_one():\n    assert True\n")
+    other = pytester.mkdir("second_root")
+    (other / "test_second.py").write_text("def test_two():\n    assert True\n")
+    conftest = pathlib.Path(__file__).parent / "conftest.py"
+    pytester.makeconftest(CONFTEST_SHIM.format(conftest=str(conftest)))
+    result = pytester.runpytest_subprocess("-q", ".", str(other))
+    result.assert_outcomes(passed=2)

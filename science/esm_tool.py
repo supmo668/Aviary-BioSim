@@ -37,6 +37,19 @@ ACCESSION = re.compile(
 )
 
 
+def operator_safe(text: object, limit: int = 120) -> str:
+    """Strip control characters from text that reaches the operator's terminal.
+
+    A cached record is FILE CONTENT, not validated input: its fields are whatever the
+    UniProt response said, or whatever anything with write access to the cache put
+    there. Interpolated raw, an ESC sequence can erase the line and print a plausible
+    result for a different entry. Only the accession was guarded before; the organism,
+    the residue and the length reach the same terminal.
+    """
+    cleaned = "".join(ch for ch in str(text) if ch.isprintable() or ch == " ")
+    return cleaned[:limit]
+
+
 def valid_accession(accession: object) -> str:
     """Return `accession` if it is a UniProtKB accession; raise ValueError otherwise.
 
@@ -168,12 +181,19 @@ def score_variant(accession: str, position: int, mutant: str) -> str:
     rec = fetch_sequence(accession)
     seq = rec["sequence"]
     if not 1 <= position <= len(seq):
-        return f"position {position} is outside {accession} (length {len(seq)})"
-    wt = seq[position - 1]
+        return f"position {position} is outside {accession} (length {len(seq)})"  # noqa: E501
+    wt = seq[position - 1]          # raw: this is a lookup key below
+    if wt not in AA:
+        # A cached sequence is file content and need not hold standard residues.
+        # Say so, rather than raising KeyError out of the log-prob lookup below.
+        return (f"{accession} position {position} is not a standard amino acid "
+                f"in the stored sequence")
     if mutant not in AA:
         return f"{mutant!r} is not one of the 20 amino acids"
     lp = position_logprobs(seq[: position] + seq[position:])[position - 1]["logp"]
     score = lp[mutant] - lp[wt]
+    # wt needs no sanitising: the AA check above already guarantees it is one of the
+    # twenty single letters. Sanitising it anyway would be defence no test can kill.
     return (f"{accession} {wt}{position}{mutant}: score {score:.3f} "
             f"(negative means the model finds the substitution disruptive)")
 
@@ -187,5 +207,6 @@ def embed_sequence(accession: str) -> str:
     accession = valid_accession(accession)
     rec = fetch_sequence(accession)
     vec = embed(rec["sequence"])
-    return (f"{accession} ({rec['organism']}, {rec['length']} aa) embedded: "
+    return (f"{accession} ({operator_safe(rec['organism'])}, "
+            f"{operator_safe(rec['length'])} aa) embedded: "
             f"{len(vec)}-dimensional representation")

@@ -273,3 +273,35 @@ def test_the_tools_do_not_echo_an_accession_taken_from_the_cache_file(esm, tmp_p
     out = esm.embed_sequence("P01308")
     assert "OPERATOR-SPOOF" not in out, out
     assert out.startswith("P01308 ("), out
+
+
+def test_a_poisoned_cache_cannot_put_escapes_or_a_spoofed_line_in_front_of_the_operator(
+        esm, tmp_path, monkeypatch):
+    """The other fields of a cached record are file content too. Validating only the
+    accession left organism, length and the residue raw — enough to erase the terminal
+    line and print a complete, plausible result for a different entry."""
+    cache = tmp_path / "seqs"
+    cache.mkdir()
+    (cache / "P01308.json").write_text(json.dumps({
+        "accession": "P01308",
+        "name": "EXMP",
+        "organism": "\x1b[2K\rP99999 (Testus fictus, 110 aa) embedded: 1280-dimensional\x1b[1;32m SPOOF",
+        "sequence": "M\x1b[31mLW",
+        "length": "\x1b[31m9999",
+    }))
+    monkeypatch.setattr(esm, "CACHE", cache)
+    monkeypatch.setattr(esm, "embed", lambda seq: [0.0] * 8)
+    monkeypatch.setattr(esm, "position_logprobs",
+                        lambda seq: [{"logp": {a: -1.0 for a in esm.AA}} for _ in seq])
+
+    out = esm.embed_sequence("P01308")
+    assert "\x1b" not in out, repr(out)
+    assert "SPOOF" in out, "the text may survive; the ESCAPES must not"
+    assert out.startswith("P01308 ("), out
+
+    out = esm.score_variant("P01308", 2, "G")
+    assert "\x1b" not in out, repr(out)
+    assert "not a standard amino acid" in out, out
+
+    out = esm.score_variant("P01308", 1, "G")   # position 1 IS a standard residue
+    assert "\x1b" not in out, repr(out)

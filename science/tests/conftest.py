@@ -22,14 +22,15 @@ watched name held before collection, and the setup/teardown hooks fail a test wh
 because a marker would only catch fakes written here — and the contributor who
 reintroduces this defect will write a plain ModuleType and never have heard of it.
 """
+import importlib.machinery
 import importlib.util
+import pathlib
 import sys
 import types
-from pathlib import Path
 
 import pytest
 
-SCIENCE = Path(__file__).resolve().parents[1]
+SCIENCE = pathlib.Path(__file__).resolve().parents[1]
 DEMO = SCIENCE.parent / "demo"
 
 IS_TEST_STUB = "__aviary_test_stub__"
@@ -40,7 +41,17 @@ IS_TEST_STUB = "__aviary_test_stub__"
 # rather than a leak. Add the name when you add the import.
 WATCHED = ("esm_tool", "biosim_env", "run_discovery", "spend_tracker",
            "aviary.core", "torch", "transformers", "requests",
-           "openai", "weave", "yaml")
+           "openai", "weave", "yaml", "aviary")
+
+# The one legitimate on-disk location of each module this project owns. A module
+# claiming one of these names from anywhere else is an impostor, however convincing
+# its __file__ looks.
+PROJECT_ORIGINS = {
+    "esm_tool": (SCIENCE / "esm_tool.py").resolve(),
+    "biosim_env": (SCIENCE / "biosim_env.py").resolve(),
+    "run_discovery": (SCIENCE / "run_discovery.py").resolve(),
+    "spend_tracker": (DEMO / "spend_tracker.py").resolve(),
+}
 
 # What sys.modules held for each watched name BEFORE collection imported anything.
 _BASELINE: dict = {}
@@ -84,15 +95,19 @@ def _leaked() -> list:
     contributor who reintroduces it will write a plain ModuleType and never hear of
     the marker. Identity finds theirs too.
 
-    A name that was absent at baseline and is now a real importable module (it has a
-    __file__) is not a leak: the suite legitimately imports aviary.core, requests and
-    others as it runs.
+    A name absent at baseline may legitimately appear: the suite really does import
+    aviary.core, requests and others as it runs. Such a module is exempt only if it is
+    the one the import system would itself find — checked via PathFinder against the
+    real filesystem, NOT by trusting an attribute on the object.
 
-    KNOWN HOLE, accepted: that exemption also lets a test module pin the REAL module
-    at a watched name (import it at module scope and never unwind) without being
-    reported. The alternatives false-positive on the suite's own legitimate imports,
-    and a real module pinned under its own name cannot fake behaviour — only its
-    presence. The sys.path half of such a module's setup IS caught, by _path_leaks.
+    A `__file__` attribute is not evidence of anything: a hand-built ModuleType can set
+    one in a line, and a fake loaded with spec_from_file_location gets one for free.
+    Trusting it exempted precisely the population this guard exists to catch.
+
+    KNOWN HOLE, accepted and narrow: a test module that imports the REAL module at a
+    watched name and never unwinds it is not reported, because it is genuinely the
+    module the finder resolves. It can change the module's state but cannot fake its
+    behaviour, and the sys.path half of arranging that IS caught by _path_leaks.
     """
     out = []
     for name in WATCHED:
@@ -100,9 +115,44 @@ def _leaked() -> list:
         if base is not None:
             if current is not base:
                 out.append(name)
-        elif current is not None and getattr(current, "__file__", None) is None:
+        elif current is not None and not _is_the_real_module(name, current):
             out.append(name)
     return out
+
+
+def _is_the_real_module(name: str, module) -> bool:
+    """Would the import system resolve `name` to exactly this object's source?
+
+    Compares the module's spec origin against what PathFinder finds on the current
+    sys.path. PathFinder is used rather than importlib.util.find_spec because the
+    latter answers from sys.modules — it would hand back the impostor's own spec and
+    agree with itself.
+    """
+    spec = getattr(module, "__spec__", None)
+    if spec is None:
+        return False                      # hand-built module object: no import produced it
+    origin = getattr(spec, "origin", None)
+    if origin is None:
+        # A namespace package has a real spec and no origin (aviary is one). A fake has
+        # no spec at all, so the two are still distinguishable.
+        return getattr(spec, "submodule_search_locations", None) is not None
+    if origin in ("built-in", "frozen"):
+        return True
+
+    expected = PROJECT_ORIGINS.get(name)
+    if expected is not None:
+        # Our own modules have exactly one legitimate location. Checking against it is
+        # exact, and does not depend on whether their directory is on sys.path right
+        # now — it is not, between tests, because the fixtures unwind it.
+        return pathlib.Path(origin).resolve() == expected
+
+    if "." in name:                       # submodule: parent package governs the path
+        return True
+    try:
+        found = importlib.machinery.PathFinder.find_spec(name, sys.path)
+    except Exception:                     # a broken finder must not mask a leak
+        return False
+    return found is not None and getattr(found, "origin", None) == origin
 
 
 def _repair() -> None:
@@ -128,6 +178,15 @@ def pytest_collection_finish(session):
     it at the first test's setup blames a file that did nothing wrong; reporting it
     here names the phase that caused it, before any test is marked red.
     """
+    # In prepend import mode pytest inserts each collected file's directory into
+    # sys.path DURING collection, after the configure snapshot. Those entries are
+    # pytest's, not a test module's: accept them and re-baseline, or collecting this
+    # suite alongside any other test root aborts the run and blames innocent code.
+    collected = {str(pathlib.Path(str(item.path)).parent) for item in session.items}
+    collected.add(str(session.config.rootpath))
+    expected = [entry for entry in _path_leaks() if entry in collected]
+    _BASELINE_SYSPATH.extend(expected)
+
     leaked, paths = _leaked(), _path_leaks()
     if leaked or paths:
         _repair()
@@ -149,9 +208,10 @@ def pytest_runtest_setup(item):
         pytest.fail(
             f"{item.nodeid} ran with global import state already dirty — "
             f"sys.modules: {leaked or 'clean'}; sys.path additions: {paths or 'none'}. "
-            "An earlier test leaked (collection-time writes are reported at collection). "
-            "Ask for a fixture (esm_stub / esm / bio / disc) or add one here; never "
-            "assign sys.modules or sys.path from a test module."
+            "This test is the one that NOTICED it, not necessarily the one that caused "
+            "it: an earlier test, a plugin, or something imported outside collection "
+            "could have. Ask for a fixture (esm_stub / esm / bio / disc) or add one "
+            "here; never assign sys.modules or sys.path from a test module."
         )
 
 
@@ -169,7 +229,7 @@ def pytest_runtest_teardown(item, nextitem):
         )
 
 
-def _load_by_path(name: str, path: Path) -> types.ModuleType:
+def _load_by_path(name: str, path: pathlib.Path) -> types.ModuleType:
     """Load a module from source under `name`, bypassing __pycache__.
 
     exec'ing the compiled source rather than using spec.loader.exec_module: the
@@ -214,6 +274,8 @@ def stub_contract():
         demo_dir = str(DEMO)
         load_by_path = staticmethod(_load_by_path)
         bio_class = _Bio
+        runtest_setup = staticmethod(pytest_runtest_setup)
+        is_the_real_module = staticmethod(_is_the_real_module)
 
         @staticmethod
         def stubbed() -> list:
