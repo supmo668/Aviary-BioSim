@@ -30,4 +30,16 @@ Two commits in one session carried messages that described states the evidence d
    them the body is wrong and the warning is silent. Its silence reads as assurance and means the
    opposite.
 
+5. A PIPELINE'S EXIT STATUS IS THE LAST COMMAND'S, SO `| head` SWALLOWS grep's NO-MATCH SIGNAL.
+   `grep -q X f | head -2 || echo "(not found)"` exits 0 and the `||` branch never fires: the
+   search reports nothing and looks like success. This produced a FALSE NEGATIVE about a
+   capability — I concluded `--body-file` did not exist when it did. Never pipe a search whose
+   exit status you intend to test; capture it first (HITS=$(grep ... ; true)) and branch on the
+   captured value.
+
+6. A DIAGNOSTIC LABEL MUST BE CONDITIONAL ON WHAT IT REPORTS. `grep -rl X ... | head; echo "(only
+   dispatches = agent is right)"` prints its conclusion whatever grep found, so the label can
+   overwrite the evidence that contradicts it. Print the verdict from the captured result, never
+   beside it. (Both sides of this exchange committed this one on the same day.)
+
 General rule: a commit message is a claim. Gate it on the observed property (tests passed with the expected count; sweep output is empty; the documented command runs verbatim), never on 'the previous command exited 0'. And before correcting a bad commit, check whether it was pushed; if not, add a corrective commit whose message says what the earlier one got wrong — do not rewrite history to hide it.
