@@ -130,21 +130,20 @@ MUTANTS = [
          replace="    return (name in sys.modules) == (_BASELINE.get(name) is not None)"),
     dict(id="guard-no-origin-baseline", pass_="4", target="science/tests/conftest.py", check=ISO,
          why="the baseline is the real module imported before collection, not whatever happened to be loaded",
-         find="        for name in WATCHED:\n"
-              "            try:\n"
-              "                importlib.import_module(name)\n"
-              "            except Exception:             # not installed, or needs one that is not\n"
-              "                pass",
-         replace="        for name in WATCHED:\n"
-                 "            pass"),
+         find="    for name in PREIMPORT:\n"
+              '        if name == "spend_tracker":\n'
+              "            continue                      # lives in demo/, needs the path; done below",
+         replace="    for name in ():\n"
+                 '        if name == "spend_tracker":\n'
+                 "            continue                      # lives in demo/, needs the path; done below"),
     dict(id="guard-dotted-exempt", pass_="4", target="science/tests/conftest.py", check=ISO,
          why="a dotted name is watched, not exempted",
-         find='           "aviary.core", "torch", "transformers", "requests",',
-         replace='           "torch", "transformers", "requests",'),
+         find='             "aviary", "aviary.core", "spend_tracker")',
+         replace='             "aviary", "spend_tracker")'),
     dict(id="guard-watched-shrunk", pass_="4", target="science/tests/conftest.py", check=ISO,
          why="every watched name is watched",
-         find='WATCHED = ("esm_tool", "biosim_env", "run_discovery", "spend_tracker",',
-         replace='WATCHED = ("esm_tool", "torch", "transformers", "requests")\n_UNUSED = ('),
+         find="WATCHED = PREIMPORT + DEFERRED",
+         replace='WATCHED = ("esm_tool", "torch")'),
     dict(id="guard-loader-keeps-syspath", pass_="3", target="science/tests/conftest.py", check=ISO,
          why="the by-path loader unwinds a module's sys.path write",
          find="        sys.path[:] = saved_for_loader", replace="        pass"),

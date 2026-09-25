@@ -37,9 +37,26 @@ DEMO = SCIENCE.parent / "demo"
 # Names a fixture here swaps, plus the third-party names the modules under test
 # import for real. THIS LIST IS THE GUARD'S ENTIRE REACH: a fake under any other name
 # is invisible. Add the name when you add the import.
-WATCHED = ("esm_tool", "biosim_env", "run_discovery", "spend_tracker",
-           "aviary.core", "torch", "transformers", "requests",
-           "openai", "weave", "yaml", "aviary")
+# Imported HERE, before collection, so the baseline holds the real module OBJECT and the
+# check is pure identity. These are the names this suite genuinely resolves for real
+# during a run: the `disc` fixture executes run_discovery.py by path (which imports
+# openai and weave), `bio` uses spend_tracker, and aviary.core supplies Environment/Tool.
+PREIMPORT = ("yaml", "requests", "openai", "weave",
+             "aviary", "aviary.core", "spend_tracker")
+
+# Watched, but deliberately NOT imported here.
+#   esm_tool / biosim_env / run_discovery are the modules under test. Importing them runs
+#   production code during collection: run_discovery's module body builds an openai client
+#   from os.environ["WANDB_API_KEY"], so on a fully-provisioned machine merely collecting
+#   this suite either raised KeyError or opened a live API client. They also bought ZERO
+#   baseline entries, because all three need torch.
+#   torch / transformers are heavy dependencies this suite always stubs.
+# Whatever sys.modules holds for these when the snapshot is taken IS their baseline, so a
+# transitive import (weave can pull torch on a machine that has it) is recorded rather
+# than treated as a leak for the rest of the session.
+DEFERRED = ("esm_tool", "biosim_env", "run_discovery", "torch", "transformers")
+
+WATCHED = PREIMPORT + DEFERRED
 
 # The module OBJECT each watched name held before collection, or None if the name was
 # absent. Identity is the whole check.
@@ -52,38 +69,58 @@ _OURS = ()
 def pytest_configure(config):
     """Snapshot the real world before collection imports any test module.
 
-    Every watched name is IMPORTED here, so the baseline holds the genuine module
-    object. After this, the check is `sys.modules[name] is the object we recorded` —
-    and object identity is the one thing a fake cannot forge. Earlier versions of this
-    guard tried to authenticate a module from its own __file__, then its __spec__.origin;
-    both are attributes the impostor sets, and both were defeated by a three-line fake.
+    Every PREIMPORT name is imported here, so the baseline holds the genuine module
+    object and the check becomes `sys.modules[name] is the object we recorded` — the one
+    thing a fake cannot forge. Earlier versions authenticated a module from its own
+    __file__, then its __spec__.origin; both are attributes the impostor sets, and both
+    were defeated by a three-line fake.
 
-    A name that cannot be imported here (torch is not installed; the project modules
-    need it) stays absent, and then ANY appearance is reported — which is correct,
-    because nothing in this suite may import them for real.
+    Third-party names resolve on a CLEAN sys.path. The previous version prepended
+    science/ and demo/ and imported them through that, so a file named science/yaml.py
+    would have been executed and recorded as the genuine baseline — with _repair()
+    faithfully reinstalling it after every test. The guard poisoning its own ground truth.
 
-    Costs about 1.4s once per session, nearly all of it spend_tracker pulling in yaml.
+    A DEFERRED name is not imported and usually stays absent, so any appearance is
+    reported. That is stricter, not weaker. Import failures are recorded rather than
+    swallowed, because a name that silently stops importing downgrades its own check from
+    identity to presence, and a green suite would never say so.
+
+    Cost, measured rather than guessed: about 0.6 s in a cold process, essentially all of
+    it weave, openai and aviary.core. Dropping the three project modules did NOT make this
+    cheaper — their cost was almost entirely the same third-party imports, pulled in
+    transitively — so the justification here is correctness, not speed. An earlier comment
+    blamed spend_tracker pulling in yaml; those are ~6 ms and ~0 ms respectively. Note also
+    that this suite spawns 17 pytester subprocesses, each of which pays it again.
     """
     global _OURS
     _OURS = (str(SCIENCE), str(DEMO))
+    failures = {}
+    for name in PREIMPORT:
+        if name == "spend_tracker":
+            continue                      # lives in demo/, needs the path; done below
+        try:
+            importlib.import_module(name)
+        except Exception as exc:
+            failures[name] = f"{type(exc).__name__}: {exc}"
     saved = list(sys.path)
     try:
-        for directory in _OURS:
-            if directory not in sys.path:
-                sys.path.insert(0, directory)
-        for name in WATCHED:
-            try:
-                importlib.import_module(name)
-            except Exception:             # not installed, or needs one that is not
-                pass
+        sys.path.insert(0, str(DEMO))
+        try:
+            importlib.import_module("spend_tracker")
+        except Exception as exc:
+            failures["spend_tracker"] = f"{type(exc).__name__}: {exc}"
     finally:
         sys.path[:] = saved
     _BASELINE.clear()
     _BASELINE.update({name: sys.modules.get(name) for name in WATCHED})
     _BASELINE_SYSPATH[:] = list(sys.path)
+    _IMPORT_FAILURES.clear()
+    _IMPORT_FAILURES.update(failures)
 
 
 _BASELINE_SYSPATH: list = []
+# PREIMPORT names that did NOT import, and why. Empty is the healthy state.
+_IMPORT_FAILURES: dict = {}
 
 
 def _stub(name: str) -> types.ModuleType:
@@ -237,6 +274,8 @@ def stub_contract():
         runtest_setup = staticmethod(pytest_runtest_setup)
         path_leaks = staticmethod(_path_leaks)
         repair = staticmethod(_repair)
+        preimport = PREIMPORT
+        import_failures = _IMPORT_FAILURES
         baseline = _BASELINE
 
         @staticmethod

@@ -215,7 +215,10 @@ def test_a_fixture_stub_does_not_leak_to_the_next_test(pytester):
 
         def test_does_not_ask(stub_contract):
             assert stub_contract.stubbed() == []
-            assert "esm_tool" not in sys.modules
+            # Relative to the baseline, not absolute. Asserting `"esm_tool" not in
+            # sys.modules` made this suite's colour depend on whether torch happened to
+            # be installed on the machine running it.
+            assert sys.modules.get("esm_tool") is stub_contract.baseline["esm_tool"]
     """)
     result.assert_outcomes(passed=2)
 
@@ -503,3 +506,33 @@ def test_a_sourceless_pyc_shadow_is_caught(pytester, tmp_path):
     _assert_the_guard_refused(result, expect="yaml")
 
 
+@pytest.mark.parametrize("name", [
+    "yaml", "requests", "openai", "weave", "aviary", "aviary.core", "spend_tracker"])
+def test_every_preimported_name_really_holds_the_real_module(name, stub_contract):
+    """Without this, the guard degrades silently.
+
+    A PREIMPORT name that stops importing gets baseline None, and its check quietly drops
+    from identity to presence — still safe, but no longer the property the file claims,
+    and nothing would say so. Measured before this test existed: five of twelve watched
+    names had no baseline at all and every test was green.
+    """
+    assert name in stub_contract.preimport
+    assert stub_contract.baseline[name] is not None, (
+        f"{name} did not import at configure "
+        f"({stub_contract.import_failures.get(name, 'no reason recorded')}), so its check "
+        "silently degraded from identity to presence")
+
+
+def test_no_preimported_name_failed_to_import(stub_contract):
+    """The reason is recorded rather than swallowed — `except Exception: pass` is why the
+    degradation above was invisible for four review passes."""
+    assert stub_contract.import_failures == {}, stub_contract.import_failures
+
+
+def test_the_modules_under_test_are_not_imported_by_collecting_the_suite(stub_contract):
+    """run_discovery's module body builds an openai client from os.environ["WANDB_API_KEY"].
+    Collecting a test suite must not execute that, and must not depend on a secret."""
+    for name in ("esm_tool", "biosim_env", "run_discovery"):
+        assert stub_contract.baseline[name] is None, (
+            f"{name} was imported at configure; collecting this suite now runs production "
+            "code and, for run_discovery, reads a credential from the environment")
