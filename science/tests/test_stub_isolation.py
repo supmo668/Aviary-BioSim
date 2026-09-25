@@ -10,6 +10,7 @@ someone adds a module that installs a global stub — which is how F08 arrived.
 import importlib.util
 import pathlib
 import sys
+import textwrap
 
 import pytest
 
@@ -92,11 +93,49 @@ def test_the_harness_shares_the_environment_the_bundle_built(disc, bio):
 # Run as their own pytest sessions, so the assertions do not depend on this file's
 # collection order the way a "runs after the one above" test would.
 
+# Phrases ONLY the guard emits. Asserting a module name instead is worthless: the probe
+# source is echoed in any traceback, so "yaml" appears whether the guard fired or the
+# probe simply failed to parse.
+GUARD_PHRASES = (
+    "while being COLLECTED",
+    "ran with global import state already dirty",
+    "left global import state dirty",
+)
+
+
 def _run(pytester, module_source):
+    """Run a throwaway suite under THIS suite's conftest.
+
+    The probe source is compiled HERE first. Without that, a typo in a probe produces a
+    collection error, the owning test sees a non-zero exit, and it passes while the guard
+    never ran. That is not hypothetical: the four-way forgery test below was written with
+    a placeholder collision ("REAL" also rewrote the REAL inside REAL_YAML), so every
+    probe was a SyntaxError and all four parametrisations passed against a guard that had
+    been deleted outright.
+    """
+    compile(textwrap.dedent(module_source), "<probe>", "exec")
     conftest = pathlib.Path(__file__).parent / "conftest.py"
     pytester.makeconftest(CONFTEST_SHIM.format(conftest=str(conftest)))
     pytester.makepyfile(test_probe=module_source)
     return pytester.runpytest_subprocess("-q")
+
+
+def _assert_the_guard_refused(result, *, expect=None):
+    """The oracle every probe test must use.
+
+    `ret != 0` alone is satisfied by ANY probe-side error, which is why five tests in
+    this file passed against a completely disabled guard. Require instead that the probe
+    produced no test outcomes at all (the run was stopped before tests ran) and that the
+    output carries something only the guard says.
+    """
+    out = result.stdout.str() + result.stderr.str()
+    assert result.ret != 0, "the probe suite passed; the guard did not refuse it"
+    assert any(phrase in out for phrase in GUARD_PHRASES), (
+        "the probe run failed, but not with anything the guard emits — so this test "
+        "would pass on a typo in the probe. Tail of output:\n" + out[-1500:])
+    if expect is not None:
+        assert expect in out, f"expected {expect!r} in the guard's message"
+    return out
 
 
 def test_the_guard_catches_an_unmarked_stub_installed_at_import_time(pytester):
@@ -114,11 +153,8 @@ def test_the_guard_catches_an_unmarked_stub_installed_at_import_time(pytester):
         def test_harmless():
             assert True
     """)
-    assert result.ret != 0
     result.assert_outcomes(passed=0, failed=0, errors=0)
-    out = result.stdout.str() + result.stderr.str()
-    assert "esm_tool" in out
-    assert "COLLECTED" in out
+    _assert_the_guard_refused(result, expect="esm_tool")
 
 
 def test_the_guard_catches_a_sys_path_write_at_import_time(pytester):
@@ -136,9 +172,11 @@ def test_the_guard_catches_a_sys_path_write_at_import_time(pytester):
         def test_harmless():
             assert True
     """.replace("OURS", repr(str(pathlib.Path(__file__).resolve().parents[1]))))
-    assert result.ret != 0
-    out = result.stdout.str() + result.stderr.str()
-    assert "sys.path" in out
+    out = _assert_the_guard_refused(result)
+    # _describe always prints BOTH halves, so "sys.path" alone would not show which
+    # half fired. Name the directory, which only appears when the path half found it.
+    assert repr(str(pathlib.Path(__file__).resolve().parents[1])).strip("'") in out
+
 
 
 def test_the_guard_catches_a_sys_path_leak_from_a_test_body(pytester):
@@ -254,30 +292,36 @@ def test_the_setup_hook_fails_a_test_that_starts_with_dirty_state(stub_contract)
 
 
 @pytest.mark.parametrize("forgery", [
-    'm.__file__ = "/not/a/real/file.py"',
-    'm.__spec__ = importlib.util.spec_from_file_location("yaml", REAL_YAML)',
-    'm.__spec__ = importlib.machinery.ModuleSpec("yaml", None, origin="built-in")',
-    'm.__spec__ = importlib.machinery.ModuleSpec("yaml", None, is_package=True)',
+    'fake.__file__ = "/not/a/real/file.py"',
+    'fake.__spec__ = importlib.util.spec_from_file_location("yaml", __REAL_PATH__)',
+    'fake.__spec__ = importlib.machinery.ModuleSpec("yaml", None, origin="built-in")',
+    'fake.__spec__ = importlib.machinery.ModuleSpec("yaml", None, is_package=True)',
 ], ids=["dunder-file", "forged-origin", "built-in-origin", "package-shaped"])
 def test_no_attribute_a_fake_can_set_makes_it_look_authentic(pytester, forgery):
     """Every earlier version of this guard authenticated a module from its OWN
     attributes — first __file__, then __spec__.origin — and each was defeated by a
-    three-line fake that simply set the attribute. Identity cannot be forged: the
-    object either is the one recorded before collection, or it is not."""
+    three-line fake that simply set the attribute. Identity cannot be forged.
+
+    The forged-origin case points the spec at the REAL yaml file: that is the strongest
+    attack on origin-based authentication, and it and built-in-origin are pinned nowhere
+    else in this file.
+
+    This test was itself vacuous when written: the placeholder was "REAL", which
+    str.replace also rewrote inside "REAL_YAML", so every probe was a SyntaxError and all
+    four parametrisations passed against a deleted guard. _run now compiles the probe.
+    """
     import yaml as real_yaml
-    result = _run(pytester, """
+    source = """
         import importlib.machinery, importlib.util, sys, types
-        REAL_YAML = REAL
-        m = types.ModuleType("yaml")
-        FORGERY
-        m.safe_load = lambda *a, **k: {"pwned": True}
-        sys.modules["yaml"] = m
+        fake = types.ModuleType("yaml")
+        __FORGERY__
+        fake.safe_load = lambda *a, **k: {"pwned": True}
+        sys.modules["yaml"] = fake
 
         def test_harmless():
             assert True
-    """.replace("REAL", repr(real_yaml.__file__)).replace("FORGERY", forgery))
-    assert result.ret != 0, "a fake survived by setting: " + forgery
-    assert "yaml" in result.stdout.str() + result.stderr.str()
+    """.replace("__FORGERY__", forgery).replace("__REAL_PATH__", repr(real_yaml.__file__))
+    _assert_the_guard_refused(_run(pytester, source), expect="yaml")
 
 
 def test_the_guard_catches_a_file_backed_fake_at_import_time(pytester, tmp_path):
@@ -295,8 +339,7 @@ def test_the_guard_catches_a_file_backed_fake_at_import_time(pytester, tmp_path)
         def test_harmless():
             assert True
     """)
-    assert result.ret != 0
-    assert "esm_tool" in result.stdout.str() + result.stderr.str()
+    _assert_the_guard_refused(result, expect="esm_tool")
 
 
 def test_collecting_alongside_another_test_root_is_not_treated_as_a_leak(pytester):
@@ -338,26 +381,33 @@ def test_a_fake_at_a_dotted_watched_name_is_caught(pytester, tmp_path):
         def test_harmless():
             assert True
     """.replace("FAKE", repr(str(fake))))
-    assert result.ret != 0
-    assert "aviary.core" in result.stdout.str() + result.stderr.str()
+    _assert_the_guard_refused(result, expect="aviary.core")
 
 
 def test_a_shadowing_directory_cannot_validate_its_own_fake(pytester):
-    """The composed bypass: drop yaml.py beside the test file and insert that directory.
-    A guard resolving against the CURRENT sys.path finds the shadow and agrees with
-    itself; resolution happens against the pre-collection baseline instead."""
+    """A directory placed on sys.path that answers to a watched name.
+
+    The probe must drop the cached module first: every watched name is pre-imported at
+    configure, so a bare `import yaml` is a cache hit and the shadow never loads. Without
+    the pop this test passed against a deleted guard — the probe's own assertion failed,
+    the run exited non-zero, and `ret != 0` was satisfied by that instead.
+
+    The probe asserts the shadow really loaded, so the scenario cannot silently stop
+    happening again.
+    """
     result = _run(pytester, """
-        import os, sys
-        _here = os.path.dirname(__file__)
-        with open(os.path.join(_here, "yaml.py"), "w") as fh:
-            fh.write("FAKE = True\\n")
-        sys.path.insert(0, _here)
+        import sys, pathlib
+        here = pathlib.Path(__file__).parent
+        (here / "yaml.py").write_text("FAKE = True\\ndef safe_load(*a, **k): return {}\\n")
+        sys.path.insert(0, str(here))
+        sys.modules.pop("yaml", None)
         import yaml
+        assert yaml.FAKE is True, "the shadow did not load; this probe proves nothing"
 
         def test_harmless():
-            assert getattr(yaml, "FAKE", False)
+            assert True
     """)
-    assert result.ret != 0, "a fake resolved through a directory it inserted itself"
+    _assert_the_guard_refused(result, expect="yaml")
 
 
 def test_a_package_shaped_fake_at_a_dotted_name_is_caught(pytester):
@@ -374,16 +424,17 @@ def test_a_package_shaped_fake_at_a_dotted_name_is_caught(pytester):
         def test_harmless():
             assert True
     """)
-    assert result.ret != 0
-    assert "aviary.core" in result.stdout.str() + result.stderr.str()
+    _assert_the_guard_refused(result, expect="aviary.core")
 
 
 def test_a_sourceless_pyc_shadow_is_caught(pytester, tmp_path):
-    """A .pyc with no source imports happily. The old shadow heuristic looked only for
-    <name>.py and <name>/, missed it, then could not repair it — cascading over every
-    later test. Pre-importing every watched name closes the class: the real module is
-    already in sys.modules, so a shadow either cannot take effect or replaces the object
-    and is caught by identity."""
+    """A .pyc with no source imports happily, and the old shadow heuristic looked only
+    for <name>.py and <name>/ so it could not see one.
+
+    The probe asserts it really loaded the .pyc. Without that this test passed with the
+    shadow directory never placed on sys.path and the .pyc never compiled — it was
+    exercising pop-and-reimport and nothing else.
+    """
     import py_compile
     src = tmp_path / "yaml.py"
     src.write_text("FAKE = True\n")
@@ -391,13 +442,15 @@ def test_a_sourceless_pyc_shadow_is_caught(pytester, tmp_path):
     py_compile.compile(str(src), cfile=str(shadow / "yaml.pyc"), doraise=True)
     result = _run(pytester, """
         import sys
-        sys.path.insert(0, SHADOW)
+        sys.path.insert(0, __SHADOW__)
         sys.modules.pop("yaml", None)
         import yaml
+        assert yaml.FAKE is True, "the .pyc shadow did not load; this probe proves nothing"
+        assert yaml.__file__.endswith(".pyc"), yaml.__file__
 
         def test_harmless():
             assert True
-    """.replace("SHADOW", repr(str(shadow))))
-    assert result.ret != 0, "a sourceless shadow replaced a watched module unnoticed"
+    """.replace("__SHADOW__", repr(str(shadow))))
+    _assert_the_guard_refused(result, expect="yaml")
 
 
