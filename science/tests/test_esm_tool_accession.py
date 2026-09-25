@@ -305,3 +305,104 @@ def test_a_poisoned_cache_cannot_put_escapes_or_a_spoofed_line_in_front_of_the_o
 
     out = esm.score_variant("P01308", 1, "G")   # position 1 IS a standard residue
     assert "\x1b" not in out, repr(out)
+
+
+# --- the other two parameters ---------------------------------------------------
+# The accession is validated exhaustively above. `position` and `mutant` are chosen by
+# the same agent, reach the same code, and had no test at all: deleting the
+# `mutant not in AA` branch outright left the whole suite green.
+
+def _seeded(esm, tmp_path, monkeypatch, sequence="MALWMRLLPL"):
+    cache = tmp_path / "seqs"
+    cache.mkdir()
+    (cache / "P01308.json").write_text(json.dumps({
+        "accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
+        "sequence": sequence, "length": len(sequence),
+    }))
+    monkeypatch.setattr(esm, "CACHE", cache)
+    monkeypatch.setattr(esm, "position_logprobs",
+                        lambda seq: [{"logp": {a: -1.0 for a in esm.AA}} for _ in seq])
+    return esm
+
+
+@pytest.mark.parametrize("mutant", [
+    "",             # the empty string is a substring of every string
+    "AC",           # so is any contiguous run of the alphabet
+    "ACD",
+    "KL",
+    "ACDEFGHIKLMNPQRSTVWY",
+    "a",            # lowercase is not one of the twenty
+    "B",            # not an amino acid letter at all
+    "\x1b[31mA",    # an escape sequence must not reach the operator
+])
+def test_a_mutant_that_is_not_one_single_amino_acid_is_refused(esm, tmp_path, monkeypatch,
+                                                               mutant):
+    """`if mutant not in AA` was substring containment, because AA is a str.
+
+    So "", "AC" and "ACD" passed a check documented as "one of the 20 amino acids", the
+    full per-residue model pass ran, and then `lp[mutant]` raised KeyError — surfaced to
+    the agent by BioSimEnv.step as an opaque `tool error: KeyError: 'AC'`. The sibling
+    `wt not in AA` branch added in the same change is safe only because seq[i] is always
+    one character; the idiom is identical and the reasoning stated for it was not.
+    """
+    esm = _seeded(esm, tmp_path, monkeypatch)
+    out = esm.score_variant("P01308", 2, mutant)
+    assert "not one of the 20 amino acids" in out, out
+    assert "\x1b" not in out, repr(out)
+
+
+def test_a_valid_single_residue_substitution_still_scores(esm, tmp_path, monkeypatch):
+    """The refusal above must not swallow the real path."""
+    esm = _seeded(esm, tmp_path, monkeypatch)
+    out = esm.score_variant("P01308", 2, "G")
+    assert "not one of the 20" not in out
+    assert "P01308" in out
+
+
+@pytest.mark.parametrize("position", [0, -1, 11, 10**6])
+def test_a_position_outside_the_sequence_is_refused(esm, tmp_path, monkeypatch, position):
+    esm = _seeded(esm, tmp_path, monkeypatch)
+    out = esm.score_variant("P01308", position, "G")
+    assert "outside" in out, out
+
+
+def test_a_long_cache_field_cannot_push_the_real_result_off_the_screen(esm, tmp_path,
+                                                                       monkeypatch):
+    """operator_safe strips control characters AND truncates; only the stripping was
+    pinned. Both `return cleaned[:limit]` -> `return cleaned` and `limit=120` -> `10**9`
+    survived the whole suite. A cached organism field of 100 KB of ordinary printable
+    text floods the terminal and scrolls the real answer away — the same threat as an
+    escape sequence, one mechanism over."""
+    flood = "A" * 100_000
+    cache = tmp_path / "seqs"
+    cache.mkdir()
+    (cache / "P01308.json").write_text(json.dumps({
+        "accession": "P01308", "name": "EXMP", "organism": flood,
+        "sequence": "MALW", "length": flood,
+    }))
+    monkeypatch.setattr(esm, "CACHE", cache)
+    monkeypatch.setattr(esm, "embed", lambda seq: [0.0] * 8)
+
+    out = esm.embed_sequence("P01308")
+    assert len(out) < 400, f"a cache field flooded the operator with {len(out)} chars"
+    assert "embedded" in out, "the tool's own result must survive the truncation"
+
+
+def test_operator_safe_truncates_at_its_stated_limit(esm):
+    assert len(esm.operator_safe("x" * 500)) == 120
+    assert len(esm.operator_safe("x" * 119)) == 119
+    assert len(esm.operator_safe("x" * 120)) == 120
+
+
+def test_the_stub_tool_has_the_same_signature_as_the_real_one(esm, esm_stub):
+    """BioSimEnv.reset builds the agent's tool schema with Tool.from_function on whatever
+    sys.modules holds. In tests that is the stub, so ~12 budget tests exercise a schema
+    that cannot exist in production: the stub took (accession, mutation) while the real
+    tool takes (accession, position, mutant). Renaming or adding a required parameter on
+    the real tool left all of them green."""
+    import inspect
+    real = inspect.signature(esm.score_variant)
+    stub = inspect.signature(esm_stub.score_variant)
+    assert list(stub.parameters) == list(real.parameters), (
+        f"stub {list(stub.parameters)} vs real {list(real.parameters)} — the budget tests "
+        "would be measuring a tool shape production never sees")

@@ -62,7 +62,7 @@ def test_a_real_rollout_stops_at_the_ceiling(disc, monkeypatch):
     monkeypatch.setenv("BIOSIM_USD_PER_1M_TOKENS", "1.0")
     monkeypatch.setattr(disc.BioSimEnv.__init__, "__defaults__", (2.5, 5))
     call = {"id": "c1", "name": "score_variant",
-            "arguments": '{"accession": "P01308", "mutation": "C7S"}'}
+            "arguments": '{"accession": "P01308", "position": 7, "mutant": "S"}'}
     model_calls = []
     monkeypatch.setattr(disc, "agent_turn",
                         lambda m, t: model_calls.append(1) or _turn([call]))
@@ -75,7 +75,7 @@ def test_a_real_rollout_stops_at_the_ceiling(disc, monkeypatch):
     # $1 per model call against a $2.50 ceiling: calls 1-3 are paid, the third crosses,
     # so its measurement is refused and no further model call is made.
     assert len(model_calls) == 3
-    assert disc.bio.calls == ["score_variant:C7S"] * 2
+    assert disc.bio.calls == ["score_variant:7S"] * 2
     refused = result["rounds"][-1]
     assert refused["round"] == 3 and "refused" in refused, \
         "the refused measurement must be visible in the transcript, not silently skipped"
@@ -139,7 +139,7 @@ def test_results_are_paired_with_the_calls_that_produced_them(disc, monkeypatch)
     position hands the real score to the call that named a nonexistent tool."""
     batch = [{"id": "bad", "name": "nosuch", "arguments": "{}"},
              {"id": "good", "name": "score_variant",
-              "arguments": '{"accession": "P01308", "mutation": "C7S"}'}]
+              "arguments": '{"accession": "P01308", "position": 7, "mutant": "S"}'}]
     result, _ = _rollout(disc, monkeypatch, ceiling=10.0, turns=[batch])
     results = result["rounds"][0]["results"]
     assert "no such tool" in results[0], results
@@ -152,13 +152,13 @@ def test_malformed_tool_arguments_do_not_crash_the_rollout(disc, monkeypatch):
     batch = [{"id": "broken", "name": "score_variant", "arguments": '{"accession": "P0130'},
              {"id": "list", "name": "score_variant", "arguments": "[1, 2]"},
              {"id": "good", "name": "score_variant",
-              "arguments": '{"accession": "P01308", "mutation": "C7S"}'}]
+              "arguments": '{"accession": "P01308", "position": 7, "mutant": "S"}'}]
     result, _ = _rollout(disc, monkeypatch, ceiling=10.0, turns=[batch])
     results = result["rounds"][0]["results"]
     assert "tool error" in results[0], results
     assert "tool error" in results[1], results
     assert results[2] == "-1.25", results
-    assert disc.bio.calls == ["score_variant:C7S"]
+    assert disc.bio.calls == ["score_variant:7S"]
 
 
 def test_tool_arguments_that_collide_with_the_call_constructor_do_not_crash_the_rollout(disc, monkeypatch):
@@ -168,7 +168,7 @@ def test_tool_arguments_that_collide_with_the_call_constructor_do_not_crash_the_
     batch = [{"id": "c1", "name": "score_variant", "arguments": '{"id": 1}'},
              {"id": "c2", "name": "score_variant", "arguments": '{"function_name": "x"}'},
              {"id": "c3", "name": "score_variant",
-              "arguments": '{"accession": "P01308", "mutation": "C7S"}'}]
+              "arguments": '{"accession": "P01308", "position": 7, "mutant": "S"}'}]
     result, _ = _rollout(disc, monkeypatch, ceiling=10.0, turns=[batch])
     results = result["rounds"][0]["results"]
     assert "tool error" in results[0], results

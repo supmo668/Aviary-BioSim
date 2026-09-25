@@ -115,6 +115,23 @@ MUTANTS = [
          find="    if not (math.isfinite(price) and price > 0):", replace="    if not (price > 0):"),
 
     # --- the isolation guard (passes 2-4) ---
+    # --- pass 5: properties that had no test at all ---
+    dict(id="esm-mutant-substring", pass_="5", target="science/esm_tool.py", check=ESM,
+         why="`mutant` must be ONE amino acid; `in` on a str is substring containment",
+         find="    if len(mutant) != 1 or mutant not in AA:",
+         replace="    if mutant not in AA:"),
+    dict(id="esm-operator-safe-no-truncation", pass_="5", target="science/esm_tool.py", check=ESM,
+         why="operator_safe truncates as well as strips; a long printable field floods the terminal",
+         find="    return cleaned[:limit]",
+         replace="    return cleaned"),
+    dict(id="esm-operator-safe-limit-widened", pass_="5", target="science/esm_tool.py", check=ESM,
+         why="the truncation limit is a real bound, not a decoration",
+         find="def operator_safe(text: object, limit: int = 120) -> str:",
+         replace="def operator_safe(text: object, limit: int = 10**9) -> str:"),
+    dict(id="guard-stub-signature-drift", pass_="5", target="science/tests/conftest.py", check=ESM,
+         why="the stub tool's parameters match production, or the budget tests measure a shape that cannot exist",
+         find="    def score_variant(accession: str, position: int, mutant: str) -> str:",
+         replace="    def score_variant(accession: str, mutation: str) -> str:"),
     dict(id="guard-hooks-disabled", pass_="2", target="science/tests/conftest.py", check=ISO,
          why="the guard runs at all",
          find="@pytest.hookimpl(tryfirst=True)\ndef pytest_runtest_setup(item):",

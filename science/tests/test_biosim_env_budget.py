@@ -14,23 +14,23 @@ import pytest
 
 def test_within_budget_the_step_runs_the_tool(bio):
     env = bio.env(ceiling=1.0)
-    obs, reward, done, truncated = bio.step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
-    assert bio.calls == ["score_variant:A12G"]
+    obs, reward, done, truncated = bio.step(env, ("score_variant", {"accession": "P01308", "position": 12, "mutant": "G"}))
+    assert bio.calls == ["score_variant:12G"]
     assert not done
 
 
 def test_spend_exactly_at_the_ceiling_still_runs(bio):
     env = bio.env(ceiling=1.0)
     env.charge("model-call-1", 1.0)
-    bio.step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
-    assert bio.calls == ["score_variant:A12G"]
+    bio.step(env, ("score_variant", {"accession": "P01308", "position": 12, "mutant": "G"}))
+    assert bio.calls == ["score_variant:12G"]
 
 
 def test_over_budget_the_rollout_stops_and_the_tool_never_runs(bio):
     env = bio.env(ceiling=1.0)
     env.charge("model-call-1", 1.5)
     with pytest.raises(bio.BudgetExceeded) as refused:
-        bio.step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
+        bio.step(env, ("score_variant", {"accession": "P01308", "position": 12, "mutant": "G"}))
     assert bio.calls == [], "a refused step must not spend on the tool it refused"
     assert refused.value.total_usd == pytest.approx(1.5)
     assert refused.value.ceiling_usd == pytest.approx(1.0)
@@ -42,7 +42,7 @@ def test_the_refusal_is_not_converted_into_a_tool_error_string(bio):
     env = bio.env(ceiling=1.0)
     env.charge("model-call-1", 2.0)
     try:
-        result = bio.step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
+        result = bio.step(env, ("score_variant", {"accession": "P01308", "position": 12, "mutant": "G"}))
     except bio.BudgetExceeded:
         return
     pytest.fail(f"step returned instead of refusing: {result!r}")
@@ -70,9 +70,9 @@ def test_crossing_the_ceiling_mid_batch_refuses_the_remaining_calls(bio):
     env._fns["score_variant"] = paid_score_variant
     with pytest.raises(bio.BudgetExceeded):
         bio.step(env,
-              ("score_variant", {"accession": "P01308", "mutation": "A12G"}),
-              ("score_variant", {"accession": "P01308", "mutation": "C7S"}))
-    assert bio.calls == ["score_variant:A12G"], "the call after the crossing one must not run"
+              ("score_variant", {"accession": "P01308", "position": 12, "mutant": "G"}),
+              ("score_variant", {"accession": "P01308", "position": 7, "mutant": "S"}))
+    assert bio.calls == ["score_variant:12G"], "the call after the crossing one must not run"
 
 
 def test_once_over_budget_every_later_step_keeps_refusing(bio):
@@ -80,7 +80,7 @@ def test_once_over_budget_every_later_step_keeps_refusing(bio):
     env.charge("model-call-1", 3.0)
     for _ in range(3):
         with pytest.raises(bio.BudgetExceeded):
-            bio.step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
+            bio.step(env, ("score_variant", {"accession": "P01308", "position": 12, "mutant": "G"}))
     assert bio.calls == []
 
 
@@ -114,7 +114,7 @@ def test_a_record_call_from_the_agent_is_not_a_tool_and_cannot_touch_the_ledger(
     assert "no such tool" in str(obs[0].content)
     assert env.tracker.total() == pytest.approx(5.0)
     with pytest.raises(bio.BudgetExceeded):
-        bio.step(env, ("score_variant", {"accession": "P01308", "mutation": "A12G"}))
+        bio.step(env, ("score_variant", {"accession": "P01308", "position": 12, "mutant": "G"}))
 
 
 def test_spend_remaining_reports_the_ceiling_minus_recorded_spend(bio):

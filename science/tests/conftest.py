@@ -293,14 +293,21 @@ def esm_stub(monkeypatch):
     calls: list[str] = []
     module = _stub("esm_tool")
 
-    def score_variant(accession: str, mutation: str) -> float:
+    def score_variant(accession: str, position: int, mutant: str) -> str:
         """Score a substitution.
+
+        The parameter list must match science/esm_tool.score_variant exactly:
+        BioSimEnv.reset builds the agent's tool schema with Tool.from_function on
+        whatever sys.modules holds, so a stub with a different shape means the budget
+        tests measure a tool that cannot exist in production. Pinned by
+        test_the_stub_tool_has_the_same_signature_as_the_real_one.
 
         Args:
             accession: Database accession.
-            mutation: Substitution such as A12G.
+            position: 1-based residue position.
+            mutant: The substituted residue, one of the 20 amino acids.
         """
-        calls.append(f"score_variant:{mutation}")
+        calls.append(f"score_variant:{position}{mutant}")
         return -1.25
 
     def embed_sequence(accession: str) -> int:

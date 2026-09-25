@@ -188,12 +188,17 @@ def score_variant(accession: str, position: int, mutant: str) -> str:
         # Say so, rather than raising KeyError out of the log-prob lookup below.
         return (f"{accession} position {position} is not a standard amino acid "
                 f"in the stored sequence")
-    if mutant not in AA:
-        return f"{mutant!r} is not one of the 20 amino acids"
+    if len(mutant) != 1 or mutant not in AA:
+        # `mutant not in AA` alone is SUBSTRING containment, because AA is a str: "",
+        # "AC" and "ACD" all passed, the per-residue model pass ran, and lp[mutant] then
+        # raised KeyError into the agent's context as an opaque tool error.
+        return f"{operator_safe(mutant)!r} is not one of the 20 amino acids"
     lp = position_logprobs(seq[: position] + seq[position:])[position - 1]["logp"]
     score = lp[mutant] - lp[wt]
-    # wt needs no sanitising: the AA check above already guarantees it is one of the
-    # twenty single letters. Sanitising it anyway would be defence no test can kill.
+    # wt needs no sanitising, but not for the reason first written here. It is safe
+    # because seq[position - 1] on a str is exactly one character and position is
+    # bounds-checked above — NOT because `wt not in AA` screens it, which is the same
+    # substring idiom that let "AC" through one branch below.
     return (f"{accession} {wt}{position}{mutant}: score {score:.3f} "
             f"(negative means the model finds the substitution disruptive)")
 
