@@ -107,30 +107,44 @@ MUTANTS = [
          replace="@pytest.hookimpl(tryfirst=True)\ndef pytest_runtest_setup(item):\n    return"),
     dict(id="guard-marker-based", pass_="2", target="science/tests/conftest.py", check=ISO,
          why="detection is by identity, not by a marker only this file sets",
-         find="        elif current is not None and not _is_the_real_module(name, current):",
-         replace='        elif current is not None and getattr(current, "__file__", None) is None:'),
+         find='    return [name for name in WATCHED if sys.modules.get(name) is not _BASELINE.get(name)]',
+         replace='    return [name for name in WATCHED\n'
+                 '            if getattr(sys.modules.get(name), "_conftest_fake", False)]'),
     dict(id="guard-trusts-dunder-file", pass_="3", target="science/tests/conftest.py", check=ISO,
          why="a fabricated __file__ is not identity",
-         find="    if spec is None:\n        return False",
-         replace="    if getattr(module, '__file__', None):\n        return True\n    if spec is None:\n        return False"),
+         find='    """\n' + '    return [name for name in WATCHED if sys.modules.get(name) is not _BASELINE.get(name)]',
+         replace='    """\n'
+                 '    return [name for name in WATCHED\n'
+                 '            if sys.modules.get(name) is not _BASELINE.get(name)\n'
+                 '            and not str(getattr(sys.modules.get(name), "__file__", "")).endswith(".py")]'),
     dict(id="guard-no-shadow-detection", pass_="4", target="science/tests/conftest.py", check=ISO,
-         why="a sys.path entry that shadows a watched name is a leak",
-         find='            if (directory / f"{top}.py").exists() or (directory / top).is_dir():',
-         replace="            if False:"),
+         why="a shadow that replaces a watched module is caught by identity; presence of the name is not enough",
+         find="    fact that the object is not the one that was there before collection.\n"
+              '    """\n' + '    return [name for name in WATCHED if sys.modules.get(name) is not _BASELINE.get(name)]',
+         replace="    fact that the object is not the one that was there before collection.\n"
+                 '    """\n'
+                 "    return [name for name in WATCHED\n"
+                 "            if (name in sys.modules) != (_BASELINE.get(name) is not None)]"),
     dict(id="guard-no-origin-baseline", pass_="4", target="science/tests/conftest.py", check=ISO,
-         why="a name resolves to what it meant before collection, not to what the dirtied path says now",
-         find="    if resolvable:", replace="    if False:"),
+         why="the baseline is the real module imported before collection, not whatever happened to be loaded",
+         find="        for name in WATCHED:\n"
+              "            try:\n"
+              "                importlib.import_module(name)\n"
+              "            except Exception:             # not installed, or needs one that is not\n"
+              "                pass",
+         replace="        for name in WATCHED:\n"
+                 "            pass"),
     dict(id="guard-dotted-exempt", pass_="4", target="science/tests/conftest.py", check=ISO,
-         why="a dotted name is resolved, not exempted",
-         find='        parent_name, _, leaf = name.rpartition(".")',
-         replace='        return True\n        parent_name, _, leaf = name.rpartition(".")'),
+         why="a dotted name is watched, not exempted",
+         find='           "aviary.core", "torch", "transformers", "requests",',
+         replace='           "torch", "transformers", "requests",'),
     dict(id="guard-watched-shrunk", pass_="4", target="science/tests/conftest.py", check=ISO,
          why="every watched name is watched",
          find='WATCHED = ("esm_tool", "biosim_env", "run_discovery", "spend_tracker",',
          replace='WATCHED = ("esm_tool", "torch", "transformers", "requests")\n_UNUSED = ('),
     dict(id="guard-loader-keeps-syspath", pass_="3", target="science/tests/conftest.py", check=ISO,
          why="the by-path loader unwinds a module's sys.path write",
-         find="        sys.path[:] = saved", replace="        pass"),
+         find="        sys.path[:] = saved_for_loader", replace="        pass"),
     dict(id="guard-bio-raw-syspath", pass_="3", target="science/tests/conftest.py", check=ISO,
          why="fixtures prepend the path through monkeypatch so it unwinds",
          find="    monkeypatch.syspath_prepend(str(DEMO))",

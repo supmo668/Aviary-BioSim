@@ -36,7 +36,7 @@ def test_a_test_that_did_not_ask_for_a_stub_sees_no_stub(stub_contract):
 
 def test_the_real_requests_is_importable_when_no_fixture_faked_it(stub_contract):
     import requests
-    assert not getattr(requests, stub_contract.marker, False)
+    assert requests is stub_contract.baseline["requests"], "not the module we started with"
     assert hasattr(requests, "Session"), "this should be the real library"
 
 
@@ -92,14 +92,6 @@ def test_the_harness_shares_the_environment_the_bundle_built(disc, bio):
 # Run as their own pytest sessions, so the assertions do not depend on this file's
 # collection order the way a "runs after the one above" test would.
 
-def _shadow_dir(pytester, module_name):
-    """A directory that would answer to a watched name — what makes a path entry
-    dangerous. An added directory shadowing nothing cannot change any resolution."""
-    directory = pytester.mkdir(f"shadow_{module_name}")
-    (directory / f"{module_name}.py").write_text("FAKE = True\n")
-    return directory
-
-
 def _run(pytester, module_source):
     conftest = pathlib.Path(__file__).parent / "conftest.py"
     pytester.makeconftest(CONFTEST_SHIM.format(conftest=str(conftest)))
@@ -130,17 +122,23 @@ def test_the_guard_catches_an_unmarked_stub_installed_at_import_time(pytester):
 
 
 def test_the_guard_catches_a_sys_path_write_at_import_time(pytester):
-    """The sys.path half of the same shape — previously invisible to the guard."""
+    """The sys.path half of the same shape.
+
+    Only THIS project's directories are policed now: every watched name is imported at
+    configure, so a later path entry cannot change what one resolves to, and treating
+    another suite's entries as leaks once aborted whole sessions over other people's
+    code. A fixture that forgets to unwind OUR directory is still a real defect.
+    """
     result = _run(pytester, """
         import sys
-        sys.path.insert(0, SHADOW)
+        sys.path.insert(0, OURS)
 
         def test_harmless():
             assert True
-    """.replace("SHADOW", repr(str(_shadow_dir(pytester, "yaml")))))
+    """.replace("OURS", repr(str(pathlib.Path(__file__).resolve().parents[1]))))
     assert result.ret != 0
     out = result.stdout.str() + result.stderr.str()
-    assert "shadow_yaml" in out
+    assert "sys.path" in out
 
 
 def test_the_guard_catches_a_sys_path_leak_from_a_test_body(pytester):
@@ -148,13 +146,13 @@ def test_the_guard_catches_a_sys_path_leak_from_a_test_body(pytester):
         import sys
 
         def test_leaks_a_path():
-            sys.path.insert(0, SHADOW)
+            sys.path.insert(0, OURS)
 
         def test_next():
             assert True
-    """.replace("SHADOW", repr(str(_shadow_dir(pytester, "requests")))))
+    """.replace("OURS", repr(str(pathlib.Path(__file__).resolve().parents[1]))))
     result.assert_outcomes(errors=1, passed=2)
-    assert "shadow_requests" in result.stdout.str()
+    assert "sys.path" in result.stdout.str()
 
 
 def test_the_guard_catches_a_stub_leaked_by_a_test_body(pytester):
@@ -233,41 +231,53 @@ def test_the_bundle_imports_its_classes_rather_than_reading_sys_modules(bio, stu
     assert rebuilt.BudgetExceeded is not Exception
 
 
-def test_the_setup_hook_fails_a_test_that_starts_with_dirty_state(stub_contract, tmp_path):
+def test_the_setup_hook_fails_a_test_that_starts_with_dirty_state(stub_contract):
     """The sibling hooks repair before failing, so this one cannot fire through the
     suite and no suite-level test can pin it. Called directly instead: without this,
     deleting it entirely leaves the suite green."""
     class _Item:
         nodeid = "probe::item"
 
-    shadow = tmp_path / "shadowing"
-    shadow.mkdir()
-    (shadow / "torch.py").write_text("FAKE = True\n")
-    sys.path.insert(0, str(shadow))
+    ours = stub_contract.demo_dir
+    sys.path.insert(0, ours)
     try:
         # pytest.fail raises Failed, which derives from BaseException, not Exception.
         with pytest.raises(BaseException) as refused:
             stub_contract.runtest_setup(_Item())
     finally:
-        while str(shadow) in sys.path:
-            sys.path.remove(str(shadow))
+        while ours in sys.path:
+            sys.path.remove(ours)
     message = str(refused.value)
-    assert str(shadow) in message
+    assert "sys.path" in message
     assert "not necessarily the one that caused it" in message, \
         "the hook must not assert a cause it cannot know"
 
 
-def test_a_fabricated_dunder_file_does_not_make_a_fake_look_real(bio, stub_contract):
-    """__file__ is one line to set and comes free from spec_from_file_location, so it
-    is not evidence. Identity is checked against where the module must actually live."""
-    import types
+@pytest.mark.parametrize("forgery", [
+    'm.__file__ = "/not/a/real/file.py"',
+    'm.__spec__ = importlib.util.spec_from_file_location("yaml", REAL_YAML)',
+    'm.__spec__ = importlib.machinery.ModuleSpec("yaml", None, origin="built-in")',
+    'm.__spec__ = importlib.machinery.ModuleSpec("yaml", None, is_package=True)',
+], ids=["dunder-file", "forged-origin", "built-in-origin", "package-shaped"])
+def test_no_attribute_a_fake_can_set_makes_it_look_authentic(pytester, forgery):
+    """Every earlier version of this guard authenticated a module from its OWN
+    attributes — first __file__, then __spec__.origin — and each was defeated by a
+    three-line fake that simply set the attribute. Identity cannot be forged: the
+    object either is the one recorded before collection, or it is not."""
+    import yaml as real_yaml
+    result = _run(pytester, """
+        import importlib.machinery, importlib.util, sys, types
+        REAL_YAML = REAL
+        m = types.ModuleType("yaml")
+        FORGERY
+        m.safe_load = lambda *a, **k: {"pwned": True}
+        sys.modules["yaml"] = m
 
-    fake = types.ModuleType("esm_tool")
-    fake.__file__ = "/not/a/real/file.py"
-    assert not stub_contract.is_the_real_module("esm_tool", fake)
-
-    import spend_tracker
-    assert stub_contract.is_the_real_module("spend_tracker", spend_tracker)
+        def test_harmless():
+            assert True
+    """.replace("REAL", repr(real_yaml.__file__)).replace("FORGERY", forgery))
+    assert result.ret != 0, "a fake survived by setting: " + forgery
+    assert "yaml" in result.stdout.str() + result.stderr.str()
 
 
 def test_the_guard_catches_a_file_backed_fake_at_import_time(pytester, tmp_path):
@@ -350,20 +360,44 @@ def test_a_shadowing_directory_cannot_validate_its_own_fake(pytester):
     assert result.ret != 0, "a fake resolved through a directory it inserted itself"
 
 
-def test_a_dotted_name_that_did_not_resolve_at_configure_is_still_checked(
-        stub_contract, tmp_path, monkeypatch):
-    """The dotted-name branch is only reachable when the name was unresolvable before
-    collection — an optional dependency that is not installed. aviary IS installed here,
-    so the origin baseline answers first and the branch would otherwise go unexercised.
-    """
-    monkeypatch.setitem(stub_contract.baseline_origin, "aviary.core", (None, False))
+def test_a_package_shaped_fake_at_a_dotted_name_is_caught(pytester):
+    """aviary.core is where the Environment and Tool classes come from. A spec built
+    with is_package=True used to exempt it outright — the shape that makes a budget
+    enforcement test pass while measuring a stub."""
+    result = _run(pytester, """
+        import importlib.machinery, importlib.util, sys
+        spec = importlib.machinery.ModuleSpec("aviary.core", None, is_package=True)
+        fake = importlib.util.module_from_spec(spec)
+        fake.Environment = object
+        sys.modules["aviary.core"] = fake
 
-    fake_file = tmp_path / "core.py"
-    fake_file.write_text("Environment = object\n")
-    spec = importlib.util.spec_from_file_location("aviary.core", fake_file)
-    fake = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(fake)
-    assert not stub_contract.is_the_real_module("aviary.core", fake)
+        def test_harmless():
+            assert True
+    """)
+    assert result.ret != 0
+    assert "aviary.core" in result.stdout.str() + result.stderr.str()
 
-    import aviary.core
-    assert stub_contract.is_the_real_module("aviary.core", aviary.core)
+
+def test_a_sourceless_pyc_shadow_is_caught(pytester, tmp_path):
+    """A .pyc with no source imports happily. The old shadow heuristic looked only for
+    <name>.py and <name>/, missed it, then could not repair it — cascading over every
+    later test. Pre-importing every watched name closes the class: the real module is
+    already in sys.modules, so a shadow either cannot take effect or replaces the object
+    and is caught by identity."""
+    import py_compile
+    src = tmp_path / "yaml.py"
+    src.write_text("FAKE = True\n")
+    shadow = pytester.mkdir("pyc_shadow")
+    py_compile.compile(str(src), cfile=str(shadow / "yaml.pyc"), doraise=True)
+    result = _run(pytester, """
+        import sys
+        sys.path.insert(0, SHADOW)
+        sys.modules.pop("yaml", None)
+        import yaml
+
+        def test_harmless():
+            assert True
+    """.replace("SHADOW", repr(str(shadow))))
+    assert result.ret != 0, "a sourceless shadow replaced a watched module unnoticed"
+
+
