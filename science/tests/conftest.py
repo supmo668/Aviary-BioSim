@@ -90,14 +90,27 @@ def _stub(name: str) -> types.ModuleType:
     return types.ModuleType(name)
 
 
+def _is_baseline(name: str) -> bool:
+    """Is this name still bound to the exact object recorded before collection?"""
+    return sys.modules.get(name) is _BASELINE.get(name)
+
+
 def _leaked() -> list:
     """Watched names whose sys.modules entry is not the object recorded at configure.
 
     No attribute is consulted. A forged __file__, a forged __spec__.origin, a spec
     claiming to be a package, a sourceless .pyc, a zip import — none of them change the
     fact that the object is not the one that was there before collection.
+
+    What this does NOT see is in-place mutation: `import yaml; yaml.safe_load = evil`
+    leaves the object identical, so no hook fires and _repair cannot undo it. Identity
+    authenticates the binding, not the contents. Recorded in docs/deferred-findings.md.
+
+    The comparison lives in _is_baseline so the mutation catalogue can anchor on a line
+    of CODE. Three entries used to anchor on this function's return statement and on the
+    prose above it, which meant rewording a comment turned the anti-rot test red.
     """
-    return [name for name in WATCHED if sys.modules.get(name) is not _BASELINE.get(name)]
+    return [name for name in WATCHED if not _is_baseline(name)]
 
 
 def _path_leaks() -> list:

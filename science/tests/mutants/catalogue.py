@@ -13,6 +13,20 @@ FAIL. A mutant that survives means the property it probes is no longer pinned.
 
 `find` must occur EXACTLY ONCE in its target — test_mutant_catalogue.py asserts that
 on every run, so an entry cannot silently stop applying when the code moves.
+
+WHEN A SIMPLIFICATION REMOVES THE MECHANISM AN ENTRY PROBED, retire it into RETIRED
+below with the reason. Do NOT retarget the entry at a different property and keep the
+id: the id is what readers match against "all four passes are still pinned", and a
+retargeted entry makes the count say something the catalogue cannot support.
+
+That is not hypothetical. Commit 1321ad8 rewrote the find/replace/why of five of the
+eleven guard entries and republished "31/31 killed" — the specification edited to fit
+the implementation, then the implementation declared to satisfy it, which is precisely
+what freezing was supposed to prevent. The number below is therefore reported as
+"N live + M retired", never as a bare ratio.
+
+`find` must anchor on a line of CODE. Two entries used to embed _leaked's docstring
+prose, so rewording a comment turned the anti-rot test red.
 """
 
 # check: pytest arguments identifying the smallest set that should catch the mutant.
@@ -105,26 +119,15 @@ MUTANTS = [
          why="the guard runs at all",
          find="@pytest.hookimpl(tryfirst=True)\ndef pytest_runtest_setup(item):",
          replace="@pytest.hookimpl(tryfirst=True)\ndef pytest_runtest_setup(item):\n    return"),
-    dict(id="guard-marker-based", pass_="2", target="science/tests/conftest.py", check=ISO,
-         why="detection is by identity, not by a marker only this file sets",
-         find='    return [name for name in WATCHED if sys.modules.get(name) is not _BASELINE.get(name)]',
-         replace='    return [name for name in WATCHED\n'
-                 '            if getattr(sys.modules.get(name), "_conftest_fake", False)]'),
     dict(id="guard-trusts-dunder-file", pass_="3", target="science/tests/conftest.py", check=ISO,
          why="a fabricated __file__ is not identity",
-         find='    """\n' + '    return [name for name in WATCHED if sys.modules.get(name) is not _BASELINE.get(name)]',
-         replace='    """\n'
-                 '    return [name for name in WATCHED\n'
-                 '            if sys.modules.get(name) is not _BASELINE.get(name)\n'
+         find="    return [name for name in WATCHED if not _is_baseline(name)]",
+         replace='    return [name for name in WATCHED if not _is_baseline(name)\n'
                  '            and not str(getattr(sys.modules.get(name), "__file__", "")).endswith(".py")]'),
-    dict(id="guard-no-shadow-detection", pass_="4", target="science/tests/conftest.py", check=ISO,
-         why="a shadow that replaces a watched module is caught by identity; presence of the name is not enough",
-         find="    fact that the object is not the one that was there before collection.\n"
-              '    """\n' + '    return [name for name in WATCHED if sys.modules.get(name) is not _BASELINE.get(name)]',
-         replace="    fact that the object is not the one that was there before collection.\n"
-                 '    """\n'
-                 "    return [name for name in WATCHED\n"
-                 "            if (name in sys.modules) != (_BASELINE.get(name) is not None)]"),
+    dict(id="guard-presence-not-identity", pass_="4", target="science/tests/conftest.py", check=ISO,
+         why="a watched name must hold the SAME OBJECT, not merely be present or absent",
+         find="    return sys.modules.get(name) is _BASELINE.get(name)",
+         replace="    return (name in sys.modules) == (_BASELINE.get(name) is not None)"),
     dict(id="guard-no-origin-baseline", pass_="4", target="science/tests/conftest.py", check=ISO,
          why="the baseline is the real module imported before collection, not whatever happened to be loaded",
          find="        for name in WATCHED:\n"
@@ -158,3 +161,25 @@ MUTANTS = [
          find="        self.BudgetExceeded = BudgetExceeded",
          replace="        self.BudgetExceeded = Exception"),
 ]
+
+# Entries whose property the design deliberately removed. Kept as a record so the live
+# count cannot quietly absorb a dropped property. Each says what it probed and why it
+# no longer can.
+RETIRED = [
+    dict(id="guard-marker-based", pass_="2", retired_in="pass 5",
+         probed="detection by identity rather than by a marker only conftest sets",
+         why_retired=(
+             "The identity rewrite deleted the marker mechanism entirely, so the "
+             "re-expressed mutant made _leaked() the constant [] — its kill set became "
+             "byte-identical to a fully disabled guard (8 tests, cheapest "
+             "`stubbed() == ['esm_tool']`). It no longer separated marker-based from "
+             "identity-based detection; it only asserted detection happens at all, "
+             "which guard-hooks-disabled already pins. Degenerate, not merely weaker.")),
+]
+
+# Known weak entries, recorded rather than silently counted:
+#   guard-watched-shrunk and guard-dotted-exempt are both killed mainly by
+#   test_every_name_the_guard_must_watch_is_watched, which restates the WATCHED tuple as
+#   a parametrize list. That is a tautology: it kills any shrink of WATCHED without the
+#   guard being exercised once. Their behavioural kills (the dotted-name fake tests) are
+#   what actually counts.
