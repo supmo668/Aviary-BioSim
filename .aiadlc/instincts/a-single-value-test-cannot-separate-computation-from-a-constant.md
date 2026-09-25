@@ -1,8 +1,8 @@
 ---
 name: a-single-value-test-cannot-separate-computation-from-a-constant
-confidence: 0.900
+confidence: 1.000
 created: 2026-09-24T17:58:31Z
-last_reinforced: 2026-09-24T17:58:31Z
+last_reinforced: 2026-09-25T09:46:42Z
 ttl_days: 30
 triggers: [science/tests, demo/tests, pytest, parametrize]
 tags: [testing, mutation, method]
