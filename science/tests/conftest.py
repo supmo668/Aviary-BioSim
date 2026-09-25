@@ -40,6 +40,12 @@ DEMO = SCIENCE.parent / "demo"
 # check is pure identity. These are the names this suite genuinely resolves for real
 # during a run: the `disc` fixture executes run_discovery.py by path (which imports
 # openai and weave), `bio` uses spend_tracker, and aviary.core supplies Environment/Tool.
+# Every name here must be a DECLARED dependency of the invocation, not one that happens
+# to arrive transitively. `requests` was undeclared for months and the suite was green
+# only because openai/weave pulled it in; when that resolution changed, three tests went
+# red. That is the same defect as depending on whether torch is installed — the suite's
+# colour becoming a property of the machine — and it is exactly what
+# test_no_preimported_name_failed_to_import exists to make loud instead of silent.
 PREIMPORT = ("yaml", "requests", "openai", "weave",
              "aviary", "aviary.core", "spend_tracker")
 

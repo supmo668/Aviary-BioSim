@@ -94,7 +94,7 @@ a self-test, and the self-test passed. The pattern is not a story about code wri
 ```bash
 # Everything below runs from the repository root.
 uv run --with pytest --with pyyaml pytest .claude/skills/v2r-loop/scripts/tests -q   # 42 passed
-uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave \
+uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave --with requests \
   pytest science/tests -q                                   # 265 passed
 
 uv run --with pyyaml demo/gate_demo.py                       # the gate refusing, in 10 s
