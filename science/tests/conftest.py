@@ -23,7 +23,6 @@ because a marker would only catch fakes written here — and the contributor who
 reintroduces this defect will write a plain ModuleType and never have heard of it.
 """
 import importlib
-import importlib.machinery
 import importlib.util
 import pathlib
 import sys

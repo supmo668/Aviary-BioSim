@@ -7,7 +7,6 @@ survives a hook refactor, and pin the fixture wiring the rest of the suite trust
 This is the regression guard for F08. Without it the fix decays the first time
 someone adds a module that installs a global stub — which is how F08 arrived.
 """
-import importlib.util
 import pathlib
 import sys
 import textwrap
