@@ -236,6 +236,7 @@ def stub_contract():
         bio_class = _Bio
         runtest_setup = staticmethod(pytest_runtest_setup)
         path_leaks = staticmethod(_path_leaks)
+        repair = staticmethod(_repair)
         baseline = _BASELINE
 
         @staticmethod

@@ -148,6 +148,24 @@ MUTANTS = [
     dict(id="guard-loader-keeps-syspath", pass_="3", target="science/tests/conftest.py", check=ISO,
          why="the by-path loader unwinds a module's sys.path write",
          find="        sys.path[:] = saved_for_loader", replace="        pass"),
+    dict(id="guard-setup-ignores-modules", pass_="5", target="science/tests/conftest.py", check=ISO,
+         why="the setup hook's sys.modules half is real; a substituted module must fail the test",
+         find="    leaked, paths = _leaked(), _path_leaks()\n"
+              '    if leaked or paths:\n'
+              '        _repair()\n'
+              '        pytest.fail(\n'
+              '            f"{item.nodeid} ran with global import state already dirty — "',
+         replace="    leaked, paths = [], _path_leaks()\n"
+                 '    if leaked or paths:\n'
+                 '        _repair()\n'
+                 '        pytest.fail(\n'
+                 '            f"{item.nodeid} ran with global import state already dirty — "'),
+    dict(id="guard-repair-skips-modules", pass_="5", target="science/tests/conftest.py", check=ISO,
+         why="one leak fails ONE test: _repair restores sys.modules so the rest of the session survives",
+         find="    for name in WATCHED:\n"
+              "        base = _BASELINE.get(name)",
+         replace="    for name in ():\n"
+                 "        base = _BASELINE.get(name)"),
     dict(id="guard-bio-raw-syspath", pass_="3", target="science/tests/conftest.py", check=ISO,
          why="fixtures prepend the path through monkeypatch so it unwinds",
          find="    monkeypatch.syspath_prepend(str(DEMO))",

@@ -50,7 +50,10 @@ def test_every_frozen_mutant_still_applies_exactly_once(mutant):
 
 def test_the_catalogue_covers_every_pass_and_every_guarded_file():
     passes = {m["pass_"] for m in MUTANTS}
-    assert passes == {"1", "2", "3", "4"}, f"missing a review pass: {passes}"
+    # Superset, not equality: a later review pass adds entries, and demanding equality
+    # made adding pass 5 turn the suite red for no reason. Every earlier pass must still
+    # be represented — that is the property — but the set is open at the top.
+    assert {"1", "2", "3", "4"} <= passes, f"a review pass lost all its mutants: {passes}"
     targets = {m["target"] for m in MUTANTS}
     for required in ("science/biosim_env.py", "science/esm_tool.py",
                      "science/run_discovery.py", "science/tests/conftest.py"):
@@ -93,8 +96,8 @@ def test_the_live_count_is_asserted_so_the_catalogue_cannot_quietly_shrink():
     same hole test_every_name_the_guard_must_watch_is_watched exists to close for
     WATCHED, and it was open here while this file policed everything else.
     """
-    assert len(MUTANTS) == 30, (
-        f"{len(MUTANTS)} live mutants, expected 30. Adding is free; REMOVING one means "
+    assert len(MUTANTS) == 32, (
+        f"{len(MUTANTS)} live mutants, expected 32. Adding is free; REMOVING one means "
         "retiring it into RETIRED with a reason and updating this number.")
     assert len(RETIRED) == 1
     for entry in RETIRED:

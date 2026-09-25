@@ -11,6 +11,7 @@ import importlib.util
 import pathlib
 import sys
 import textwrap
+import types
 
 import pytest
 
@@ -289,6 +290,54 @@ def test_the_setup_hook_fails_a_test_that_starts_with_dirty_state(stub_contract)
     assert "sys.path" in message
     assert "not necessarily the one that caused it" in message, \
         "the hook must not assert a cause it cannot know"
+
+
+def test_the_setup_hook_fails_a_test_that_starts_with_a_faked_module(stub_contract,
+                                                                     monkeypatch):
+    """The setup hook has two halves and only the sys.path one was pinned.
+
+    Mutating `leaked, paths = _leaked(), _path_leaks()` to `[], _path_leaks()` — the hook
+    blind to substituted modules, which is the entire point of the file — left all 38
+    tests passing. Called directly, because the hook repairs before it fails, so no
+    suite-level test can observe it.
+    """
+    class _Item:
+        nodeid = "probe::item"
+
+    fake = types.ModuleType("torch")
+    monkeypatch.setitem(sys.modules, "torch", fake)
+    with pytest.raises(BaseException) as refused:      # pytest.fail raises Failed
+        stub_contract.runtest_setup(_Item())
+    message = str(refused.value)
+    assert "torch" in message, "the hook did not name the substituted module"
+    assert "sys.modules" in message
+    assert sys.modules.get("torch") is stub_contract.baseline["torch"], \
+        "the hook must repair before failing, or one leak fails every later test"
+
+
+def test_one_leak_fails_one_test_and_the_rest_of_the_session_survives(pytester):
+    """_repair's docstring promises 'ONE leak fails ONE test instead of every test after
+    it'. Only the sys.path half of that promise was tested: deleting the sys.modules
+    restore loop entirely left all 38 tests passing.
+
+    Three tests, the first of which leaks. With repair: one teardown error, three passes.
+    Without it, the two later tests die at setup too — which is the cascade.
+    """
+    result = _run(pytester, """
+        import sys, types
+
+        def test_leaks():
+            sys.modules["torch"] = types.ModuleType("torch")
+
+        def test_after_one():
+            assert True
+
+        def test_after_two():
+            assert True
+    """)
+    assert result.ret != 0, "the leak was not reported at all"
+    result.assert_outcomes(passed=3, errors=1)
+    assert "left global import state dirty" in result.stdout.str() + result.stderr.str()
 
 
 @pytest.mark.parametrize("forgery", [
