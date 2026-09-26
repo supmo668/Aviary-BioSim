@@ -46,10 +46,21 @@ def headline(res: dict, agent_positions: list[int]) -> dict:
     cpep = next(r for r in res["regions"] if r["name"].lower().startswith("c pep"))
     ctrl_pos = sorted(p for p in agent_positions if cpep["start"] <= p <= cpep["end"])
     ala = {s["pos"]: s["score"] for s in subs if s["mut"] == "A"}
+    # The mature protein: everything after the signal peptide, as results.json's own
+    # regions define it. The published summary reports both the all-positions and the
+    # mature-only means; the paper must map each number to the one it actually is.
+    signal = next(r for r in res["regions"] if r["name"].lower().startswith("signal"))
+    mature_from = signal["end"] + 1
+    cys_m = [s["score"] for s in subs if s["pos"] in seq_cys and s["pos"] >= mature_from]
+    other_m = [s["score"] for s in subs if s["pos"] not in seq_cys and s["pos"] >= mature_from]
     return {
         "substitutions": len(subs),
         "cysteine_mean": round(mean(cys), 2),
         "other_mean": round(mean(other), 2),
+        "mature_from_position": mature_from,
+        "cysteine_mean_mature": round(mean(cys_m), 2),
+        "other_mean_mature": round(mean(other_m), 2),
+        "n_substitutions_mature": len(cys_m) + len(other_m),
         "cysteine_positions": sorted(seq_cys),
         "c_peptide_region": [cpep["start"], cpep["end"]],
         "c_peptide_controls": {str(p): round(ala[p], 2) for p in ctrl_pos if p in ala},
@@ -59,7 +70,8 @@ def headline(res: dict, agent_positions: list[int]) -> dict:
 
 def compare(fresh: dict, published: dict) -> dict:
     keys = ("substitutions", "cysteine_mean", "other_mean", "cysteine_positions",
-            "c_peptide_region", "c_peptide_controls")
+            "c_peptide_region", "c_peptide_controls",
+            "mature_from_position", "cysteine_mean_mature", "other_mean_mature", "n_substitutions_mature")
     return {k: fresh[k] == published[k] for k in keys}
 
 

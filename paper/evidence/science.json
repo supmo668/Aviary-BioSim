@@ -7,11 +7,15 @@
   "weights_sha256": "a08adabb949fa67ad3c14b509d04fd60368b35007b0095e3358f81200c4f4db0",
   "device": "mps",
   "seed": 0,
-  "runtime_s": 15.9,
+  "runtime_s": 9.6,
   "headline": {
     "substitutions": 2090,
     "cysteine_mean": -13.02,
     "other_mean": -5.53,
+    "mature_from_position": 25,
+    "cysteine_mean_mature": -13.02,
+    "other_mean_mature": -5.85,
+    "n_substitutions_mature": 1634,
     "cysteine_positions": [
       31,
       43,
@@ -148,6 +152,10 @@
     "substitutions": 2090,
     "cysteine_mean": -13.02,
     "other_mean": -5.53,
+    "mature_from_position": 25,
+    "cysteine_mean_mature": -13.02,
+    "other_mean_mature": -5.85,
+    "n_substitutions_mature": 1634,
     "cysteine_positions": [
       31,
       43,
@@ -176,12 +184,16 @@
     "other_mean": true,
     "cysteine_positions": true,
     "c_peptide_region": true,
-    "c_peptide_controls": true
+    "c_peptide_controls": true,
+    "mature_from_position": true,
+    "cysteine_mean_mature": true,
+    "other_mean_mature": true,
+    "n_substitutions_mature": true
   },
   "per_position_mean_matches": true,
   "provenance": {
-    "git_sha": "8c01aa5e43122461b0b37a23a4c134777e95088c",
-    "recorded_at": "2026-09-26T21:29:20Z",
+    "git_sha": "47afb557978a86a7c24be06935077f050a692019",
+    "recorded_at": "2026-09-26T21:32:54Z",
     "inputs_path": "/Users/mo/github/personal/bioFM/projects/aviary-biosim/science/out",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",

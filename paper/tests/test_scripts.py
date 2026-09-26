@@ -412,6 +412,11 @@ def test_headline_derives_controls_from_the_region_and_the_agent_positions(scrip
     assert h["other_mean"] == round((-2.0 * 56 + 1.234) / 57, 2) == -1.94
     assert h["c_peptide_region"] == [3, 5]
     assert h["c_peptide_controls"] == {"3": 1.23, "5": -10.0}      # 1 is outside the region; 9 is not a position
+    # mature = after the signal region (1-2): positions 3-6; cysteines there 4,5; others 3,6
+    assert h["mature_from_position"] == 3
+    assert h["cysteine_mean_mature"] == -10.0
+    assert h["other_mean_mature"] == round((-2.0 * 37 + 1.234) / 38, 2)
+    assert h["n_substitutions_mature"] == 4 * 19
     assert h["per_position_mean"] == [-1.0, -2.0, -3.0, -4.0, -5.0, -6.0]
 
 
