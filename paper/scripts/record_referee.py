@@ -11,6 +11,7 @@ the referee's own words, and this script exits 2 so no caller can mistake it for
 """
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -22,14 +23,27 @@ REFEREE_COMMAND = "sh paper/scripts/sealed_suite_results.sh"
 
 
 def coarse_from(stdout: str):
-    """The referee prints its coarse JSON as the last stdout line; None if it did not."""
-    lines = [ln for ln in stdout.strip().splitlines() if ln.strip()]
-    if not lines:
-        return None
-    try:
-        return json.loads(lines[-1])
-    except json.JSONDecodeError:
-        return None
+    """The referee's coarse JSON: the first stdout line that parses as an object with a
+    `total` key. With --sign the referee prints further lines after it, so 'the last
+    line' was wrong and read a signed, passing run as 'no results' — safe, but false."""
+    for ln in stdout.splitlines():
+        ln = ln.strip()
+        if not ln.startswith("{"):
+            continue
+        try:
+            d = json.loads(ln)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(d, dict) and "total" in d:
+            return d
+    return None
+
+
+def receipt_hash_from(text: str):
+    """The Hash E the referee reports when it signs, or None."""
+    import re
+    m = re.search(r"signed sealed-suite receipt \(Hash E ([0-9a-f]+)\)", text)
+    return m.group(1) if m else None
 
 
 def main(argv=None) -> int:
@@ -44,7 +58,13 @@ def main(argv=None) -> int:
     coarse = coarse_from(r.stdout)
     ran = coarse is not None and int(coarse.get("total", 0)) > 0
     clean = ran and int(coarse.get("failed", 0)) == 0 and int(coarse.get("skipped", 0)) == 0
-    prov = P.block(inputs_path=None, extra={"referee_command": REFEREE_COMMAND, "referee_argv": cmd})
+    branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
+    prov = P.block(inputs_path=None, extra={
+        "referee_command": REFEREE_COMMAND, "referee_argv": cmd,
+        # The referee resolves the command from the tree it is run in: record where.
+        "cwd": str(Path.cwd()), "branch": branch,
+        "archived_commit_env": os.environ.get("DRAIN1_END_COMMIT", "(default in the script)"),
+    })
     if clean and r.returncode == 0:
         label = f"measured (re-run, {prov['recorded_at'][:10]})"
     else:
@@ -55,6 +75,7 @@ def main(argv=None) -> int:
         "referee_exit": r.returncode,
         "referee": coarse,
         "referee_stderr_tail": r.stderr[-2000:],
+        "referee_receipt_hash_e": receipt_hash_from(r.stdout + r.stderr),
         "note": ("Hash E on the referee's receipt binds the CURRENT tree; the suite ran over the "
                  "archived pass-end tree named above."),
         "provenance": prov,

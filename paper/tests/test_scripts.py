@@ -135,11 +135,25 @@ def test_junit_converter_treats_an_unreadable_report_as_could_not_run(script, tm
 
 # --- the evidence recorder, against a stub referee ---------------------------------------
 
-def _stub_referee(tmp_path, stdout: str, exit_code: int = 0):
+def _stub_referee(tmp_path, stdout: str, exit_code: int = 0, stderr: str = ""):
     stub = tmp_path / "referee"
-    stub.write_text(f"#!/bin/sh\nprintf '%s\\n' '{stdout}'\nexit {exit_code}\n")
+    stub.write_text(f"#!/bin/sh\nprintf '%s\\n' '{stdout}'\n"
+                    f"printf '%s\\n' '{stderr}' >&2\nexit {exit_code}\n")
     stub.chmod(0o755)
     return str(stub)
+
+
+def test_recorder_finds_the_coarse_json_when_the_referee_prints_more_after_it(script, tmp_path):
+    """With --sign the referee prints lines after the JSON. Reading the LAST line labelled a
+    signed, passing run NOT MEASURED — the wrong answer in the safe direction, still wrong."""
+    R = script("record_referee")
+    out = tmp_path / "drain1-rerun.json"
+    ref = _stub_referee(tmp_path, '{"total":6,"passed":6,"failed":0,"skipped":0}\nreceipt written: x.md',
+                        stderr="referee: signed sealed-suite receipt (Hash E abc1234)")
+    assert R.main(["--referee", ref, "--out", str(out), "--commit", "abc1234"]) == 0
+    d = json.loads(out.read_text())
+    assert d["label"].startswith("measured (re-run, ")
+    assert d["referee_receipt_hash_e"] == "abc1234"
 
 
 def test_recorder_labels_measured_only_on_a_clean_verdict(script, tmp_path):
