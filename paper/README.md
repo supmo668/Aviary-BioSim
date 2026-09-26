@@ -26,7 +26,7 @@ A label is a field inside the evidence file, not prose around it.
 | `drain1-rerun.json` | A1 | measured | `tools/referee run --sign` via `scripts/sealed_suite_results.sh`, recorded by `scripts/record_referee.py` | — (waiting: the referee command must exist on a commit and be confirmed) |
 | `drain1-from-git.csv` | A2 | reconstructed | `scripts/drain1_from_git.py` | — |
 | `drain1-record-check.json` | A2b | recovered record; pre-claim chain verified; write-time provenance not established | `scripts/drain1_record_check.py --record <path>` | — |
-| `science-input.json` | A3a/b | measured (fresh fetch) | `scripts/science_input.py --inputs <absolute path>` | — |
+| `science-input.json` | A3a/b | measured (fresh fetch) | `scripts/science_input.py --inputs <absolute path>` | 2026-09-26 |
 | `science.json` | A3c | measured (re-run) or reported on mismatch | `scripts/science_rerun.py --inputs <absolute path>` | — |
 | `agent-run.json` | A4 | reported (artifact counted) | `scripts/agent_run.py --inputs <absolute path>` | — |
 | `weave-count.json` | A4 | queried | recorded by hand from the trace store's count query on the day | — |
@@ -41,3 +41,16 @@ is untracked); the paper says where they were read from.
 Plain language: a *pass* of the loop, a *task*, *setting a task aside*, an *independent
 test*, the *worklist* — see `docs/CONTEXT.md` § Reader-facing vocabulary for the mapping to
 the project's own terms.
+
+## Why the science identifier is recorded in the clear
+
+`science-input.json` and the paper's methods name the database record the experiment
+used. A digest of it would not hide it: the identifier grammar is small enough to
+enumerate offline, and a digest of the sequence is a lookup against any public sequence
+store. The project's rule against new identifier-to-substance associations is
+prospective; the association between this experiment's protein and its public record is
+already published by this repository (the run's own prompt and the submission text), so
+restating it for reproducibility creates no new one. Ruled by the coordinator on
+2026-09-26 (F33), with the principal told so they can override before submission. The
+value appears in the evidence file and the methods only — never in tests, fixtures or
+messages.

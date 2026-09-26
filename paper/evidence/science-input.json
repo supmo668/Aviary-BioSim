@@ -1,0 +1,29 @@
+{
+  "label": "measured (fresh fetch, 2026-09-26)",
+  "identifier": "P01308",
+  "identifier_disclosure": "recorded in the clear by ruling (2026-09-26): the association is already public in this repository; a digest would be a lookup",
+  "published": {
+    "length": 110,
+    "sequence_sha256": "99603f8fb1e9872e2d24ee1e9f85108c2bddea6b148a0f1099e16ba2715c8263",
+    "organism_field": "Homo sapiens"
+  },
+  "fresh": {
+    "length": 110,
+    "sequence_sha256": "99603f8fb1e9872e2d24ee1e9f85108c2bddea6b148a0f1099e16ba2715c8263",
+    "release": "2026_03",
+    "release_date": "02-September-2026",
+    "entry_version": "1",
+    "http_last_modified": ""
+  },
+  "match": true,
+  "provenance": {
+    "git_sha": "3c75410f2889d5a6f7654678956789c37b19395e",
+    "recorded_at": "2026-09-26T21:25:29Z",
+    "inputs_path": "/Users/mo/github/personal/bioFM/projects/aviary-biosim/science/out",
+    "python": "3.14.5",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "versions": {
+      "requests": "2.34.2"
+    }
+  }
+}

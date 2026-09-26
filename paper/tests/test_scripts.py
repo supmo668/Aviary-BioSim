@@ -286,3 +286,62 @@ def test_record_check_never_writes_the_recovered_record(script, tmp_path):
     C.main(["--record", str(rec), "--register", _stub_register(tmp_path, 0),
             "--out", str(tmp_path / "o.json"), "--copy-to", str(tmp_path / "copy")])
     assert {p.name: p.read_bytes() for p in rec.iterdir()} == before
+
+
+# --- A3a/b: the science input, fetched fresh and compared by hash ----------------------
+
+INVENTED_ACC = "Q9ZZZ9"    # invented; matches the grammar; asserted to denote nothing
+
+
+def test_science_input_errors_on_missing_inputs(script, tmp_path):
+    S = script("science_input")
+    with pytest.raises(SystemExit) as e:
+        S.main(["--inputs", str(tmp_path / "absent"), "--out", str(tmp_path / "o.json")])
+    assert e.value.code == 2
+
+
+def _published_inputs(tmp_path, acc, seq="MAAAC"):
+    inputs = tmp_path / "out"
+    (inputs / "seqs").mkdir(parents=True)
+    (inputs / "esm").mkdir()
+    (inputs / "seqs" / f"{acc}.json").write_text(json.dumps(
+        {"accession": acc, "name": "EXMP", "organism": "Testus fictus", "sequence": seq, "length": len(seq)}))
+    (inputs / "esm" / "results.json").write_text(json.dumps({"human_sequence": seq}))
+    return inputs
+
+
+def test_science_input_compares_by_hash_and_records_the_identifier_by_ruling(script, tmp_path, monkeypatch):
+    S = script("science_input")
+    inputs = _published_inputs(tmp_path, INVENTED_ACC)
+    seen = []
+    monkeypatch.setattr(S, "fetch_fresh", lambda a: (seen.append(a), {"sequence": "MAAAC", "release": "2026_04",
+                        "release_date": "x", "http_last_modified": "y", "entry_version": "2"})[1])
+    out = tmp_path / "o.json"
+    assert S.main(["--inputs", str(inputs), "--out", str(out)]) == 0
+    d = json.loads(out.read_text())
+    assert d["match"] is True
+    assert d["identifier"] == INVENTED_ACC and seen == [INVENTED_ACC]
+    assert d["published"]["sequence_sha256"] == d["fresh"]["sequence_sha256"]
+    assert d["fresh"]["release"] == "2026_04" and d["published"]["length"] == 5
+    assert "sequence" not in d["published"] and "sequence" not in d["fresh"], "digests only, never the sequence"
+
+
+def test_science_input_reports_a_mismatch(script, tmp_path, monkeypatch, capsys):
+    S = script("science_input")
+    inputs = _published_inputs(tmp_path, INVENTED_ACC)
+    monkeypatch.setattr(S, "fetch_fresh", lambda a: {"sequence": "MAAAD", "release": "", "release_date": "",
+                                                     "http_last_modified": "", "entry_version": ""})
+    out = tmp_path / "o.json"
+    assert S.main(["--inputs", str(inputs), "--out", str(out)]) == 0
+    assert json.loads(out.read_text())["match"] is False
+    assert "MISMATCH" in capsys.readouterr().out
+
+
+def test_science_input_refuses_a_cached_identifier_that_is_not_an_accession(script, tmp_path, monkeypatch):
+    """Cache content is file content: a value that could steer the URL is refused before
+    any request is built (the branch's own valid_accession, F34)."""
+    S = script("science_input")
+    inputs = _published_inputs(tmp_path, "not-an-accession-or-path")
+    monkeypatch.setattr(S, "fetch_fresh", lambda a: pytest.fail("network reached; validation should have refused"))
+    with pytest.raises(ValueError):
+        S.main(["--inputs", str(inputs), "--out", str(tmp_path / "o.json")])
