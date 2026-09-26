@@ -42,7 +42,8 @@ def _ignore(dirpath, names):
     """Exclude the sealed referee tree by BASENAME at the right directory.
 
     shutil.ignore_patterns fnmatches basenames, so the "tests/sealed" pattern this
-    replaced matched nothing and the sealed tree was copied into all 31 temp trees.
+    replaced matched nothing and the sealed tree was copied into every temp tree (31 at
+    the time).
     Nothing collected it and the temp root is 0700, so no seal was broken — but
     commit b7d1e82's body claimed an exclusion that never happened.
     """

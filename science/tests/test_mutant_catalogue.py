@@ -1,6 +1,6 @@
 """The frozen mutant catalogue must stay applicable to the code it describes.
 
-Running all 31 mutants takes minutes (each is a pytest subprocess against its own
+Running every mutant takes minutes (each is a pytest subprocess against its own
 copy of the tree), so the full sweep lives in mutants/run_mutants.py and is the
 acceptance gate for changing the guard. What runs here on every suite is the cheap
 half: that each mutant's `find` string still matches its target exactly once.
@@ -92,7 +92,7 @@ def test_the_live_count_is_asserted_so_the_catalogue_cannot_quietly_shrink():
     """Lowering this is a deliberate act that shows up in review.
 
     Without it the coverage test above is satisfied by as few as four entries — four
-    passes x four target files — so 30 could become 4 with the suite green. That is the
+    passes x four target files — so the whole catalogue could shrink to 4 with the suite green. That is the
     same hole test_every_name_the_guard_must_watch_is_watched exists to close for
     WATCHED, and it was open here while this file policed everything else.
     """

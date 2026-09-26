@@ -6,7 +6,7 @@ must actually catch — a specification of the property, arrived at the expensiv
 
 They are frozen here BEFORE the guard is simplified, so "simplify" becomes a
 measurable operation: the minimum guard that still kills every entry below. Without
-this the simplification would quietly discard what three passes bought.
+this the simplification would quietly discard what those passes bought.
 
 Each entry: apply `find` -> `replace` in `target`, run `check`, and the suite must
 FAIL. A mutant that survives means the property it probes is no longer pinned.
@@ -114,7 +114,6 @@ MUTANTS = [
          why="the declared price must be finite",
          find="    if not (math.isfinite(price) and price > 0):", replace="    if not (price > 0):"),
 
-    # --- the isolation guard (passes 2-4) ---
     # --- pass 5: properties that had no test at all ---
     dict(id="esm-mutant-substring", pass_="5", target="science/esm_tool.py", check=ESM,
          why="`mutant` must be ONE amino acid; `in` on a str is substring containment",
@@ -132,6 +131,7 @@ MUTANTS = [
          why="the stub tool's parameters match production, or the budget tests measure a shape that cannot exist",
          find="    def score_variant(accession: str, position: int, mutant: str) -> str:",
          replace="    def score_variant(accession: str, mutation: str) -> str:"),
+    # --- the isolation guard (passes 2-4) ---
     dict(id="guard-hooks-disabled", pass_="2", target="science/tests/conftest.py", check=ISO,
          why="the SETUP hook runs at all (teardown and collection-finish have their own entries below)",
          find="@pytest.hookimpl(tryfirst=True)\ndef pytest_runtest_setup(item):",
