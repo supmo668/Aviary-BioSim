@@ -2,7 +2,10 @@
 """Apply every frozen mutant to a throwaway copy of the tree and require it to die.
 
 Usage:  uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave \
-            python science/tests/mutants/run_mutants.py [--only <id> ...]
+            --with requests python science/tests/mutants/run_mutants.py [--only <id> ...]
+
+`--with requests` is not optional: conftest pre-imports requests as a DECLARED dependency
+and its baseline test goes red without it, which turns every mutant into BROKEN-CHECK.
 
 Exit 0 only if EVERY mutant is killed. A survivor means the property that mutant
 probes is no longer pinned by any test — which is exactly the state three review
