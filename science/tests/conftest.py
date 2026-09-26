@@ -262,6 +262,10 @@ def _load_by_path(name: str, path: pathlib.Path) -> types.ModuleType:
     bytecode cache validates on (mtime-to-the-second, size), so a same-second
     same-size edit runs the PREVIOUS version — which makes mutation testing report
     the wrong answer while the file on disk is correct.
+
+    Each call returns a DISTINCT module object. Anything that must share class
+    identity with another fixture's module has to be pinned into sys.modules (see
+    `disc`) or imported normally (see spend_tracker in _Bio).
     """
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
@@ -280,10 +284,6 @@ def _load_by_path(name: str, path: pathlib.Path) -> types.ModuleType:
     finally:
         sys.path[:] = saved_for_loader
     return module
-
-    # NOTE: each call returns a DISTINCT module object. Anything that must share class
-    # identity with another fixture's module has to be pinned into sys.modules (see
-    # `disc`) or imported normally (see spend_tracker in _Bio).
 
 
 @pytest.fixture
