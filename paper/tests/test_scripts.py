@@ -466,3 +466,35 @@ def test_plugin_tests_runs_each_suite_in_a_scratch_worktree_and_removes_it(scrip
     assert d["suites"]["bad.test.sh"]["failed"] == 1 and d["suites"]["bad.test.sh"]["exit"] == 1
     wts = subprocess.run(["git", "-C", str(repo), "worktree", "list"], capture_output=True, text=True).stdout
     assert "v9.9.9" not in wts, "the scratch worktree must be removed afterwards"
+
+
+# --- A5: the taxonomy is machine-checked -------------------------------------------
+
+HEADER = "id,symptom,why_it_passed_review,found_by,regression_test,label,comp_bio_analogue,source\n"
+
+
+def test_taxonomy_check_passes_a_consistent_file_and_counts(script, tmp_path):
+    X = script("taxonomy_check")
+    (tmp_path / "t.py").write_text("")
+    csvf = tmp_path / "t.csv"
+    csvf.write_text(HEADER
+                    + f'"T01","s","w","f","{tmp_path}/t.py","documented, tested","a","src"\n'
+                    + '"T02","s","w","f","","documented, no test","a","src"\n')
+    # an absolute path is checked as-is when joined: REPO / abs == abs
+    failures, stats = X.check(csvf, None)
+    assert failures == [] and stats == {"rows": 2, "with_tests": 1, "documented_only": 1}
+
+
+def test_taxonomy_check_lists_a_missing_test_and_a_mislabelled_row(script, tmp_path):
+    X = script("taxonomy_check")
+    csvf = tmp_path / "t.csv"
+    csvf.write_text(HEADER
+                    + '"T01","s","w","f","tests/absent-for-this-test.sh","documented, tested","a","src"\n'
+                    + '"T02","s","w","f","","documented, tested","a","src"\n'
+                    + '"T02","","w","f","","documented, no test","a","src"\n')
+    failures, _ = X.check(csvf, tmp_path)
+    joined = "\n".join(failures)
+    assert "T01: regression test not found" in joined
+    assert "T02: no test cited" in joined
+    assert "duplicate id" in joined and "empty symptom" in joined
+    assert X.main(["--csv", str(csvf), "--plugin-root", str(tmp_path)]) == 1
