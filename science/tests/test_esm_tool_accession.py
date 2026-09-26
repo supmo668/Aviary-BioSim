@@ -272,17 +272,20 @@ def test_a_body_that_is_not_a_fasta_record_is_refused_and_not_cached(esm, body, 
 def test_the_tools_report_the_validated_accession_not_the_callers_object(esm, tmp_path, monkeypatch):
     """Same residual class as the cache-path bypass: both tools interpolated the
     PARAMETER into the string handed back to the agent, so a str subclass could put
-    ANSI escapes (or any text) into what the operator reads. Report rec['accession'],
-    which came from the validated value."""
+    ANSI escapes (or any text) into what the operator reads. Report the VALIDATED value
+    (what valid_accession returned) — not the caller's object, and not rec['accession']
+    either, which is file content; the do-not-echo test below pins that half."""
     cache = tmp_path / "seqs"
     cache.mkdir()
     (cache / "P01308.json").write_text(json.dumps(
         {"accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
          "sequence": "MALW", "length": 4}))
     monkeypatch.setattr(esm, "CACHE", cache)
-    out = esm.score_variant(_Evil("P01308"), 99, "A")
-    assert "../secret" not in out, out
-    assert "P01308" in out, out
+    monkeypatch.setattr(esm, "embed", lambda seq: [0.0] * 4)
+    for out in (esm.score_variant(_Evil("P01308"), 99, "A"),
+                esm.embed_sequence(_Evil("P01308"))):
+        assert "../secret" not in out, out
+        assert "P01308" in out, out
 
 
 def _seed_cache(esm, tmp_path, monkeypatch):
@@ -411,12 +414,48 @@ def test_a_mutant_that_is_not_one_single_amino_acid_is_refused(esm, tmp_path, mo
     assert "\x1b" not in out, repr(out)
 
 
+def _graded_logprobs(esm):
+    """A log-prob table that differs by position AND by residue, so the score can be
+    worked out by hand and a wrong subtraction, a wrong sign, or an off-by-one index
+    each produce a different number. Every earlier success-path stub returned the same
+    constant for every residue, so the score was always 0.000 and none of those
+    mutations changed any assertion. Values are invented."""
+    return lambda seq: [
+        {"logp": {a: -(pos * 0.1 + esm.AA.index(a) * 0.01) for a in esm.AA}}
+        for pos in range(1, len(seq) + 1)
+    ]
+
+
 def test_a_valid_single_residue_substitution_still_scores(esm, tmp_path, monkeypatch):
-    """The refusal above must not swallow the real path."""
-    esm = _seeded(esm, tmp_path, monkeypatch)
-    out = esm.score_variant("P01308", 2, "G")
-    assert "not one of the 20" not in out
-    assert "P01308" in out
+    """The refusal above must not swallow the real path — and the number it reports is
+    the model's log-odds at THAT position, mutant minus wild type, to three decimals.
+
+    Sequence MALWMRLLPL, position 2 (A -> G), under the graded table:
+      logp(G) at pos 2 = -(0.2 + index(G)*0.01) = -(0.2 + 0.05) = -0.25
+      logp(A) at pos 2 = -(0.2 + index(A)*0.01) = -(0.2 + 0.00) = -0.20
+      score = -0.25 - (-0.20) = -0.05  -> "score -0.050"
+    """
+    esm = _seeded(esm, tmp_path, monkeypatch, accession=INVENTED_ACC)
+    monkeypatch.setattr(esm, "position_logprobs", _graded_logprobs(esm))
+    out = esm.score_variant(INVENTED_ACC, 2, "G")
+    assert out.startswith(f"{INVENTED_ACC} A2G: score -0.050 "), out
+    assert "negative means" in out
+
+
+def test_the_score_is_taken_at_the_requested_position_and_carries_its_sign(esm, tmp_path, monkeypatch):
+    """Two more positions so `[position]` cannot masquerade as `[position - 1]` and a
+    swapped subtraction cannot masquerade as the right one:
+      pos 1, M -> A: logp(A)= -(0.1+0.00) = -0.10; logp(M)= -(0.1+ index(M)*0.01) = -(0.1+0.10) = -0.20
+                     score = -0.10 - (-0.20) = +0.10           -> "score 0.100"
+      pos 10, L -> W: logp(W)= -(1.0+0.18) = -1.18; logp(L)= -(1.0+0.09) = -1.09
+                     score = -1.18 - (-1.09) = -0.09           -> "score -0.090"
+    The last position is included on purpose: `[position]` there raises IndexError
+    instead of returning a wrong number.
+    """
+    esm = _seeded(esm, tmp_path, monkeypatch, accession=INVENTED_ACC)
+    monkeypatch.setattr(esm, "position_logprobs", _graded_logprobs(esm))
+    assert esm.score_variant(INVENTED_ACC, 1, "A").startswith(f"{INVENTED_ACC} M1A: score 0.100 ")
+    assert esm.score_variant(INVENTED_ACC, 10, "W").startswith(f"{INVENTED_ACC} L10W: score -0.090 ")
 
 
 @pytest.mark.parametrize("position", ["2", 2.0, True, None, [2]], ids=["str", "float", "bool", "none", "list"])

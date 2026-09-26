@@ -96,8 +96,8 @@ def test_the_live_count_is_asserted_so_the_catalogue_cannot_quietly_shrink():
     same hole test_every_name_the_guard_must_watch_is_watched exists to close for
     WATCHED, and it was open here while this file policed everything else.
     """
-    assert len(MUTANTS) == 39, (
-        f"{len(MUTANTS)} live mutants, expected 39. Adding is free; REMOVING one means "
+    assert len(MUTANTS) == 48, (
+        f"{len(MUTANTS)} live mutants, expected 48. Adding is free; REMOVING one means "
         "retiring it into RETIRED with a reason and updating this number.")
     assert len(RETIRED) == 1
     for entry in RETIRED:

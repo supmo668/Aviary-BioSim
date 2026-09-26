@@ -190,7 +190,8 @@ def test_the_guard_catches_a_sys_path_leak_from_a_test_body(pytester):
             assert True
     """.replace("OURS", repr(str(pathlib.Path(__file__).resolve().parents[1]))))
     result.assert_outcomes(errors=1, passed=2)
-    assert "sys.path" in result.stdout.str()
+    # _describe always prints "sys.path"; only the directory shows WHICH half fired.
+    assert str(pathlib.Path(__file__).resolve().parents[1]) in result.stdout.str()
 
 
 def test_the_guard_catches_a_stub_leaked_by_a_test_body(pytester):
@@ -238,8 +239,10 @@ def test_sys_path_is_restored_after_a_fixture_loaded_a_module_by_path(pytester):
             assert stub_contract.demo_dir in sys.path      # while the fixture holds it
 
         def test_sys_path_came_back(stub_contract):
-            assert stub_contract.demo_dir not in sys.path
-            assert stub_contract.science_dir not in sys.path
+            # Relative to the baseline, not absolute: a launch that already had a
+            # project directory on the path must not turn this red.
+            assert stub_contract.path_leaks() == []
+            assert (stub_contract.demo_dir in sys.path) == (stub_contract.demo_dir in stub_contract.baseline_syspath)
     """)
     result.assert_outcomes(passed=2)
 
@@ -279,17 +282,25 @@ def test_the_setup_hook_fails_a_test_that_starts_with_dirty_state(stub_contract)
     class _Item:
         nodeid = "probe::item"
 
-    ours = stub_contract.demo_dir
+    # Whichever of our directories is NOT already on the baseline path. Asserting on
+    # demo/ unconditionally made this test depend on how pytest was launched (cwd=demo
+    # puts it there before configure), and the old `while ... remove` then stripped the
+    # baseline's own copy too — the invocation-dependence this file exists to remove.
+    candidates = [d for d in (stub_contract.demo_dir, stub_contract.science_dir)
+                  if d not in stub_contract.baseline_syspath]
+    if not candidates:
+        pytest.skip("both project directories are on the baseline sys.path in this launch")
+    ours = candidates[0]
+    saved = list(sys.path)
     sys.path.insert(0, ours)
     try:
         # pytest.fail raises Failed, which derives from BaseException, not Exception.
         with pytest.raises(BaseException) as refused:
             stub_contract.runtest_setup(_Item())
     finally:
-        while ours in sys.path:
-            sys.path.remove(ours)
+        sys.path[:] = saved
     message = str(refused.value)
-    assert "sys.path" in message
+    assert ours in message, "the path half must name the directory it found"
     assert "not necessarily the one that caused it" in message, \
         "the hook must not assert a cause it cannot know"
 
@@ -340,6 +351,48 @@ def test_one_leak_fails_one_test_and_the_rest_of_the_session_survives(pytester):
     assert result.ret != 0, "the leak was not reported at all"
     result.assert_outcomes(passed=3, errors=1)
     assert "left global import state dirty" in result.stdout.str() + result.stderr.str()
+
+
+def test_a_leaked_real_module_is_put_back_not_merely_removed(pytester):
+    """_repair has two branches: pop a name whose baseline was absent, or REINSTALL the
+    real module. Every leak test above leaks `torch`, which is DEFERRED — its baseline is
+    None unless something imported it transitively at configure — so on a machine
+    without torch only the pop branch ever ran, and turning the reinstall into a pop
+    survived there. yaml is PREIMPORT and always has a real baseline."""
+    result = _run(pytester, """
+        import sys, types
+
+        def test_leaks_a_real_name():
+            sys.modules["yaml"] = types.ModuleType("yaml")
+
+        def test_the_real_module_is_back(stub_contract):
+            assert sys.modules["yaml"] is stub_contract.baseline["yaml"]
+            assert hasattr(sys.modules["yaml"], "safe_dump"), "not the real library"
+    """)
+    result.assert_outcomes(passed=2, errors=1)
+    assert "left global import state dirty" in result.stdout.str() + result.stderr.str()
+
+
+def test_an_import_failure_at_configure_is_recorded_with_its_reason(pytester):
+    """`except Exception: pass` is how the degradation stayed invisible for four review
+    passes. The shim adds an invented, non-existent name to PREIMPORT and WATCHED before
+    configure runs; the reason must be recorded and the baseline must be None."""
+    conftest = pathlib.Path(__file__).parent / "conftest.py"
+    shim = CONFTEST_SHIM.format(conftest=str(conftest)) + textwrap.dedent("""
+        _mod.PREIMPORT = _mod.PREIMPORT + ("invented_module_that_does_not_exist_xq",)
+        _mod.WATCHED = _mod.WATCHED + ("invented_module_that_does_not_exist_xq",)
+        PREIMPORT = _mod.PREIMPORT
+        WATCHED = _mod.WATCHED
+    """)
+    pytester.makeconftest(shim)
+    pytester.makepyfile(test_probe="""
+        def test_recorded(stub_contract):
+            reason = stub_contract.import_failures["invented_module_that_does_not_exist_xq"]
+            assert reason.startswith("ModuleNotFoundError"), reason
+            assert stub_contract.baseline["invented_module_that_does_not_exist_xq"] is None
+    """)
+    result = pytester.runpytest_subprocess("-q")
+    result.assert_outcomes(passed=1)
 
 
 @pytest.mark.parametrize("forgery", [

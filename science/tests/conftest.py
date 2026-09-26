@@ -305,6 +305,7 @@ def stub_contract():
         preimport = PREIMPORT
         import_failures = _IMPORT_FAILURES
         baseline = _BASELINE
+        baseline_syspath = _BASELINE_SYSPATH
 
         @staticmethod
         def stubbed() -> list:
