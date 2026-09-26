@@ -1,0 +1,43 @@
+# paper/publish.yml — per-project publish manifest (PUBLICATION_PIPELINE_SPEC.md §12.1).
+# Prepared, nothing enabled: every venue is enabled: false until the principal's explicit go.
+topic: v2r-biosim-whitepaper            # required, no default: names the asset folder
+title: "The build loop as a lab method: an agentic worklist with independent tests, and a protein-model experiment run under it"
+description: |
+  A white paper for ML-focused computational biologists: a build loop in which the
+  agent that writes code cannot record that it passed, taught as a lab method, with
+  a protein-language-model experiment as the worked example and a failure-mode
+  taxonomy from auditing the loop's own trust core. Every number is bound to an
+  evidence file by a check that fails the build otherwise.
+version: "0.1.0-draft"
+license: "MIT"
+related_url: "https://github.com/supmo668/Aviary-BioSim"
+authors:
+  - name: "Mangyin Mo"
+    orcid: "0009-0009-5233-3142"
+    # affiliation: not stated anywhere in the repository — the principal supplies it at the publish gate
+keywords: ["agentic build loop", "independent tests", "protein language model", "reproducibility", "failure modes"]
+artifacts:
+  - path: "main.pdf"
+    description: "White paper PDF"
+  - path: "evidence/"
+    description: "Every number in the paper, with its producing configuration"
+  - path: "claims.yaml"
+    description: "Claims-traceability map (checked by claims.py at build time)"
+  - path: "figures/"
+    description: "Figures and the script that draws them from evidence/ only"
+notify:
+  slack_channel: "#research-approvals"
+venues:
+  zenodo:
+    enabled: false                    # sandbox pre-approved once the pipeline exists; LIVE needs an explicit go
+    sandbox: true
+    upload_type: "publication"
+    publication_type: "preprint"
+    zenodo_license: "mit"
+  figshare: { enabled: false }
+  osf: { enabled: false }
+manual:
+  arxiv:
+    prepared_only: true               # no API; a human uploads the bundle
+    primary: "cs.LG"
+    cross_list: ["q-bio.QM"]

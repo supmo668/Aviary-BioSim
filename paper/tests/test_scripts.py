@@ -514,3 +514,24 @@ def test_make_figures_refuses_any_directory_but_the_evidence_dir(tmp_path):
     with pytest.raises(SystemExit):
         m.main(["--evidence", "science/out", "--out", str(tmp_path)])
     assert m.guard(str(m.EVIDENCE)) == m.EVIDENCE.resolve()
+
+
+# --- P1: the publish manifest is prepared and nothing is enabled -----------------------
+
+def test_publish_manifest_is_complete_and_nothing_deposits():
+    import re
+    import yaml
+    paper = _Path(__file__).resolve().parents[1]
+    m = yaml.safe_load((paper / "publish.yml").read_text())
+    assert m["topic"] and isinstance(m["topic"], str)
+    assert m["authors"][0]["name"] == "Mangyin Mo"
+    assert re.fullmatch(r"\d{4}-\d{4}-\d{4}-\d{3}[\dX]", m["authors"][0]["orcid"])
+    assert "affiliation" not in m["authors"][0], "absent until the principal supplies it; never invented"
+    flat = yaml.safe_dump(m)
+    for placeholder in ("YOUR_HANDLE", "0000-0000", "Family Given", "TBD", "TODO"):
+        assert placeholder not in flat
+    for a in m["artifacts"]:
+        assert not a["path"].startswith("/") and ".." not in a["path"]
+        assert (paper / a["path"]).exists(), a["path"]
+    assert all(v.get("enabled") is False for v in m["venues"].values())
+    assert m["manual"]["arxiv"]["prepared_only"] is True
