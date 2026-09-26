@@ -24,3 +24,4 @@ paper/*.fls
 paper/*.fdb_latexmk
 paper/*.bbl
 paper/*.blg
+paper/.tools/

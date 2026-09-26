@@ -99,3 +99,20 @@ def test_a_missing_main_tex_only_resolves_claims(tmp_path):
                  None, {"e.json": {"x": 1}})
     assert C.check(root) == []
     assert (root / "claims.tex").exists()
+
+
+def test_generates_the_appendix_table(tmp_path):
+    root = setup(tmp_path,
+        [{"id": "subs", "value": 2090, "label": "reported", "source": "e.json:x_y", "text": "t"}],
+        None, {"e.json": {"x_y": 2090}})
+    assert C.check(root) == []
+    table = (root / "claims-table.tex").read_text()
+    assert "longtable" in table and "2,090" in table and "e.json:x\\_y" in table
+
+
+def test_a_heading_or_blank_line_ends_a_sentence(tmp_path):
+    root = setup(tmp_path,
+        [{"id": "n", "value": 66, "label": "reported", "source": "e.json:n", "text": ""}],
+        "Dashed lines are measured.}\n\\paragraph{The run.} It chose \\claimn{} things.\n\nWe re-run nothing here.\n",
+        {"e.json": {"n": 66}})
+    assert C.check(root) == []
