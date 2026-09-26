@@ -198,6 +198,18 @@ MUTANTS = [
          why="'the rollout STOPS' must not degrade to 'raises anything'",
          find="        self.BudgetExceeded = BudgetExceeded",
          replace="        self.BudgetExceeded = Exception"),
+
+    # --- pass 6: the runner's own oracle ---
+    dict(id="runner-any-nonzero-is-a-kill", pass_="6", target="science/tests/mutants/run_mutants.py",
+         check="science/tests/test_run_mutants.py",
+         why="only exit 1 WITH a failure summary is a kill; exit 4/5 and a red baseline once scored as kills",
+         find="        if completed.returncode != 1 or not KILL_SUMMARY.search(out):\n",
+         replace="        if False:\n"),
+    dict(id="runner-skips-baseline", pass_="6", target="science/tests/mutants/run_mutants.py",
+         check="science/tests/test_run_mutants.py",
+         why="a mutant is never credited against a baseline that was already red",
+         find="    if not _baseline_is_green(check):\n",
+         replace="    if False:\n"),
 ]
 
 # Entries whose property the design deliberately removed. Kept as a record so the live
