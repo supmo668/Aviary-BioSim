@@ -41,7 +41,7 @@ Skeleton commit `8f6a8e6` precedes U-001; all dated 2026-09-13. The worklist too
 
 | Item | State | Evidence |
 |---|---|---|
-| Test-isolation fix (deferred finding F08) | Gated and receipted; waiting on a push, then the coordinator's review and landing | [`docs/deferred-findings.md`](../deferred-findings.md) row F08; receipt `…-qgr-pr-prep-20260925-0558-the pr-prep receipt current at landing.md` under `workstreams/aviary-biosim/qgr/` |
+| Test-isolation fix (deferred finding F08) | Gated and receipted; waiting on a push, then the coordinator's review and landing | [`docs/deferred-findings.md`](../deferred-findings.md) row F08; the pr-prep receipt current at landing (under `workstreams/aviary-biosim/qgr/`, untracked) under `workstreams/aviary-biosim/qgr/` |
 | White paper (the loop as a lab method, BioSim as the worked experiment) | Spec approved 2026-09-25; plan being written; no build before the human plan gate | the spec lives in the coordinating repo, not here; the paper will live under `paper/` |
 
 ## Read the source

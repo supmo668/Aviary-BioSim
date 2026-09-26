@@ -10,8 +10,8 @@
 
 | Claim | Value | Kind | Artifact |
 |---|---|---|---|
-| Worklist-tool suite green | 42 passed | **measured** 2026-09-25 | receipt `…-qgr-pr-prep-20260925-0558-the pr-prep receipt current at landing.md`, § Review Summary |
-| Science suite green, with `torch` installed and in four collection orders | 265 passed | **measured** 2026-09-25 | same receipt |
+| Worklist-tool suite green | 42 passed | **measured** 2026-09-25 | the pr-prep receipt current at landing (under `workstreams/aviary-biosim/qgr/`, untracked), § Review Summary |
+| Science suite green — default order, `--import-mode=importlib`, and each file alone (torch not installed for this run; the 2026-09-25 gate measured 265 with torch installed and in four orders) | 328 passed | **measured** 2026-09-26 | the F08 re-gate receipt |
 | Deliberately broken copies of the guard all caught | 36 live killed + 1 retired | **measured** 2026-09-25 | same receipt |
 | Independent component tests from pass 1 | 75 | **carried forward** — not re-run since pass 1 | [`SUBMISSION.md`](../../SUBMISSION.md) § Status, which says so |
 | Pass 1 outcome | 6 closed, 0 set aside, every task at attempt 0 | **reconstructed** from version control | commits `28af3c4` … `2e00aa3`; [`docs/drain-1-notes.md`](../drain-1-notes.md) |
