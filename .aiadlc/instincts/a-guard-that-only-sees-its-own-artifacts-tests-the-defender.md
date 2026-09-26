@@ -2,7 +2,7 @@
 name: a-guard-that-only-sees-its-own-artifacts-tests-the-defender
 confidence: 1.000
 created: 2026-09-24T18:58:33Z
-last_reinforced: 2026-09-25T10:54:21Z
+last_reinforced: 2026-09-26T00:42:16Z
 ttl_days: 30
 triggers: [science/tests/conftest.py, conftest.py, pytest_runtest_setup, sys.modules, validation]
 tags: [testing, security, detection, method]
