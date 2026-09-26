@@ -60,8 +60,10 @@ def valid_accession(accession: object) -> str:
     """
     match = ACCESSION.match(accession) if isinstance(accession, str) else None
     if match is None:
+        # The echo is operator-facing text built from agent input: cap it and strip
+        # control characters, as every other such string is.
         raise ValueError(
-            f"not a UniProt accession: {accession!r} "
+            f"not a UniProt accession: {operator_safe(repr(accession), 80)} "
             "(expected e.g. P01308 — 6 or 10 uppercase alphanumerics)"
         )
     # Return the MATCHED TEXT, not the caller's object. isinstance admits str
@@ -186,6 +188,15 @@ def score_variant(accession: str, position: int, mutant: str) -> str:
     accession = valid_accession(accession)
     rec = fetch_sequence(accession)
     seq = rec["sequence"]
+    # Types before values: the comparisons below raise TypeError on a str position and
+    # accept True as 1; a list mutant raised at `not in AA`. Each reached the agent as an
+    # opaque tool error or a wrong answer instead of the refusal every other bad input gets.
+    if isinstance(position, bool) or not isinstance(position, int):
+        return f"position {operator_safe(repr(position), 40)} is not a whole number"
+    if not isinstance(seq, str):
+        return f"{accession}: the stored sequence is not text; the cached record is unusable"
+    if not isinstance(mutant, str):
+        return f"{operator_safe(repr(mutant), 40)} is not one of the 20 amino acids"
     if not 1 <= position <= len(seq):
         return f"position {position} is outside {accession} (length {len(seq)})"  # noqa: E501
     wt = seq[position - 1]          # raw: this is a lookup key below

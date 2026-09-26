@@ -372,11 +372,11 @@ def test_a_poisoned_cache_cannot_put_escapes_or_a_spoofed_line_in_front_of_the_o
 # the same agent, reach the same code, and had no test at all: deleting the
 # `mutant not in AA` branch outright left the whole suite green.
 
-def _seeded(esm, tmp_path, monkeypatch, sequence="MALWMRLLPL"):
+def _seeded(esm, tmp_path, monkeypatch, sequence="MALWMRLLPL", accession="P01308"):
     cache = tmp_path / "seqs"
     cache.mkdir()
-    (cache / "P01308.json").write_text(json.dumps({
-        "accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
+    (cache / f"{accession}.json").write_text(json.dumps({
+        "accession": accession, "name": "EXMP", "organism": "Testus fictus",
         "sequence": sequence, "length": len(sequence),
     }))
     monkeypatch.setattr(esm, "CACHE", cache)
@@ -417,6 +417,46 @@ def test_a_valid_single_residue_substitution_still_scores(esm, tmp_path, monkeyp
     out = esm.score_variant("P01308", 2, "G")
     assert "not one of the 20" not in out
     assert "P01308" in out
+
+
+@pytest.mark.parametrize("position", ["2", 2.0, True, None, [2]], ids=["str", "float", "bool", "none", "list"])
+def test_a_position_that_is_not_a_whole_number_is_refused_not_crashed(esm, tmp_path, monkeypatch, position):
+    """Values, not types, were checked: a str raised TypeError at the comparison and True
+    was silently position 1. Both reach the agent as an opaque tool error or a wrong
+    answer; a refusal string is what every other bad input gets."""
+    esm = _seeded(esm, tmp_path, monkeypatch, accession=INVENTED_ACC)
+    out = esm.score_variant(INVENTED_ACC, position, "G")
+    assert "position" in out and "whole number" in out, out
+
+
+@pytest.mark.parametrize("mutant", [None, ["A"], 7, b"A"], ids=["none", "list", "int", "bytes"])
+def test_a_mutant_that_is_not_text_is_refused_not_crashed(esm, tmp_path, monkeypatch, mutant):
+    esm = _seeded(esm, tmp_path, monkeypatch, accession=INVENTED_ACC)
+    out = esm.score_variant(INVENTED_ACC, 2, mutant)
+    assert "not one of the 20 amino acids" in out, out
+
+
+def test_a_stored_sequence_that_is_not_text_is_refused_not_crashed(esm, tmp_path, monkeypatch):
+    """A cached record is file content; its sequence field need not be a string."""
+    cache = tmp_path / "seqs"
+    cache.mkdir()
+    (cache / f"{INVENTED_ACC}.json").write_text(json.dumps(
+        {"accession": INVENTED_ACC, "name": "EXMP", "organism": "Testus fictus",
+         "sequence": ["M", "A"], "length": 2}))
+    monkeypatch.setattr(esm, "CACHE", cache)
+    out = esm.score_variant(INVENTED_ACC, 1, "G")
+    assert "stored sequence" in out and "not text" in out, out
+
+
+def test_the_accession_refusal_does_not_echo_an_unbounded_input(esm):
+    """The refusal echoed the full repr of whatever the agent sent, with no cap and no
+    control-character stripping — the one operator-facing string operator_safe missed."""
+    huge = "\x1b[2K" + "Z" * 5000
+    with pytest.raises(ValueError) as refused:
+        esm.valid_accession(huge)
+    msg = str(refused.value)
+    assert len(msg) < 300, len(msg)
+    assert "\x1b" not in msg
 
 
 @pytest.mark.parametrize("position", [0, -1, 11, 10**6])
