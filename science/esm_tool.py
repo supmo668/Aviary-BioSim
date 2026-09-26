@@ -102,6 +102,12 @@ def fetch_sequence(accession: str) -> dict:
     r = requests.get(f"https://rest.uniprot.org/uniprotkb/{accession}.fasta", timeout=30)
     r.raise_for_status()
     lines = r.text.strip().splitlines()
+    if not lines or not lines[0].startswith(">"):
+        # An empty body raised IndexError out of lines[0] — an opaque tool error — and a
+        # body with no header line would have been recorded as a real sequence. Refuse
+        # both, before anything is written.
+        raise ValueError(
+            f"UniProt returned no FASTA record for {accession} ({len(r.text)} bytes)")
     header = lines[0]
     seq = "".join(lines[1:])
     name = header.split("OS=")[0].split("|")[-1].strip()

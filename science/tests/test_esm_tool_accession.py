@@ -209,6 +209,66 @@ def test_a_valid_accession_is_fetched_from_the_right_url_and_cached(esm, accessi
     assert len(urls) == 1, "a cached accession must not be re-fetched"
 
 
+# Invented for the tests below: matches the accession grammar, is asserted to denote
+# nothing, and was never copied from code or data. Used where a test needs a value that
+# passes validation without borrowing one that appears elsewhere in this file.
+INVENTED_ACC = "Q9ZZZ9"
+
+
+class _ErroringResponse(_FakeResponse):
+    """A response whose status check raises — the HTTP-error path."""
+
+    class HTTPError(Exception):     # invented; stands in for requests.HTTPError
+        pass
+
+    def raise_for_status(self):
+        raise self.HTTPError("503 (invented)")
+
+
+def test_an_http_error_propagates_and_writes_no_cache_file(esm, tmp_path, monkeypatch):
+    """raise_for_status fires BEFORE anything is written, so a failed fetch leaves no
+    record behind that a later call would trust as cached truth."""
+    cache = tmp_path / "seqs"
+    monkeypatch.setattr(esm, "CACHE", cache)
+    urls: list = []
+
+    def fake_get(url, **kwargs):
+        urls.append(url)
+        return _ErroringResponse("irrelevant")
+
+    monkeypatch.setattr(esm.requests, "get", fake_get)
+    with pytest.raises(_ErroringResponse.HTTPError):
+        esm.fetch_sequence(INVENTED_ACC)
+    assert list(cache.glob("*.json")) == [], "a failed fetch must not be cached"
+    with pytest.raises(_ErroringResponse.HTTPError):
+        esm.fetch_sequence(INVENTED_ACC)
+    assert len(urls) == 2, "with nothing cached, the second call must fetch again"
+
+
+def test_a_header_without_an_organism_field_records_a_question_mark(esm, tmp_path, monkeypatch):
+    cache = tmp_path / "seqs"
+    monkeypatch.setattr(esm, "CACHE", cache)
+    monkeypatch.setattr(esm.requests, "get", lambda url, **kw: _FakeResponse(
+        f">sp|{INVENTED_ACC}|EXMP_TEST Example protein\nMALW\n"))
+    rec = esm.fetch_sequence(INVENTED_ACC)
+    assert rec["organism"] == "?"
+    assert rec["sequence"] == "MALW"
+
+
+@pytest.mark.parametrize("body", ["", "   \n\n", "MALW\n"], ids=["empty", "blank", "no-header"])
+def test_a_body_that_is_not_a_fasta_record_is_refused_and_not_cached(esm, body, tmp_path, monkeypatch):
+    """An empty body used to raise IndexError out of lines[0] — an opaque tool error, and
+    a body with no header line would have been recorded as a real sequence. Both are
+    refused with a ValueError that names the accession, and nothing is written."""
+    cache = tmp_path / "seqs"
+    monkeypatch.setattr(esm, "CACHE", cache)
+    monkeypatch.setattr(esm.requests, "get", lambda url, **kw: _FakeResponse(body))
+    with pytest.raises(ValueError) as refused:
+        esm.fetch_sequence(INVENTED_ACC)
+    assert INVENTED_ACC in str(refused.value)
+    assert list(cache.glob("*.json")) == []
+
+
 def test_the_tools_report_the_validated_accession_not_the_callers_object(esm, tmp_path, monkeypatch):
     """Same residual class as the cache-path bypass: both tools interpolated the
     PARAMETER into the string handed back to the agent, so a str subclass could put
