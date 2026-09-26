@@ -313,9 +313,9 @@ def esm_stub(monkeypatch):
             mutant: The substituted residue, one of the 20 amino acids.
         """
         calls.append(f"score_variant:{position}{mutant}")
-        return -1.25
+        return "-1.25"      # a str, like production; the harness str()s it anyway
 
-    def embed_sequence(accession: str) -> int:
+    def embed_sequence(accession: str) -> str:
         """Embed a sequence.
 
         Args:

@@ -506,3 +506,30 @@ def test_the_stub_tool_has_the_same_signature_as_the_real_one(esm, esm_stub):
     assert list(stub.parameters) == list(real.parameters), (
         f"stub {list(stub.parameters)} vs real {list(real.parameters)} — the budget tests "
         "would be measuring a tool shape production never sees")
+
+
+def _shape(fn):
+    """Names, kinds, defaults AND resolved annotations — the schema's inputs.
+
+    typing.get_type_hints, not inspect's raw annotations: esm_tool.py uses
+    `from __future__ import annotations`, so its annotations are strings and would
+    compare unequal to the stub's real types even when they agree.
+    """
+    import inspect
+    import typing
+    sig = inspect.signature(fn)
+    hints = typing.get_type_hints(fn)
+    return {
+        "params": [(p.name, p.kind, p.default) for p in sig.parameters.values()],
+        "hints": hints,
+    }
+
+
+@pytest.mark.parametrize("tool", ["score_variant", "embed_sequence"])
+def test_the_stub_tools_match_production_in_type_as_well_as_name(esm, esm_stub, tool):
+    """Tool.from_function builds the agent's schema from the ANNOTATIONS, so a stub whose
+    parameter names match but whose types do not still lets the budget tests measure a
+    schema production never sees. The names-only check above stayed green when
+    `position: int` became `position: str`, and embed_sequence was never compared at all
+    (its stub was annotated `-> int` against the real `-> str`)."""
+    assert _shape(getattr(esm_stub, tool)) == _shape(getattr(esm, tool))
