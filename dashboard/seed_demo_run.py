@@ -3,16 +3,25 @@
 # requires-python = ">=3.12"
 # dependencies = ["pyyaml"]
 # ///
-"""Seed a realistic multi-drain .v2r/ so the dashboard has a story to tell.
+"""Seed a realistic multi-drain FIXTURE so the dashboard has a story to tell.
 
 Shows the shape a real run has: a first drain that closes most units, a second
 that recovers some of the parked ones under a fresh instinct pin, and a third
 that closes nothing — the loop's own termination condition.
+
+It writes `.v2r-demo/`, never `.v2r/`. The live directory is evidence of a pass that
+happened; a fixture written there is indistinguishable from a real record to every
+consumer, and this script once overwrote pass 1's own record that way. Point the
+dashboard's path box at `.v2r-demo` to see the fixture.
 """
 import sys
 from pathlib import Path
 
 import yaml
+
+LIVE_DIR = ".v2r"          # the loop's real run state — this script must never write it
+DEFAULT_TARGET = ".v2r-demo"
+FIXTURE_MARK = "dashboard/seed_demo_run.py (FIXTURE — not a run that happened)"
 
 UNITS = [
     ("U-001", "R1", "Environment.reset returns (observations, tools)", 1, "closed"),
@@ -48,8 +57,14 @@ DRAINS = [
 ]
 
 
-def main(root: Path) -> int:
-    v2r = root / ".v2r"
+def main(root: Path, target: str = DEFAULT_TARGET) -> int:
+    v2r = root / target
+    if v2r.name == LIVE_DIR or v2r.resolve() == (root / LIVE_DIR).resolve():
+        # Refuse whatever is or is not inside: an empty live directory is still the
+        # live directory, and the next real pass would inherit the fixture.
+        print(f"refusing to write fixture data into the live run-state directory {v2r}; "
+              f"use the default {DEFAULT_TARGET}/ or pass another --target", file=sys.stderr)
+        return 2
     v2r.mkdir(parents=True, exist_ok=True)
     ceilings = {"max_drains": 3, "max_attempts": 3, "max_wall_clock_s": 21600, "max_spend_usd": 25}
 
@@ -74,7 +89,8 @@ def main(root: Path) -> int:
     closed_ids = [u["id"] for u in units if u["state"] == "closed"]
     for drain, pin, n_closed, parked, outcome in DRAINS:
         yaml.safe_dump(
-            {"drain": drain, "register_sha": f"sha256:{'%064x' % (drain * 7919)}",
+            {"produced_by": FIXTURE_MARK,
+             "drain": drain, "register_sha": f"sha256:{'%064x' % (drain * 7919)}",
              "instinct_pin": pin, "seed": 1337, "ceilings": ceilings,
              "closed": closed_ids[:n_closed], "parked": parked, "outcome": outcome},
             (v2r / f"run-record-{drain}.yaml").open("w"), sort_keys=False)
@@ -93,4 +109,10 @@ def main(root: Path) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(Path(sys.argv[1] if len(sys.argv) > 1 else ".")))
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("root", nargs="?", default=".")
+    ap.add_argument("--target", default=DEFAULT_TARGET,
+                    help=f"directory under ROOT to write (default {DEFAULT_TARGET}); {LIVE_DIR} is refused")
+    a = ap.parse_args()
+    sys.exit(main(Path(a.root), target=a.target))
