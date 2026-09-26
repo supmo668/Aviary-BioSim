@@ -76,8 +76,8 @@ def cysteines(ev: Path, out: Path):
     ax.axvspan(0.5, d["headline"]["mature_from_position"] - 0.5, color="0.92", zorder=0)
     ax.set_xlabel("residue position")
     ax.set_ylabel("mean substitution score")
-    ax.set_title("Per-position sensitivity; cysteines highlighted; dashed lines are the two mature-protein means "
-                 "(values in the caption)", fontsize=7)
+    ax.set_title("Per-position sensitivity. Cysteines highlighted; dashed lines: the two mature-protein means",
+                 fontsize=7, loc="left")
     for s in ("right", "top"):
         ax.spines[s].set_visible(False)
     footer(fig, "science.json")
