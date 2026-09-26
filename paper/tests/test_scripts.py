@@ -166,3 +166,109 @@ def test_recorder_records_not_measured_and_exits_2_otherwise(script, tmp_path, s
     d = json.loads(out.read_text())
     assert d["label"].startswith("NOT MEASURED")
     assert d["referee_exit"] == code
+
+
+# --- A2: pass 1 reconstructed from version control -------------------------------------
+
+def test_drain1_from_git_finds_six_units_in_order_with_their_pre_claim_parents(script):
+    D = script("drain1_from_git")
+    rows = D.rows(first="28af3c4", last="2e00aa3")
+    assert [r["unit"] for r in rows] == [f"U-00{i}" for i in range(1, 7)]
+    assert all(r["requirement"].startswith("R") for r in rows)
+    assert all(r["sealed_test"].startswith("demo/tests/") for r in rows)
+    assert all(len(r["parent"]) == 40 for r in rows)
+    assert all(r["label"] == "reconstructed" for r in rows)
+
+
+def test_drain1_from_git_keeps_only_close_commits(script):
+    """A skeleton commit and a coordination commit interleave in the range."""
+    D = script("drain1_from_git")
+    assert len(D.rows()) == 6
+
+
+def test_drain1_from_git_errors_when_nothing_matches(script, tmp_path, capsys):
+    D = script("drain1_from_git")
+    # a one-commit range whose subject is not a close: the range's own first commit's parent
+    assert D.main(["--out", str(tmp_path / "x.csv"), "--first", "8f6a8e6", "--last", "8f6a8e6"]) == 2
+    assert "no close commits" in capsys.readouterr().err
+
+
+# --- A2b: the recovered record --------------------------------------------------------
+
+def _synthetic_record(tmp_path, script, tamper_one=False):
+    """A record whose pre_claim_sha values come from the REAL close-commit parents — the
+    check compares against history, so the fixture must be consistent with it."""
+    D = script("drain1_from_git")
+    rows = D.rows()[:2]
+    parents = [r["parent"] for r in rows]
+    if tamper_one:
+        parents[1] = "0" * 40
+    rec = tmp_path / "v2r"
+    rec.mkdir()
+    import yaml
+    (rec / "register.yaml").write_text(yaml.safe_dump({"version": 1, "run": {"drain": 1}, "units": [
+        {"id": r["unit"], "state": "closed", "attempts": 0, "pre_claim_sha": p, "sealed_test_sha": "x" * 64}
+        for r, p in zip(rows, parents)]}))
+    import hashlib
+    reg_sha = "sha256:" + hashlib.sha256((rec / "register.yaml").read_bytes()).hexdigest()
+    if tamper_one:
+        reg_sha = "sha256:" + "a" * 64
+    (rec / "run-record-1.yaml").write_text(yaml.safe_dump(
+        {"drain": 1, "register_sha": reg_sha, "instinct_pin": None, "seed": 1,
+         "closed": [r["unit"] for r in rows], "parked": [], "outcome": "completed"}))
+    return rec
+
+
+def _stub_register(tmp_path, exit_code):
+    stub = tmp_path / "register"
+    stub.write_text(f"#!/bin/sh\necho 'stub verify-record'\nexit {exit_code}\n")
+    stub.chmod(0o755)
+    return str(stub)
+
+
+def test_record_check_errors_on_a_missing_record_dir_naming_the_path(script, tmp_path):
+    C = script("drain1_record_check")
+    missing = tmp_path / "absent"
+    with pytest.raises(SystemExit) as e:
+        C.main(["--record", str(missing), "--out", str(tmp_path / "o.json"), "--copy-to", str(tmp_path / "c")])
+    assert e.value.code == 2
+
+
+def test_record_check_verifies_the_chain_and_never_checks_the_test_digest(script, tmp_path):
+    C = script("drain1_record_check")
+    rec = _synthetic_record(tmp_path, script)
+    out = tmp_path / "o.json"
+    assert C.main(["--record", str(rec), "--register", _stub_register(tmp_path, 0),
+                   "--out", str(out), "--copy-to", str(tmp_path / "copy")]) == 0
+    d = json.loads(out.read_text())
+    assert d["pre_claim_matches"] == 2 and d["units_checked"] == 2
+    assert d["label"] == "recovered record; pre-claim chain verified 2/2; write-time provenance not established"
+    assert d["sealed_test_sha"]["checked"] is False
+    assert all(u["sealed_test_sha_checked"] is False for u in d["units"])
+    assert d["register_verify_record"]["exit"] == 0 and d["register_verify_record"]["ran"] is True
+    assert d["register_sha"]["matches_register_file"] is True
+    assert d["register_verify_record"]["record_predates_provenance_format"] is True
+    assert (tmp_path / "copy" / "register.yaml").exists()
+    assert d["files"]["register.yaml"]["sha256"] == __import__("hashlib").sha256((rec / "register.yaml").read_bytes()).hexdigest()
+
+
+def test_record_check_counts_a_broken_link_in_the_chain(script, tmp_path):
+    C = script("drain1_record_check")
+    rec = _synthetic_record(tmp_path, script, tamper_one=True)
+    out = tmp_path / "o.json"
+    assert C.main(["--record", str(rec), "--register", _stub_register(tmp_path, 3),
+                   "--out", str(out), "--copy-to", str(tmp_path / "copy")]) == 0
+    d = json.loads(out.read_text())
+    assert d["pre_claim_matches"] == 1
+    assert "verified 1/2" in d["label"]
+    assert d["register_verify_record"]["exit"] == 3
+    assert d["register_sha"]["matches_register_file"] is False
+
+
+def test_record_check_never_writes_the_recovered_record(script, tmp_path):
+    C = script("drain1_record_check")
+    rec = _synthetic_record(tmp_path, script)
+    before = {p.name: p.read_bytes() for p in rec.iterdir()}
+    C.main(["--record", str(rec), "--register", _stub_register(tmp_path, 0),
+            "--out", str(tmp_path / "o.json"), "--copy-to", str(tmp_path / "copy")])
+    assert {p.name: p.read_bytes() for p in rec.iterdir()} == before

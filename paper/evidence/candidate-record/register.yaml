@@ -1,0 +1,85 @@
+version: 1
+run:
+  drain: 1
+  seed: 1337
+  instinct_pin: null
+  ceilings:
+    max_drains: 3
+    max_attempts: 3
+    max_wall_clock_s: 21600
+    max_spend_usd: 25
+units:
+- id: U-001
+  satisfies: R1
+  statement: SpendTracker.record accumulates each call's cost and SpendTracker.total
+    returns the running sum, 0.0 before anything is recorded
+  stub: demo/spend_tracker.py::SpendTracker.record
+  sealed_test: demo/tests/sealed/test_u001.py
+  sealed_test_sha: 285b778ad0aedf8518ce7606c73f9d66084d0b9f62632bd75e8fbe39eb57fc34
+  state: closed
+  attempts: 0
+  pre_claim_sha: 8f6a8e687b983a9fa9a84160941f91f87c6f7ee1
+  evidence: null
+  park_branch: null
+- id: U-002
+  satisfies: R2
+  statement: load_ceiling reads max_spend_usd from a YAML config file and raises ConfigError
+    when it cannot
+  stub: demo/spend_tracker.py::load_ceiling
+  sealed_test: demo/tests/sealed/test_u002.py
+  sealed_test_sha: f60d3f18bc60ad96a65c766adb817d7cb6c4ab34a05bcc989a41a9791ed4fd90
+  state: closed
+  attempts: 0
+  pre_claim_sha: 367ae3cfea48d9a355da137779caa25821cb293b
+  evidence: null
+  park_branch: null
+- id: U-003
+  satisfies: R3
+  statement: BudgetExceeded carries the total and the ceiling as attributes and names
+    both in its message
+  stub: demo/spend_tracker.py::BudgetExceeded.__init__
+  sealed_test: demo/tests/sealed/test_u003.py
+  sealed_test_sha: 6e391a23be43a6d1a1049067a1d6e4ec8bb07289417c4edfbac007c776a374df
+  state: closed
+  attempts: 0
+  pre_claim_sha: 83786f72bcd4c2148e8ac11cb4fce1c12f2bde98
+  evidence: null
+  park_branch: null
+- id: U-004
+  satisfies: R3
+  statement: SpendTracker.check returns None at or below the ceiling and raises BudgetExceeded
+    above it
+  stub: demo/spend_tracker.py::SpendTracker.check
+  sealed_test: demo/tests/sealed/test_u004.py
+  sealed_test_sha: 14d79feb7d47297117963c286393c4090f287937a945ea72adc6c7a5120c8c1c
+  state: closed
+  attempts: 0
+  pre_claim_sha: e8d6e289245ade7daedc18b1a292140a010dc98b
+  evidence: null
+  park_branch: null
+- id: U-005
+  satisfies: R4
+  statement: SpendTracker.persist and SpendTracker.restore round-trip recorded spend
+    across a process restart, and persist is crash-atomic - a reader must never observe
+    a partially written state file
+  stub: demo/spend_tracker.py::SpendTracker.persist
+  sealed_test: demo/tests/sealed/test_u005.py
+  sealed_test_sha: 6b828adc648dfb6feca65321d26935188c4f4f798a13ca5afa5aa62d361b662c
+  state: closed
+  attempts: 0
+  pre_claim_sha: e27fd434221e50ef09f36750f1f2fc040ea05ce0
+  evidence: null
+  park_branch: null
+- id: U-006
+  satisfies: R5
+  statement: SpendTracker.as_tool exposes record as an aviary Tool via Tool.from_function,
+    deriving the tool name, description and parameter schema from record's signature
+    and docstring
+  stub: demo/spend_tracker.py::SpendTracker.as_tool
+  sealed_test: demo/tests/sealed/test_u006.py
+  sealed_test_sha: 37856b47a28881ab798812d2577522ecf3c1e5a1de159f69fd9458fe89a97e4f
+  state: closed
+  attempts: 0
+  pre_claim_sha: 72af9a15d3f681e600addd032c4dd6befc5988a0
+  evidence: null
+  park_branch: null

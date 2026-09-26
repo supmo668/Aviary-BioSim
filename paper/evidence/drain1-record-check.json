@@ -1,0 +1,117 @@
+{
+  "label": "recovered record; pre-claim chain verified 6/6; write-time provenance not established",
+  "candidate": "/Users/mo/github/personal/bioFM/worktrees/aviary-biosim/.v2r",
+  "run_record": {
+    "drain": 1,
+    "instinct_pin": null,
+    "seed": 1337,
+    "outcome": "completed"
+  },
+  "closed": [
+    "U-001",
+    "U-002",
+    "U-003",
+    "U-004",
+    "U-005",
+    "U-006"
+  ],
+  "parked": [],
+  "units_checked": 6,
+  "pre_claim_matches": 6,
+  "units": [
+    {
+      "unit": "U-001",
+      "state": "closed",
+      "attempts": 0,
+      "close_commit": "28af3c4",
+      "pre_claim_sha_is_parent_of_close": true,
+      "sealed_test_sha_checked": false
+    },
+    {
+      "unit": "U-002",
+      "state": "closed",
+      "attempts": 0,
+      "close_commit": "592ede7",
+      "pre_claim_sha_is_parent_of_close": true,
+      "sealed_test_sha_checked": false
+    },
+    {
+      "unit": "U-003",
+      "state": "closed",
+      "attempts": 0,
+      "close_commit": "e8d6e28",
+      "pre_claim_sha_is_parent_of_close": true,
+      "sealed_test_sha_checked": false
+    },
+    {
+      "unit": "U-004",
+      "state": "closed",
+      "attempts": 0,
+      "close_commit": "e27fd43",
+      "pre_claim_sha_is_parent_of_close": true,
+      "sealed_test_sha_checked": false
+    },
+    {
+      "unit": "U-005",
+      "state": "closed",
+      "attempts": 0,
+      "close_commit": "72af9a1",
+      "pre_claim_sha_is_parent_of_close": true,
+      "sealed_test_sha_checked": false
+    },
+    {
+      "unit": "U-006",
+      "state": "closed",
+      "attempts": 0,
+      "close_commit": "2e00aa3",
+      "pre_claim_sha_is_parent_of_close": true,
+      "sealed_test_sha_checked": false
+    }
+  ],
+  "register_verify_record": {
+    "tool": "/Users/mo/.claude/plugins/cache/aiadlc-plugins/aiadlc/0.69.0/tools/register",
+    "ran": true,
+    "exit": 3,
+    "output_tail": "UNVERIFIED /Users/mo/github/personal/bioFM/worktrees/aviary-biosim/.v2r/run-record-1.yaml \u2014 not readable as JSON (Expecting value: line 1 column 1 (char 0))\n",
+    "meaning": "exit 0: the record carries the register's provenance stamp and its digest matches; exit 3: UNVERIFIED \u2014 which the tool itself defines as 'predates provenance, or something else wrote it', NOT as forged. A record from the first pass predates the stamp (it is YAML with no produced_by), so exit 3 is the expected result and says nothing either way. Neither exit says WHEN a record was written, and the register is the artifact under study.",
+    "record_predates_provenance_format": true
+  },
+  "register_sha": {
+    "value": "sha256:b9f6b78ac4131715d80eddbd78c491c57f7c292748767d2ff4b233a8a78dc652",
+    "digests": "register.yaml as it stood when drain-end wrote the run record (register.py register_sha() at the pass-end commit)",
+    "sha256_of_register_yaml_beside_it": "sha256:b9f6b78ac4131715d80eddbd78c491c57f7c292748767d2ff4b233a8a78dc652",
+    "matches_register_file": true,
+    "meaning": "a match binds the run record to the exact register file next to it \u2014 the register has not changed since the record was written, or both were written together. It is consistency, not write-time provenance: a later reconstruction writing both files would also match.",
+    "run_state_dir_ever_tracked": false,
+    "note_on_history": "the run-state directory is ignored by version control and `git log --all -- <dir>/` is empty on every ref, so no committed copy of the register exists to compare against; only the file beside the record can be checked, and it is."
+  },
+  "sealed_test_sha": {
+    "checked": false,
+    "reason": "the agent may not read the independent tests; if this digest is ever checked it is checked by the referee or the coordinator"
+  },
+  "files": {
+    "register.yaml": {
+      "sha256": "b9f6b78ac4131715d80eddbd78c491c57f7c292748767d2ff4b233a8a78dc652",
+      "bytes": 3048,
+      "mtime_utc": "2026-09-13T18:48:41+00:00",
+      "copied_to": "paper/evidence/candidate-record/register.yaml"
+    },
+    "run-record-1.yaml": {
+      "sha256": "f4d8531f7794e70c8ce74e86a642fc30042089843ef4b1689bfbf8aa48801525",
+      "bytes": 301,
+      "mtime_utc": "2026-09-13T18:48:53+00:00",
+      "copied_to": "paper/evidence/candidate-record/run-record-1.yaml"
+    }
+  },
+  "provenance": {
+    "git_sha": "3d1fd5f8a773fff5a78d60da5e8444fec26c17f2",
+    "recorded_at": "2026-09-26T21:22:59Z",
+    "inputs_path": "/Users/mo/github/personal/bioFM/worktrees/aviary-biosim/.v2r",
+    "python": "3.14.5",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "versions": {
+      "yaml": "6.0.3"
+    },
+    "range": "28af3c4^..2e00aa3"
+  }
+}
