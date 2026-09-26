@@ -1,0 +1,411 @@
+{
+  "label": "measured (re-run, 2026-09-26)",
+  "archived_commit": "2e00aa3",
+  "referee_exit": 0,
+  "referee": {
+    "total": 75,
+    "passed": 75,
+    "failed": 0,
+    "skipped": 0,
+    "declared": 75,
+    "unaccounted": 0,
+    "plan_error": null,
+    "categories": {
+      "test_u001/test_trackers_do_not_share_recorded_spend": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u001/test_single_recorded_call_is_reflected_in_total": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_accepts_the_path_as_a_plain_string": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_config_error_is_a_proper_value_error_subclass": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u001/test_fresh_tracker_totals_zero": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_returns_none_literally_not_merely_falsy": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u005/test_persist_accepts_a_path_that_does_not_exist_yet": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_an_over_budget_tracker_keeps_refusing": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_exactly_at_ceiling_does_not_raise": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u001/test_integer_costs_are_accumulated_as_numbers": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_raises_when_a_single_call_overshoots": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_message_names_both_numbers[12.5-10.0]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_different_files_yield_their_own_ceilings": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u005/test_persisting_twice_leaves_the_later_state": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_carries_total_and_ceiling_as_attributes": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_repeated_check_within_budget_does_not_change_the_total": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_just_above_ceiling_raises": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_mapping_document_raises_config_error[empty]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_numeric_value_raises_config_error[currency-string]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u001/test_constructor_keeps_ceiling_as_float": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u006/test_as_tool_returns_an_aviary_tool": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u005/test_state_survives_a_mid_write_crash_well_enough_to_keep_running": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u005/test_restored_tracker_keeps_accumulating_on_top_of_restored_spend": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_mapping_document_raises_config_error[bare-number]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u006/test_tool_description_is_derived_from_record_docstring": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u005/test_a_persist_that_dies_mid_write_never_leaves_a_partial_file": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_absent_max_spend_usd_key_raises_config_error[near-miss-key]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u006/test_tool_parameters_match_record_signature_and_types": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u006/test_tool_parameters_exclude_self": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_absent_max_spend_usd_key_raises_config_error[nested-only]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_numeric_value_raises_config_error[mapping-value]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_budget_exceeded_carries_the_actual_total_and_declared_ceiling": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_mapping_document_raises_config_error[bare-string]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_exactly_at_ceiling_derived_from_reported_total": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_missing_file_given_as_string_raises_config_error": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_raises_and_is_catchable_as_a_runtime_error_with_attributes_intact": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_numeric_value_raises_config_error[explicit-null]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_below_ceiling_returns_none": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_is_a_carrier_not_a_validator[1.0-100.0]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u006/test_tool_name_is_the_recording_operations_own_name": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_is_a_carrier_not_a_validator[0.0-25.0]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_number_detector_is_sound": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_numeric_value_raises_config_error[sequence-value]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_numeric_value_raises_config_error[empty-value]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_catchable_by_its_own_type": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_on_fresh_tracker_returns_none": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_message_names_both_numbers[3.0-1.0]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_returns_declared_float_ceiling": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u005/test_persist_then_restore_reconstructs_recorded_spend": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_numeric_value_raises_config_error[word]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u001/test_several_distinct_calls_accumulate": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_budget_exceeded_is_a_runtime_error": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_absent_max_spend_usd_key_raises_config_error[empty-mapping]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u001/test_total_is_a_query_not_a_consumer": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u006/test_every_tool_parameter_carries_a_description": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_numeric_value_raises_config_error[quoted-number]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_mapping_document_raises_config_error[null-document]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_unrelated_keys_are_ignored": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_yaml_integer_is_a_number_and_comes_back_as_float": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_crossing_the_ceiling_flips_check_from_pass_to_refuse": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_is_a_carrier_not_a_validator[10.0-10.0]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_is_a_runtime_error": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_constructor_accepts_the_documented_keyword_names": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u005/test_restore_of_an_empty_ledger_round_trips_as_zero": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_on_fresh_tracker_with_zero_ceiling_returns_none": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_non_mapping_document_raises_config_error[sequence]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u006/test_tool_is_bound_to_the_producing_instance": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u005/test_restored_tracker_uses_the_ceiling_it_was_handed": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u003/test_message_names_both_numbers[125.0-100.0]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u006/test_each_instance_yields_its_own_tool": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u004/test_check_does_not_disturb_a_later_exact_boundary": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_missing_file_raises_config_error": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u001/test_mixed_magnitude_costs_sum_correctly": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u002/test_absent_max_spend_usd_key_raises_config_error[other-keys]": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      },
+      "test_u001/test_fractional_costs_sum_correctly": {
+        "passed": 1,
+        "skipped": 0,
+        "total": 1
+      }
+    }
+  },
+  "referee_stderr_tail": "referee: signed sealed-suite receipt (Hash E 6ad70cd)\n",
+  "referee_receipt_hash_e": "6ad70cd",
+  "note": "Hash E on the referee's receipt binds the CURRENT tree; the suite ran over the archived pass-end tree named above.",
+  "provenance": {
+    "git_sha": "77260ca3bb3fff03c928f49f13394276024ee1a9",
+    "recorded_at": "2026-09-26T21:24:02Z",
+    "inputs_path": null,
+    "python": "3.14.5",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "versions": {},
+    "referee_command": "sh paper/scripts/sealed_suite_results.sh",
+    "referee_argv": [
+      "/Users/mo/.claude/plugins/cache/aiadlc-plugins/aiadlc/0.69.0/tools/referee",
+      "run",
+      "--sign"
+    ],
+    "cwd": "/Users/mo/github/personal/bioFM/worktrees/aviary-biosim-272-scratch",
+    "branch": "whitepaper",
+    "archived_commit_env": "(default in the script)"
+  }
+}
