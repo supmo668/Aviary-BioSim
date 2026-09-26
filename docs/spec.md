@@ -1,8 +1,8 @@
 # /v2r-loop — requirement-to-function build-out
 
 **Status:** design approved 2026-09-12
-**Glossary:** [`docs/v2r-loop/CONTEXT.md`](../../v2r-loop/CONTEXT.md) — terms in **bold** below are defined there
-**Decisions:** [`docs/v2r-loop/adr/`](../../v2r-loop/adr/)
+**Glossary:** [`docs/CONTEXT.md`](CONTEXT.md) — terms in **bold** below are defined there
+**Decisions:** [`docs/adr/`](adr/)
 
 ## Goal
 
@@ -217,6 +217,9 @@ units:
     statement: "SpendTracker.record accumulates per-call cost"
     stub: skeleton/spend_tracker.py::SpendTracker.record
     state: parked            # open | closed | parked
+                             # Divergence note (docs-only, 2026-09-26): the implementation also
+                             # holds a transient `claimed` state between claim and close/park —
+                             # see docs/hacp/design.md and docs/adr/0001-*. Recorded, not redesigned.
     attempts: 3
     evidence: parked/U-014.pytest.out
     park_branch: park/U-014
