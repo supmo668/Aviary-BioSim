@@ -80,10 +80,16 @@ def pytest_configure(config):
     __file__, then its __spec__.origin; both are attributes the impostor sets, and both
     were defeated by a three-line fake.
 
-    Third-party names resolve on a CLEAN sys.path. The previous version prepended
-    science/ and demo/ and imported them through that, so a file named science/yaml.py
-    would have been executed and recorded as the genuine baseline — with _repair()
-    faithfully reinstalling it after every test. The guard poisoning its own ground truth.
+    Third-party names resolve with nothing of ours on sys.path. Two things put project
+    directories there before this hook runs: pytest's prepend import mode inserts THIS
+    conftest's directory when it loads it, and `python -m pytest` adds the working
+    directory. An earlier version also prepended science/ and demo/ itself. Through any of
+    those, a file named yaml.py in the project would be executed and recorded as the
+    genuine baseline — with _repair() faithfully reinstalling it after every test. The
+    guard poisoning its own ground truth. So the loop below runs on sys.path with the
+    working directory, the rootdir, the invocation directory, this directory, science/
+    and demo/ removed, and restores the full path afterwards. Pinned by
+    test_a_shadow_beside_the_conftest_is_not_recorded_as_the_baseline.
 
     A DEFERRED name is not imported and usually stays absent, so any appearance is
     reported. That is stricter, not weaker. Import failures are recorded rather than
@@ -100,16 +106,18 @@ def pytest_configure(config):
     global _OURS
     _OURS = (str(SCIENCE), str(DEMO))
     failures = {}
-    for name in PREIMPORT:
-        if name == "spend_tracker":
-            continue                      # lives in demo/, needs the path; done below
-        try:
-            importlib.import_module(name)
-        except Exception as exc:
-            failures[name] = f"{type(exc).__name__}: {exc}"
     saved = list(sys.path)
+    not_ours = _project_free(sys.path, config)
     try:
-        sys.path.insert(0, str(DEMO))
+        sys.path[:] = not_ours
+        for name in PREIMPORT:
+            if name == "spend_tracker":
+                continue                  # lives in demo/, needs the path; done below
+            try:
+                importlib.import_module(name)
+            except Exception as exc:
+                failures[name] = f"{type(exc).__name__}: {exc}"
+        sys.path[:] = [str(DEMO)] + not_ours
         try:
             importlib.import_module("spend_tracker")
         except Exception as exc:
@@ -121,6 +129,21 @@ def pytest_configure(config):
     _BASELINE_SYSPATH[:] = list(sys.path)
     _IMPORT_FAILURES.clear()
     _IMPORT_FAILURES.update(failures)
+
+
+def _project_free(path: list, config) -> list:
+    """sys.path with every entry that could shadow a third-party name removed.
+
+    "" and "." mean the working directory; rootpath and the invocation dir are where
+    pytest was pointed; this conftest's directory is what prepend mode inserted.
+    Compared by resolved path so a relative spelling cannot slip through.
+    """
+    here = pathlib.Path(__file__).resolve().parent
+    ours = {here, SCIENCE, DEMO, pathlib.Path.cwd().resolve(),
+            pathlib.Path(config.rootpath).resolve(),
+            pathlib.Path(config.invocation_params.dir).resolve()}
+    return [entry for entry in path
+            if entry not in ("", ".") and pathlib.Path(entry).resolve() not in ours]
 
 
 _BASELINE_SYSPATH: list = []

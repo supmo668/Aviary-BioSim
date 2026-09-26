@@ -147,12 +147,16 @@ MUTANTS = [
          replace="    return (name in sys.modules) == (_BASELINE.get(name) is not None)"),
     dict(id="guard-no-origin-baseline", pass_="4", target="science/tests/conftest.py", check=ISO,
          why="the baseline is the real module imported before collection, not whatever happened to be loaded",
-         find="    for name in PREIMPORT:\n"
-              '        if name == "spend_tracker":\n'
-              "            continue                      # lives in demo/, needs the path; done below",
-         replace="    for name in ():\n"
-                 '        if name == "spend_tracker":\n'
-                 "            continue                      # lives in demo/, needs the path; done below"),
+         find="        for name in PREIMPORT:\n"
+              '            if name == "spend_tracker":\n'
+              "                continue                  # lives in demo/, needs the path; done below",
+         replace="        for name in ():\n"
+                 '            if name == "spend_tracker":\n'
+                 "                continue                  # lives in demo/, needs the path; done below"),
+    dict(id="guard-baseline-on-dirty-path", pass_="6", target="science/tests/conftest.py", check=ISO,
+         why="the baseline resolves with the conftest directory, cwd, rootdir, science/ and demo/ removed from sys.path — a yaml.py beside the conftest must not become ground truth",
+         find="        sys.path[:] = not_ours\n",
+         replace="        pass\n"),
     dict(id="guard-dotted-exempt", pass_="4", target="science/tests/conftest.py", check=ISO,
          why="a dotted name is watched, not exempted",
          find='             "aviary", "aviary.core", "spend_tracker")',

@@ -435,6 +435,29 @@ def test_a_fake_at_a_dotted_watched_name_is_caught(pytester, tmp_path):
     _assert_the_guard_refused(result, expect="aviary.core")
 
 
+def test_a_shadow_beside_the_conftest_is_not_recorded_as_the_baseline(pytester):
+    """The docstring said third-party names resolve on a CLEAN sys.path. They did not:
+    pytest's prepend import mode puts the conftest's own directory at the front of
+    sys.path before configure runs, and `python -m pytest` adds the working directory.
+    A yaml.py in either place was imported at configure, recorded as the genuine
+    baseline, and then defended by the guard for the whole session — the guard
+    poisoning its own ground truth, the shape the docstring claimed was closed.
+
+    The probe asserts the shadow file really exists beside the conftest, so the test
+    cannot pass by the shadow never being in play."""
+    pytester.makepyfile(yaml="FAKE = True\ndef safe_load(*a, **k): return {}\n")
+    result = _run(pytester, """
+        import pathlib
+
+        def test_the_baseline_is_the_real_library(stub_contract):
+            assert (pathlib.Path(__file__).parent / "yaml.py").exists()
+            base = stub_contract.baseline["yaml"]
+            assert not getattr(base, "FAKE", False), f"shadow recorded as baseline: {base.__file__}"
+            assert hasattr(base, "safe_dump"), "not the real library"
+    """)
+    result.assert_outcomes(passed=1)
+
+
 def test_a_shadowing_directory_cannot_validate_its_own_fake(pytester):
     """A directory placed on sys.path that answers to a watched name.
 
