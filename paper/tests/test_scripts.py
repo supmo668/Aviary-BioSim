@@ -498,3 +498,19 @@ def test_taxonomy_check_lists_a_missing_test_and_a_mislabelled_row(script, tmp_p
     assert "T02: no test cited" in joined
     assert "duplicate id" in joined and "empty symptom" in joined
     assert X.main(["--csv", str(csvf), "--plugin-root", str(tmp_path)]) == 1
+
+
+# --- A8: figures come from paper/evidence only ------------------------------------------
+
+def test_make_figures_refuses_any_directory_but_the_evidence_dir(tmp_path):
+    import importlib.util
+    src = _Path(__file__).resolve().parents[1] / "figures" / "make_figures.py"
+    spec = importlib.util.spec_from_file_location("make_figures_under_test", src)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    with pytest.raises(SystemExit) as e:
+        m.guard(str(tmp_path))
+    assert e.value.code == 2
+    with pytest.raises(SystemExit):
+        m.main(["--evidence", "science/out", "--out", str(tmp_path)])
+    assert m.guard(str(m.EVIDENCE)) == m.EVIDENCE.resolve()
