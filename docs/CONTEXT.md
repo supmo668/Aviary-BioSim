@@ -229,3 +229,23 @@ backlinked, and closed exactly once.**
 >
 > **Domain expert:** That's precisely why you can't. You'd write the test that your fix
 > passes.
+
+## Reader-facing vocabulary
+
+The glossary above is the project's working language: code, specs, ADRs and dispatches use
+it exactly. Text written for a reader outside the project — the white paper, the HACP
+pages under `docs/hacp/`, an abstract — uses plain words instead, under the plain-language
+rule the white-paper spec set (2026-09-25). This table is the ONLY mapping, so the two
+vocabularies cannot drift apart or collide unnoticed:
+
+| Glossary term | Reader-facing word | Note |
+|---|---|---|
+| **Drain** | a **pass** (of the loop) | "pass" is listed under *Avoid* for Drain above because inside the project it collided with Close; for readers the loop-level sense is the only one used. |
+| **Build unit** | a **task** | listed under *Avoid* above for the aviary/aiadlc collision; readers do not meet those. |
+| **Close** | a task **closed** | never "passed": in reader text "pass" is reserved for the loop-level run above, so a task that satisfied its independent test is *closed*. |
+| **Park** | **set aside** | |
+| **Sealed test** | **independent test** | |
+| **Register** | **worklist** | |
+| **Instinct** | **lesson** | |
+
+Code identifiers, file paths and command names keep their real names in every context.

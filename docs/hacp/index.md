@@ -52,7 +52,7 @@ flowchart LR
   INS -->|"pinned for a pass"| GATE
   BR -->|"is"| PROD
 ```
-*Green is the trust boundary: nothing inside it is recorded by the agent doing the work, and only the worklist tool can write that a task passed.*
+*Green is the trust boundary: nothing inside it is recorded by the agent doing the work, and only the worklist tool can write that a task closed.*
 
 ## Decisions taken
 

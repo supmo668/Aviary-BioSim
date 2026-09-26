@@ -10,17 +10,17 @@
 
 | Claim | Value | Kind | Artifact |
 |---|---|---|---|
-| Worklist-tool suite green | 42 passed | **measured** 2026-09-25 | receipt `…-qgr-pr-prep-20260925-0558-64e74db.md`, § Review Summary |
+| Worklist-tool suite green | 42 passed | **measured** 2026-09-25 | receipt `…-qgr-pr-prep-20260925-0558-the pr-prep receipt current at landing.md`, § Review Summary |
 | Science suite green, with `torch` installed and in four collection orders | 265 passed | **measured** 2026-09-25 | same receipt |
 | Deliberately broken copies of the guard all caught | 36 live killed + 1 retired | **measured** 2026-09-25 | same receipt |
 | Independent component tests from pass 1 | 75 | **carried forward** — not re-run since pass 1 | [`SUBMISSION.md`](../../SUBMISSION.md) § Status, which says so |
 | Pass 1 outcome | 6 closed, 0 set aside, every task at attempt 0 | **reconstructed** from version control | commits `28af3c4` … `2e00aa3`; [`docs/drain-1-notes.md`](../drain-1-notes.md) |
 | Substitutions scored by the protein model | 2,090 | **reported** by the science run | [`SUBMISSION.md`](../../SUBMISSION.md) § Results |
 | Six disulfide cysteines vs every other residue, mean score | −13.02 vs −5.85 | **reported** by the science run | same table |
-| Measurements chosen by the discovery agent | 66 | **reported**; trace to be located | same table |
+| Measurements chosen by the discovery agent | 66 | **reported**; the artifact and its trace were located on 2026-09-26 (the #272 plan, Task 6 records where) | same table |
 | Trace query after the emission fix | 0 → 19 | **reported** | [`SUBMISSION.md`](../../SUBMISSION.md) § Sponsor tools |
 
-The receipt's *Hash E* (`64e74db`) is the digest of the diff it attests to; a receipt whose diff has moved refuses to verify, which is how the earlier `cedae49` receipt was retired.
+The receipt's *Hash E* (the pr-prep receipt current at landing) is the digest of the diff it attests to; a receipt whose diff has moved refuses to verify, which is how the earlier `cedae49` receipt was retired.
 
 ## What the gate can and cannot see
 

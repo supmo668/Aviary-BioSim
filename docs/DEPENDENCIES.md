@@ -17,7 +17,8 @@ git --version
 | `dashboard/v2r_dashboard.py` | `marimo`, `pyyaml`, `pandas`, `altair`, `pyarrow` | none |
 | `dashboard/seed_demo_run.py` | `pyyaml` | none |
 | `demo/gate_demo.py` | `pyyaml` | none |
-| the test suite | `pytest`, `pyyaml` | none |
+| the register test suite (`.claude/skills/v2r-loop/scripts/tests`) | `pytest`, `pyyaml` | none |
+| the science test suite (`science/tests`) | `pytest`, `pyyaml`, `fhaviary`, `openai`, `weave`, `requests` — every name `conftest.py` pre-imports must be declared, never transitive | none (torch and transformers are stubbed) |
 
 ```bash
 # the gate, on camera
