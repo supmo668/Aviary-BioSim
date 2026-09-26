@@ -1,0 +1,36 @@
+# Every number the paper carries: id, value, label, source (file:field under paper/evidence/), text.
+# claims.py resolves each against its evidence file, emits claims.tex, and fails the build on any
+# unmapped number, missing file, value mismatch, or a non-measured claim phrased as measured.
+claims:
+  # --- the science experiment (A3c re-run; A3a/b input check) ---
+  - {id: subs, value: 2090, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.substitutions", text: "single-residue substitutions scored"}
+  - {id: cysmean, value: -13.02, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.cysteine_mean_mature", text: "mean score at the six disulfide cysteines (mature protein)"}
+  - {id: othermean, value: -5.85, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.other_mean_mature", text: "mean score at every other mature-protein residue"}
+  - {id: othermeanall, value: -5.53, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.other_mean", text: "mean score at every other residue including the signal peptide"}
+  - {id: matsubs, value: 1634, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.n_substitutions_mature", text: "substitutions in the mature protein"}
+  - {id: seqlen, value: 110, label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:published.length", text: "residues in the input sequence"}
+  - {id: ctrlA, value: 1.53, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.62", text: "C-peptide control, position 62 to alanine"}
+  - {id: ctrlB, value: 1.08, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.79", text: "C-peptide control, position 79 to alanine"}
+  - {id: ctrlC, value: -0.1, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.83", text: "C-peptide control, position 83 to alanine"}
+  - {id: rerunsec, value: 9.6, label: "measured (re-run, 2026-09-26)", source: "science.json:runtime_s", text: "seconds for the re-run scan"}
+  - {id: pubsec, value: 7.3, label: "reported", source: "science.json:published_runtime_s", text: "seconds the published run reported"}
+  - {id: weightsgb, value: 2609506392, label: "measured (re-run, 2026-09-26)", source: "science.json:weights_bytes", text: "bytes of model weights, digest recorded"}
+  # --- the discovery agent (A4) ---
+  - {id: meas, value: 66, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:measurements", text: "measurements the agent chose"}
+  - {id: rounds, value: 5, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:rounds", text: "rounds"}
+  - {id: tokens, value: 15115, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:completion_tokens_total", text: "completion tokens across the rounds that recorded a count"}
+  - {id: positions, value: 34, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:distinct_positions", text: "distinct positions measured"}
+  - {id: traceroots, value: 1, label: "queried (2026-09-26)", source: "weave-count.json:run_discovery_root_traces", text: "root trace of the discovery run in the trace store"}
+  - {id: tracetotal, value: 36, label: "queried (2026-09-26)", source: "weave-count.json:project_total", text: "traces in the project"}
+  # --- pass 1 (A1, A2, A2b) ---
+  - {id: sealed, value: 75, label: "measured (re-run, 2026-09-26)", source: "drain1-rerun.json:referee.total", text: "independent tests re-run through the referee"}
+  - {id: sealedfail, value: 0, label: "measured (re-run, 2026-09-26)", source: "drain1-rerun.json:referee.failed", text: "of them failing"}
+  - {id: units, value: 6, label: "reconstructed", source: "drain1-from-git.csv:rows", text: "tasks closed in the first pass"}
+  - {id: chain, value: 6, label: "recovered record; pre-claim chain verified", source: "drain1-record-check.json:pre_claim_matches", text: "tasks whose pre-claim commit is the parent of the close"}
+  - {id: closed, value: 6, label: "recovered record", source: "drain1-record-check.json:closed_count", text: "tasks the recovered record lists as closed"}
+  - {id: parked, value: 0, label: "recovered record", source: "drain1-record-check.json:parked_count", text: "tasks set aside"}
+  # --- the trust core's own tests (A6) and the taxonomy (A5) ---
+  - {id: plugintests, value: 219, label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:totals.run", text: "plugin suite assertions re-run"}
+  - {id: pluginfail, value: 0, label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:totals.failed", text: "of them failing"}
+  - {id: regtests, value: 60, label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:suites.register.test.sh.run", text: "worklist-tool assertions"}
+  - {id: taxrows, value: 22, label: "documented", source: "taxonomy.csv:rows", text: "failure modes in the taxonomy"}

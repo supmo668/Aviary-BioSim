@@ -118,6 +118,7 @@ def main(argv=None) -> int:
         "candidate": str(record.resolve()),
         "run_record": {k: run.get(k) for k in ("drain", "instinct_pin", "seed", "outcome")},
         "closed": run.get("closed", []), "parked": run.get("parked", []),
+        "closed_count": len(run.get("closed", [])), "parked_count": len(run.get("parked", [])),
         "units_checked": len(units), "pre_claim_matches": matches, "units": units,
         "register_verify_record": verify,
         "register_sha": {
