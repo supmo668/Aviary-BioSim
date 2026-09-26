@@ -345,3 +345,119 @@ def test_science_input_refuses_a_cached_identifier_that_is_not_an_accession(scri
     monkeypatch.setattr(S, "fetch_fresh", lambda a: pytest.fail("network reached; validation should have refused"))
     with pytest.raises(ValueError):
         S.main(["--inputs", str(inputs), "--out", str(tmp_path / "o.json")])
+
+
+# --- A4: the discovery run counted from its artifact -----------------------------------
+
+def test_agent_run_counts_and_copies_no_content(script, tmp_path):
+    A = script("agent_run")
+    d = tmp_path / "discovery"
+    d.mkdir()
+    # An INVENTED three-entry artifact; the identifier field is a non-identifier placeholder.
+    (d / "discovery.json").write_text(json.dumps({
+        "objective": "invented objective", "model": "invented/model",
+        "rounds": [{"round": 1, "reasoning": "secret reasoning", "requested": ["a", "b"], "results": ["r", "r"],
+                    "completion_tokens": 10},
+                   {"round": 2, "reasoning": "more", "requested": ["c"], "results": ["r"]}],
+        "conclusion": "secret conclusion",
+        "audit_trail": ["score_variant({'accession': 'X', 'position': 31, 'mutant': 'A'}) -> ok",
+                        "score_variant({'accession': 'X', 'position': 43, 'mutant': 'A'}) -> ok",
+                        "score_variant({'accession': 'X', 'position': 31, 'mutant': 'G'}) -> ok"]}))
+    out = tmp_path / "agent-run.json"
+    assert A.main(["--inputs", str(d), "--out", str(out), "--science", str(tmp_path / "absent.json")]) == 0
+    text = out.read_text()
+    j = json.loads(text)
+    assert j["measurements"] == 3 and j["rounds"] == 2
+    assert j["completion_tokens_per_round"] == [10, None] and j["completion_tokens_total"] == 10
+    assert j["rounds_without_a_token_count"] == 1
+    assert j["positions_measured"] == [31, 43] and j["distinct_positions"] == 2
+    assert j["control_positions"].startswith("pending")
+    for secret in ("secret reasoning", "secret conclusion", "audit_trail", "invented objective"):
+        assert secret not in text
+
+
+def test_agent_run_errors_when_the_artifact_is_absent_naming_the_path(script, tmp_path, capsys):
+    A = script("agent_run")
+    with pytest.raises(SystemExit) as e:
+        A.main(["--inputs", str(tmp_path / "nowhere"), "--out", str(tmp_path / "o.json")])
+    assert e.value.code == 2
+    assert "nowhere" in capsys.readouterr().err
+
+
+# --- A3c: the headline numbers, computed the same way on both sides ------------------
+
+def _synthetic_results():
+    """Invented: a 6-residue 'protein' with cysteines at 2 and 5, a C-peptide region 3-5,
+    and 19 substitutions per position with hand-set scores."""
+    seq = "ACDCCE"
+    subs = []
+    for pos, wt in enumerate(seq, start=1):
+        for mut in "ACDEFGHIKLMNPQRSTVWY".replace(wt, ""):
+            subs.append({"pos": pos, "wt": wt, "mut": mut, "score": -10.0 if wt == "C" else -2.0})
+    # alanine at position 3 gets a distinctive score for the control lookup
+    for s in subs:
+        if s["pos"] == 3 and s["mut"] == "A":
+            s["score"] = 1.234
+    return {"substitutions": subs, "cysteine_positions": [2, 4, 5],
+            "regions": [{"name": "signal", "start": 1, "end": 2}, {"name": "C peptide", "start": 3, "end": 5}],
+            "per_position": [{"pos": p, "mean_score": -1.0 * p} for p in range(1, 7)]}
+
+
+def test_headline_derives_controls_from_the_region_and_the_agent_positions(script):
+    S = script("science_rerun")
+    h = S.headline(_synthetic_results(), agent_positions=[1, 3, 5, 9])
+    assert h["substitutions"] == 6 * 19
+    assert h["cysteine_mean"] == -10.0
+    # 57 non-cysteine scores, one of them 1.234 instead of -2.0: (-2.0 * 56 + 1.234) / 57
+    assert h["other_mean"] == round((-2.0 * 56 + 1.234) / 57, 2) == -1.94
+    assert h["c_peptide_region"] == [3, 5]
+    assert h["c_peptide_controls"] == {"3": 1.23, "5": -10.0}      # 1 is outside the region; 9 is not a position
+    assert h["per_position_mean"] == [-1.0, -2.0, -3.0, -4.0, -5.0, -6.0]
+
+
+def test_compare_flags_any_headline_difference(script):
+    S = script("science_rerun")
+    a = S.headline(_synthetic_results(), [3])
+    b = dict(a); b["cysteine_mean"] = -9.99
+    m = S.compare(a, b)
+    assert m["cysteine_mean"] is False and m["substitutions"] is True
+
+
+def test_science_rerun_refuses_a_non_isolated_hf_home(script, tmp_path, monkeypatch):
+    S = script("science_rerun")
+    monkeypatch.delenv("HF_HOME", raising=False)
+    assert S.main(["--inputs", str(tmp_path), "--out", str(tmp_path / "o.json")]) == 2
+
+
+# --- A6: the plugin suites, re-run ----------------------------------------------------
+
+def test_plugin_summary_regex_matches_the_libs_own_line(script):
+    """tests/lib.sh's tests_summary prints exactly: '---' then '<n> run, <m> failed'."""
+    T = script("plugin_tests")
+    assert T.parse_summary("ok 1\nok 2\n---\n41 run, 0 failed\n") == (41, 0)
+    assert T.parse_summary("---\n3 run, 1 failed\nafter") == (3, 1)
+    assert T.parse_summary("no summary here") is None
+    assert T.parse_summary("2 run, 0 failed\n---\n5 run, 2 failed\n") == (5, 2), "the last one wins"
+
+
+def test_plugin_tests_runs_each_suite_in_a_scratch_worktree_and_removes_it(script, tmp_path):
+    T = script("plugin_tests")
+    repo = tmp_path / "plugin"
+    repo.mkdir()
+    import subprocess
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "tests").mkdir()
+    (repo / "tests" / "good.test.sh").write_text("echo ok\necho ---\necho '2 run, 0 failed'\nexit 0\n")
+    (repo / "tests" / "bad.test.sh").write_text("echo ---\necho '2 run, 1 failed'\nexit 1\n")
+    subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "x"], check=True)
+    subprocess.run(["git", "-C", str(repo), "tag", "v9.9.9"], check=True)
+    out = tmp_path / "o.json"
+    rc = T.main(["--plugin-repo", str(repo), "--tag", "v9.9.9", "--suites", "good.test.sh", "bad.test.sh",
+                 "--out", str(out)])
+    d = json.loads(out.read_text())
+    assert rc == 1 and d["label"].startswith("NOT GREEN")
+    assert d["suites"]["good.test.sh"] == {"run": 2, "failed": 0, "exit": 0, "summary_found": True, "passed": 2}
+    assert d["suites"]["bad.test.sh"]["failed"] == 1 and d["suites"]["bad.test.sh"]["exit"] == 1
+    wts = subprocess.run(["git", "-C", str(repo), "worktree", "list"], capture_output=True, text=True).stdout
+    assert "v9.9.9" not in wts, "the scratch worktree must be removed afterwards"
