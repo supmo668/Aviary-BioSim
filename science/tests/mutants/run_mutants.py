@@ -85,7 +85,7 @@ def _baseline_is_green(check: str) -> bool:
     return _BASELINE_OK[check]
 
 
-def run_one(mutant, keep_going=True):
+def run_one(mutant):
     check = mutant["check"]
     if not (REPO / check.split("::")[0]).exists():
         return "BROKEN-CHECK", f"{check} does not exist"

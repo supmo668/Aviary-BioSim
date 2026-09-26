@@ -160,7 +160,7 @@ def test_main_exits_nonzero_unless_every_mutant_was_killed(runner, monkeypatch, 
     outcomes = dict(zip((e["id"] for e in entries), verdicts))
     monkeypatch.setattr(runner, "MUTANTS", entries)
     monkeypatch.setattr(runner, "RETIRED", [])
-    monkeypatch.setattr(runner, "run_one", lambda m, keep_going=True: (outcomes[m["id"]], ""))
+    monkeypatch.setattr(runner, "run_one", lambda m: (outcomes[m["id"]], ""))
     monkeypatch.setattr(sys, "argv", ["run_mutants.py"])
     assert runner.main() == expected_exit
     out = capsys.readouterr().out
