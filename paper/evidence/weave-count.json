@@ -1,0 +1,34 @@
+{
+  "label": "queried (2026-09-26)",
+  "store": "Weave (Weights & Biases)",
+  "project": "3m-m/Aviary-BioSim",
+  "queries": [
+    {
+      "tool": "count_weave_traces_tool",
+      "filters": null,
+      "total_count": 36,
+      "root_traces_count": 4
+    },
+    {
+      "tool": "count_weave_traces_tool",
+      "filters": {
+        "op_name_contains": "run_discovery"
+      },
+      "total_count": 1,
+      "root_traces_count": 1
+    },
+    {
+      "tool": "count_weave_traces_tool",
+      "filters": {
+        "trace_roots_only": true
+      },
+      "total_count": 4,
+      "root_traces_count": 4
+    }
+  ],
+  "run_discovery_root_traces": 1,
+  "project_total": 36,
+  "project_roots": 4,
+  "recorded_at": "2026-09-26T21:28:17Z",
+  "note": "counts only; no trace content was read. Re-queried on the day, not copied from the 2026-09-26 morning lookup (which gave the same numbers)."
+}

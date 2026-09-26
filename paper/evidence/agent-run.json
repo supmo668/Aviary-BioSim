@@ -1,0 +1,86 @@
+{
+  "label": "reported (artifact counted, 2026-09-26)",
+  "measurements": 66,
+  "rounds": 5,
+  "requests_per_round": [
+    26,
+    12,
+    16,
+    12,
+    0
+  ],
+  "completion_tokens_per_round": [
+    6905,
+    6304,
+    1087,
+    819,
+    null
+  ],
+  "completion_tokens_total": 15115,
+  "rounds_without_a_token_count": 1,
+  "model": "deepseek-ai/DeepSeek-V4-Pro-0813",
+  "positions_measured": [
+    20,
+    21,
+    25,
+    30,
+    31,
+    32,
+    35,
+    36,
+    40,
+    41,
+    42,
+    43,
+    44,
+    47,
+    48,
+    49,
+    50,
+    62,
+    70,
+    72,
+    79,
+    83,
+    90,
+    91,
+    92,
+    95,
+    96,
+    99,
+    100,
+    101,
+    102,
+    103,
+    105,
+    109
+  ],
+  "distinct_positions": 34,
+  "control_positions": {
+    "c_peptide_positions_from_science_json": [
+      62,
+      70,
+      72,
+      79,
+      83
+    ],
+    "measured_by_the_agent": [
+      62,
+      70,
+      72,
+      79,
+      83
+    ]
+  },
+  "artifact_sha256": "ed9b4e2f5f01f24ab3aa6ba027fd47da55441d5028dc4a09a9b99cd91998d340",
+  "artifact_bytes": 29650,
+  "artifact_mtime_utc": "2026-09-13T19:23:20+00:00",
+  "provenance": {
+    "git_sha": "3de31dadcc6bf2e9e5d5cf18c7ea5912af408e0c",
+    "recorded_at": "2026-09-26T21:31:33Z",
+    "inputs_path": "/Users/mo/github/personal/bioFM/projects/aviary-biosim/science/out/discovery",
+    "python": "3.14.5",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "versions": {}
+  }
+}
