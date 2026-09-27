@@ -524,8 +524,18 @@ def test_publish_manifest_is_complete_and_nothing_deposits():
     paper = _Path(__file__).resolve().parents[1]
     m = yaml.safe_load((paper / "publish.yml").read_text())
     assert m["topic"] and isinstance(m["topic"], str)
-    assert m["authors"][0]["name"] == "Mangyin Mo"
-    assert re.fullmatch(r"\d{4}-\d{4}-\d{4}-\d{3}[\dX]", m["authors"][0]["orcid"])
+    # The author's name and ORCID are values the PRINCIPAL owns. Asserting a literal here
+    # tests the principal's data, not the manifest, and turns the next correction to their
+    # own name into a test failure for no defect. Read them from the manifest instead and
+    # assert they are populated and CONSISTENT with what the paper prints — which is
+    # strictly stronger, because it catches the manifest and the paper disagreeing about
+    # who wrote it, something the literal never checked.
+    name, orcid = m["authors"][0]["name"], m["authors"][0]["orcid"]
+    assert isinstance(name, str) and name.strip(), "manifest author name is empty"
+    assert re.fullmatch(r"\d{4}-\d{4}-\d{4}-\d{3}[\dX]", orcid)
+    main_tex = (paper / "main.tex").read_text()
+    assert name in main_tex, f"manifest author name is not the one main.tex prints"
+    assert orcid in main_tex, "manifest ORCID is not the one main.tex prints"
     assert "affiliation" not in m["authors"][0], "absent until the principal supplies it; never invented"
     flat = yaml.safe_dump(m)
     for placeholder in ("YOUR_HANDLE", "0000-0000", "Family Given", "TBD", "TODO"):
