@@ -1,0 +1,40 @@
+{
+  "label": "measured (re-run, 2026-09-26)",
+  "suites": {
+    "science/tests": {
+      "passed": 328,
+      "failed": 0,
+      "exit": 0
+    },
+    ".claude/skills/v2r-loop/scripts/tests": {
+      "passed": 42,
+      "failed": 0,
+      "exit": 0
+    },
+    "dashboard/tests": {
+      "passed": 5,
+      "failed": 0,
+      "exit": 0
+    },
+    "paper/tests": {
+      "passed": 52,
+      "failed": 0,
+      "exit": 0
+    }
+  },
+  "total_passed": 427,
+  "mutants": {
+    "killed": 48,
+    "live": 48,
+    "retired": 1,
+    "exit": 0
+  },
+  "provenance": {
+    "git_sha": "2d75eabe88aa1908aba4391ad1d6314947995174",
+    "recorded_at": "2026-09-26T22:09:33Z",
+    "inputs_path": null,
+    "python": "3.14.5",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "versions": {}
+  }
+}

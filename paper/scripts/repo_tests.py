@@ -22,11 +22,16 @@ REPO = Path(__file__).resolve().parents[2]
 SCI = ["uv", "run", "--with", "pytest", "--with", "pyyaml", "--with", "fhaviary", "--with", "openai",
        "--with", "weave", "--with", "requests", "python", "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
 REG = ["uv", "run", "--with", "pytest", "--with", "pyyaml", "python", "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
+PAPER = ["uv", "run", "--with", "pytest", "--with", "pyyaml", "--with", "requests", "--with", "matplotlib",
+         "python", "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
 SUITES = {
     "science/tests": SCI + ["science/tests"],
     ".claude/skills/v2r-loop/scripts/tests": REG + [".claude/skills/v2r-loop/scripts/tests"],
     "dashboard/tests": REG + ["dashboard/tests"],
-    "paper/tests": REG + ["--with", "requests", "paper/tests"],
+    # uv's --with flags go BEFORE `python`; an earlier form put one after `-m pytest`, so
+    # pytest received it, exited 4, and the runner recorded no count — which is the right
+    # behaviour for the runner and the wrong invocation for the suite.
+    "paper/tests": PAPER + ["paper/tests"],
 }
 PYTEST_SUMMARY = re.compile(r"(\d+) passed")
 FAILED = re.compile(r"(\d+) failed")

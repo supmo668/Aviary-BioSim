@@ -34,3 +34,10 @@ claims:
   - {id: pluginfail, value: 0, label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:totals.failed", text: "of them failing"}
   - {id: regtests, value: 60, label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:suites.register.test.sh.run", text: "worklist-tool assertions"}
   - {id: taxrows, value: 22, label: "documented", source: "taxonomy.csv:rows", text: "failure modes in the taxonomy"}
+  # --- the repository's own suites and mutation gate (repo-tests.json) ---
+  - {id: scitests, value: 328, label: "measured (re-run, 2026-09-26)", source: "repo-tests.json:suites.science/tests.passed", text: "science-suite tests"}
+  - {id: wltests, value: 42, label: "measured (re-run, 2026-09-26)", source: "repo-tests.json:suites..claude/skills/v2r-loop/scripts/tests.passed", text: "worklist-tool tests in this repository"}
+  - {id: papertests, value: 52, label: "measured (re-run, 2026-09-26)", source: "repo-tests.json:suites.paper/tests.passed", text: "tests over the paper's own scripts"}
+  - {id: mutlive, value: 48, label: "measured (re-run, 2026-09-26)", source: "repo-tests.json:mutants.live", text: "live mutants in the frozen catalogue"}
+  - {id: mutkilled, value: 48, label: "measured (re-run, 2026-09-26)", source: "repo-tests.json:mutants.killed", text: "of them killed"}
+  - {id: mutretired, value: 1, label: "measured (re-run, 2026-09-26)", source: "repo-tests.json:mutants.retired", text: "retired with a reason"}
