@@ -354,31 +354,76 @@ No `agency.yaml` may be created in this repo (first-match shadowing — ruling #
 
 ```sh
 #!/bin/sh
-# paper/scripts/sealed_suite_results.sh — the tests.referee_command for this repo.
-# Extracts the pass-end commit's demo/ tree (code + independent tests as they were
-# when the pass closed), runs the suite there, and prints one RESULT line per test
-# in the referee's contract. Nothing here prints assertion text.
-set -eu
+# paper/scripts/sealed_suite_results.sh — the tests.referee_command for this repository.
+#
+# Extracts the pass-end commit's WHOLE tree (the code and the independent tests exactly as
+# they were when the pass closed), runs the suite there, and prints the referee's dialect:
+# one `PLAN <n>` line and one `RESULT pass|fail|skip <category>` line per test. Nothing
+# here prints assertion text; the category is the test's class and name.
+#
+# EXIT CODES — "could not run" is never allowed to look like "ran and failed":
+#   0  the suite ran; PLAN + RESULT lines are on stdout (every result a pass or skip)
+#   1  the suite ran and at least one RESULT is a fail
+#   3  COULD NOT RUN — NOTHING on stdout; one `COULD-NOT-RUN: <what was missing>` line on
+#      stderr. Missing tool, unknown commit, failed archive, missing suite directory,
+#      pytest unable to start, no junit report, ZERO TESTS COLLECTED. To the referee,
+#      which ignores exit codes, this shape is "no recognisable results" and it refuses
+#      to sign; paper/scripts/record_referee.py reads the exit code directly.
+set -u
 COMMIT="${DRAIN1_END_COMMIT:-2e00aa3}"
-WORK="$(mktemp -d)"
+SUITE="${SUITE_PATH:-demo/tests/sealed}"
+
+die() { printf 'COULD-NOT-RUN: %s\n' "$*" >&2; exit 3; }
+
+for tool in git tar uv python3; do
+  command -v "$tool" >/dev/null 2>&1 || die "$tool is not on PATH"
+done
+# The script's own directory, by parameter expansion: no external command before the
+# tool check above has said which tools exist.
+case "$0" in */*) HERE="${0%/*}" ;; *) HERE="." ;; esac
+git rev-parse --verify --quiet "$COMMIT^{commit}" >/dev/null 2>&1 \
+  || die "commit $COMMIT is not in this repository"
+
+WORK="$(mktemp -d 2>/dev/null)" || die "mktemp failed"
 trap 'rm -rf "$WORK"' EXIT
-git archive "$COMMIT" demo | tar -x -C "$WORK"
-( cd "$WORK" && uv run --with pytest --with pyyaml --with fhaviary \
-    pytest demo/tests/sealed -q --junitxml junit.xml >/dev/null 2>&1 || true )
-python3 - "$WORK/junit.xml" "$COMMIT" <<'PY'
-import sys, xml.etree.ElementTree as ET
-root = ET.parse(sys.argv[1]).getroot()
-for tc in root.iter("testcase"):
-    cat = tc.get("classname", "").split(".")[-1] + "/" + tc.get("name", "")
-    if tc.find("failure") is not None or tc.find("error") is not None:
-        print(f"RESULT fail {cat}")
-    elif tc.find("skipped") is not None:
-        print(f"RESULT skip {cat}")
-    else:
-        print(f"RESULT pass {cat}")
-print(f"# archived commit {sys.argv[2]}")
-PY
+
+git archive "$COMMIT" 2>/dev/null | tar -x -C "$WORK" 2>/dev/null
+[ -d "$WORK/demo" ] || die "git archive of $COMMIT produced no demo/ tree"
+[ -e "$WORK/$SUITE" ] || die "no test path '$SUITE' in the archived tree at $COMMIT"
+
+# Every name the suite imports is DECLARED here, never left to arrive transitively (the
+# A7b rule): the independent tests import the aviary package (fhaviary on PyPI).
+( cd "$WORK" && uv run --with pytest --with pyyaml --with fhaviary python -B -m pytest "$SUITE" -q \
+    -p no:cacheprovider --junitxml junit.xml >/dev/null 2>&1 )
+PYRC=$?
+# pytest: 0 all passed, 1 failures, 2 interrupted, 3 internal error, 4 usage, 5 no tests.
+case "$PYRC" in
+  0|1) ;;
+  5) die "zero tests collected from '$SUITE' at $COMMIT" ;;
+  *) die "pytest could not run the suite (exit $PYRC) at $COMMIT" ;;
+esac
+[ -s "$WORK/junit.xml" ] || die "pytest wrote no junit report"
+
+python3 "$HERE/junit_to_results.py" "$WORK/junit.xml" "$COMMIT" || exit 3
+[ "$PYRC" -eq 1 ] && exit 1
+exit 0
 ```
+
+**AMENDED 2026-09-27, and this plan must be re-signed.** The block above was, as
+signed, `set -eu` with `pytest ... || true`. That swallows the suite's exit code, so
+"pytest could not start" and "the suite ran and everything passed" both reach the
+referee as an empty result set and are indistinguishable. The implementation was
+written deliberately stricter and the CTO approved that design (#448): **exit 0 = ran,
+exit 1 = ran and failed, exit 3 = COULD NOT RUN with the missing thing named on
+stderr and nothing on stdout**, with zero-tests-collected a hard error rather than a
+silent pass. The shipped script also checks its tools, the commit, the archive and the
+junit report, each failing as exit 3.
+
+The plan text is what changed, not the implementation. A signed plan the implementer
+knowingly contradicts is worse than an unsigned one: the signature then certifies text
+nobody intends to follow, and the next reader cannot tell which parts are live. The
+divergence was small and in the safe direction, which is exactly why it was cheap to
+fix here and would have been expensive to explain later.
 
 - [ ] **Step 2: Run the referee** (after the CTO confirms the config):
 
