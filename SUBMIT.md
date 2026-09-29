@@ -60,7 +60,7 @@ hystricomorph divergence, recovered from sequence alone.
 
 Every stage of both agents is a @weave.op, so the full decision tree is queryable: which
 hypotheses were discarded, on what stated grounds, and what each fork cost. 46,250
-completion tokens end to end. 168 tests green. Zero fabricated numbers.
+completion tokens end to end. 445 tests green. Zero fabricated numbers.
 
 Honest limits, stated up front: ESM-2 has seen insulin, so this recovers known constraint
 rather than discovering new biology; no wet experiment has been run; and a trace shows
@@ -133,7 +133,7 @@ confirm. Artifacts are private by default; an unshared link shows a judge nothin
 | **Best Loop Design** | ✅ | Everyone joins. Also our strongest claim: a gate the coordinator itself could not wave through. |
 | **Best Use of Weave** | ✅ | Every stage of both agents is a `@weave.op`; the traces are the entire basis of the interpretability deliverable. We also found and fixed a real Weave defect — `weave.publish()` writes an object, not a call, so it succeeded while returning zero to the trace query. |
 | **Best Use of marimo** | ✅ | `dashboard/v2r_dashboard.py` — reactive dashboard over the loop's own state files, shown running against the real run: [a5dd195c…](https://claude.ai/code/artifact/a5dd195c-e3f5-4d6b-a41d-4ce2f1531c0b) |
-| **Most Production-Ready** | ✅ | 168 tests, sealed-referee gate, four ADRs, a glossary resolving four terminology collisions, and a component already ported upstream into a plugin framework. This is the 2-weeks-later award and the work genuinely stands up. |
+| **Most Production-Ready** | ✅ | 445 tests, sealed-referee gate, four ADRs, a glossary resolving four terminology collisions, and a component already ported upstream into a plugin framework. This is the 2-weeks-later award and the work genuinely stands up. |
 
 **Do not select:**
 

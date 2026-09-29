@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import requests
@@ -27,6 +28,49 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 MODEL_ID = os.environ.get("ESM_MODEL", "facebook/esm2_t33_650M_UR50D")
 CACHE = Path(__file__).parent / "out" / "seqs"
 AA = "ACDEFGHIKLMNPQRSTVWY"
+
+# UniProtKB's own accession grammar (the pattern UniProt publishes), anchored.
+# The accession is chosen by an untrusted agent and is interpolated into BOTH a
+# cache path and a request URL, so it is validated once, here, before either.
+ACCESSION = re.compile(
+    r"\A(?:[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9](?:[A-Z][A-Z0-9]{2}[0-9]){1,2})\Z"
+)
+
+
+def operator_safe(text: object, limit: int = 120) -> str:
+    """Strip control characters from text that reaches the operator's terminal.
+
+    A cached record is FILE CONTENT, not validated input: its fields are whatever the
+    UniProt response said, or whatever anything with write access to the cache put
+    there. Interpolated raw, an ESC sequence can erase the line and print a plausible
+    result for a different entry. Only the accession was guarded before; the organism,
+    the residue and the length reach the same terminal.
+    """
+    cleaned = "".join(ch for ch in str(text) if ch.isprintable() or ch == " ")
+    return cleaned[:limit]
+
+
+def valid_accession(accession: object) -> str:
+    """Return `accession` if it is a UniProtKB accession; raise ValueError otherwise.
+
+    Rejecting is the whole point: `../../x` escapes the cache directory and reads
+    any .json on the host, and a value carrying `/`, `?` or `#` steers the UniProt
+    request somewhere other than the entry asked for. Nothing is sanitised or
+    trimmed — a value that is not an accession is refused, not repaired.
+    """
+    match = ACCESSION.match(accession) if isinstance(accession, str) else None
+    if match is None:
+        # The echo is operator-facing text built from agent input: cap it and strip
+        # control characters, as every other such string is.
+        raise ValueError(
+            f"not a UniProt accession: {operator_safe(repr(accession), 80)} "
+            "(expected e.g. P01308 — 6 or 10 uppercase alphanumerics)"
+        )
+    # Return the MATCHED TEXT, not the caller's object. isinstance admits str
+    # subclasses, and a subclass can override __format__/__str__ so the f-string
+    # below builds a different path than the regex just inspected. re gives back a
+    # plain str, so the value that was validated is the value that gets used.
+    return match.group(0)
 
 _model = None
 _tok = None
@@ -52,6 +96,7 @@ def load_model():
 
 def fetch_sequence(accession: str) -> dict:
     """Fetch one UniProt entry. Cached on disk; never fabricated."""
+    accession = valid_accession(accession)
     CACHE.mkdir(parents=True, exist_ok=True)
     cached = CACHE / f"{accession}.json"
     if cached.exists():
@@ -59,6 +104,12 @@ def fetch_sequence(accession: str) -> dict:
     r = requests.get(f"https://rest.uniprot.org/uniprotkb/{accession}.fasta", timeout=30)
     r.raise_for_status()
     lines = r.text.strip().splitlines()
+    if not lines or not lines[0].startswith(">"):
+        # An empty body raised IndexError out of lines[0] — an opaque tool error — and a
+        # body with no header line would have been recorded as a real sequence. Refuse
+        # both, before anything is written.
+        raise ValueError(
+            f"UniProt returned no FASTA record for {accession} ({len(r.text)} bytes)")
     header = lines[0]
     seq = "".join(lines[1:])
     name = header.split("OS=")[0].split("|")[-1].strip()
@@ -132,15 +183,39 @@ def score_variant(accession: str, position: int, mutant: str) -> str:
         position: 1-based residue position in the full sequence to substitute.
         mutant: Single-letter amino acid code to substitute in at that position.
     """
+    # Validate here too, and report THIS value: on the cached branch rec is file
+    # content, so rec["accession"] is not necessarily what the caller asked for.
+    accession = valid_accession(accession)
     rec = fetch_sequence(accession)
     seq = rec["sequence"]
+    # Types before values: the comparisons below raise TypeError on a str position and
+    # accept True as 1; a list mutant raised at `not in AA`. Each reached the agent as an
+    # opaque tool error or a wrong answer instead of the refusal every other bad input gets.
+    if isinstance(position, bool) or not isinstance(position, int):
+        return f"position {operator_safe(repr(position), 40)} is not a whole number"
+    if not isinstance(seq, str):
+        return f"{accession}: the stored sequence is not text; the cached record is unusable"
+    if not isinstance(mutant, str):
+        return f"{operator_safe(repr(mutant), 40)} is not one of the 20 amino acids"
     if not 1 <= position <= len(seq):
-        return f"position {position} is outside {accession} (length {len(seq)})"
-    wt = seq[position - 1]
-    if mutant not in AA:
-        return f"{mutant!r} is not one of the 20 amino acids"
+        return f"position {position} is outside {accession} (length {len(seq)})"  # noqa: E501
+    wt = seq[position - 1]          # raw: this is a lookup key below
+    if wt not in AA:
+        # A cached sequence is file content and need not hold standard residues.
+        # Say so, rather than raising KeyError out of the log-prob lookup below.
+        return (f"{accession} position {position} is not a standard amino acid "
+                f"in the stored sequence")
+    if len(mutant) != 1 or mutant not in AA:
+        # `mutant not in AA` alone is SUBSTRING containment, because AA is a str: "",
+        # "AC" and "ACD" all passed, the per-residue model pass ran, and lp[mutant] then
+        # raised KeyError into the agent's context as an opaque tool error.
+        return f"{operator_safe(mutant)!r} is not one of the 20 amino acids"
     lp = position_logprobs(seq[: position] + seq[position:])[position - 1]["logp"]
     score = lp[mutant] - lp[wt]
+    # wt needs no sanitising, but not for the reason first written here. It is safe
+    # because seq[position - 1] on a str is exactly one character and position is
+    # bounds-checked above — NOT because `wt not in AA` screens it, which is the same
+    # substring idiom that let "AC" through one branch below.
     return (f"{accession} {wt}{position}{mutant}: score {score:.3f} "
             f"(negative means the model finds the substitution disruptive)")
 
@@ -151,7 +226,9 @@ def embed_sequence(accession: str) -> str:
     Args:
         accession: UniProt accession of the protein to embed, for example P01308.
     """
+    accession = valid_accession(accession)
     rec = fetch_sequence(accession)
     vec = embed(rec["sequence"])
-    return (f"{accession} ({rec['organism']}, {rec['length']} aa) embedded: "
+    return (f"{accession} ({operator_safe(rec['organism'])}, "
+            f"{operator_safe(rec['length'])} aa) embedded: "
             f"{len(vec)}-dimensional representation")

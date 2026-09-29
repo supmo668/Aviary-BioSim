@@ -45,7 +45,7 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 | Every other residue, mean score | **−5.85** |
 | Full 110-residue scan on Apple MPS | **7 s** |
 | Agent-chosen measurements | **66** |
-| Tests green across the loop | **168** |
+| Tests green across the loop | **445** |
 
 **Two known outcomes recovered from sequence alone.** *Sus scrofa* sits nearest human (0.55) — porcine insulin differs by a single residue, which is why it was the therapeutic before recombinant. *Cavia porcellus* sits furthest (2.69), beyond zebrafish and *Xenopus* — the known hystricomorph divergence.
 
@@ -70,7 +70,7 @@ Autonomous coding loops fail quietly. The usual failure is not bad code — it i
 
 ## Status, stated honestly
 
-**Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop; all three deliverables. **168 tests green** — 42 register, 51 science, and 75 sealed component tests last run at drain 1's close (`demo/spend_tracker.py` is unchanged since).
+**Built, tested and run:** the register CLI and its ten transitions; the sealed-referee gate and its refusal matrix; park-and-revert; ceilings; run records; the instinct pin; Weave tracing; the marimo dashboard; `BioSimEnv` against aviary's contract; the ESM-2 experiment; the traced discovery loop; all three deliverables. **445 tests green** — 42 register, 328 science, and 75 sealed component tests. The first two were measured for this line (2026-09-26); the sealed figure is carried forward from drain 1's close, because re-counting it means reading the sealed suite (`demo/spend_tracker.py` is unchanged since).
 
 **Built and tested, not yet run end to end:** `BioSimEnv`'s budget enforcement. The discovery loop refuses to start without a declared token price, and none has been supplied yet. The 66-measurement run above predates it, so its traces show the earlier tool list, which still offered the agent `record`.
 
@@ -94,8 +94,8 @@ a self-test, and the self-test passed. The pattern is not a story about code wri
 ```bash
 # Everything below runs from the repository root.
 uv run --with pytest --with pyyaml pytest .claude/skills/v2r-loop/scripts/tests -q   # 42 passed
-uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave \
-  pytest science/tests -q                                    # 51 passed
+uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave --with requests \
+  pytest science/tests -q                                   # 328 passed
 
 uv run --with pyyaml demo/gate_demo.py                       # the gate refusing, in 10 s
 
