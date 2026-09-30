@@ -12,9 +12,10 @@ version: "0.1.0-draft"
 license: "MIT"
 related_url: "https://github.com/supmo668/Aviary-BioSim"
 authors:
-  - name: "Mangyin Mo"
+  - name: "Mang-yin Mo"
     orcid: "0009-0009-5233-3142"
-    # affiliation: not stated anywhere in the repository — the principal supplies it at the publish gate
+    email: "mangyinm@alumni.cmu.edu"
+    affiliation: "Independent researcher"   # principal-supplied 2026-09-28 (#456)
 keywords: ["agentic build loop", "independent tests", "protein language model", "reproducibility", "failure modes"]
 artifacts:
   - path: "main.pdf"

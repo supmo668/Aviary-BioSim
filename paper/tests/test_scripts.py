@@ -536,7 +536,14 @@ def test_publish_manifest_is_complete_and_nothing_deposits():
     main_tex = (paper / "main.tex").read_text()
     assert name in main_tex, f"manifest author name is not the one main.tex prints"
     assert orcid in main_tex, "manifest ORCID is not the one main.tex prints"
-    assert "affiliation" not in m["authors"][0], "absent until the principal supplies it; never invented"
+    # Affiliation and email were supplied by the principal (#456); same rule as the name:
+    # populated, and printed by the paper exactly as the manifest states them.
+    affiliation, email = m["authors"][0]["affiliation"], m["authors"][0]["email"]
+    assert isinstance(affiliation, str) and affiliation.strip(), "manifest affiliation is empty"
+    assert re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email), "manifest email is malformed"
+    assert affiliation in main_tex, "manifest affiliation is not the one main.tex prints"
+    assert email in main_tex, "manifest email is not the one main.tex prints"
+    assert "to be supplied" not in main_tex, "a placeholder for a principal-supplied value survived"
     flat = yaml.safe_dump(m)
     for placeholder in ("YOUR_HANDLE", "0000-0000", "Family Given", "TBD", "TODO"):
         assert placeholder not in flat
