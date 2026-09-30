@@ -116,3 +116,29 @@ def test_a_heading_or_blank_line_ends_a_sentence(tmp_path):
         "Dashed lines are measured.}\n\\paragraph{The run.} It chose \\claimn{} things.\n\nWe re-run nothing here.\n",
         {"e.json": {"n": 66}})
     assert C.check(root) == []
+
+
+def test_a_string_claim_is_escaped_for_tex_in_macro_and_table(tmp_path):
+    # A release name like 2026_03 is a string claim; unescaped, its underscore is a TeX error.
+    root = setup(tmp_path,
+        [{"id": "rel", "value": "2026_03", "label": "measured", "source": "e.json:r", "text": "t"}],
+        r"Release \claimrel{}.", {"e.json": {"r": "2026_03"}})
+    assert C.check(root) == []
+    assert r"\newcommand{\claimrel}{2026\_03}" in (root / "claims.tex").read_text()
+    assert r"& 2026\_03 &" in (root / "claims-table.tex").read_text()
+
+
+def test_a_long_string_claim_can_wrap_in_the_appendix_table(tmp_path):
+    # A 64-character digest in a column that cannot wrap runs off the page.
+    digest = "99603f8fb1e9872e2d24ee1e9f85108c2bddea6b148a0f1099e16ba2715c8263"
+    root = setup(tmp_path,
+        [{"id": "sha", "value": digest, "label": "measured", "source": "e.json:s", "text": "t"},
+         {"id": "rel", "value": "2026_03", "label": "measured", "source": "e.json:r", "text": "t"}],
+        None, {"e.json": {"s": digest, "r": "2026_03"}})
+    assert C.check(root) == []
+    table = (root / "claims-table.tex").read_text()
+    assert r"\begin{longtable}{@{}lp{" in table, "the value column must be a wrapping p column"
+    row = next(l for l in table.splitlines() if l.startswith(r"\texttt{sha}"))
+    assert r"\allowbreak" in row and row.replace(r"\allowbreak{}", "").count(digest) == 1
+    assert r"\allowbreak" not in next(l for l in table.splitlines() if l.startswith(r"\texttt{rel}"))
+    assert digest in (root / "claims.tex").read_text(), "the text macro carries the digest unbroken"
