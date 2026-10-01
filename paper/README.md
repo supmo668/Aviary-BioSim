@@ -21,19 +21,21 @@ A label is a field inside the evidence file, not prose around it.
 
 ## Files
 
+Run every command below **from the repository root**. The scripts anchor their git calls and default output paths to the repository themselves, so the working directory only matters for paths you type (`HF_HOME`, `--inputs`).
+
 | file | task | label | produced by | date |
 |---|---|---|---|---|
-| `drain1-rerun.json` | A1 | measured (re-run) | `tools/referee run --sign` via `scripts/sealed_suite_results.sh`, recorded by `scripts/record_referee.py --referee <tools/referee> --sign` | 2026-09-26 |
-| `drain1-from-git.csv` | A2 | reconstructed | `scripts/drain1_from_git.py` | 2026-09-26 |
-| `drain1-record-check.json` | A2b | recovered record; pre-claim chain verified; write-time provenance not established | `scripts/drain1_record_check.py --record <absolute path to the recovered .v2r>` | 2026-09-26 |
-| `science-input.json` | A3a/b | measured (fresh fetch) | `scripts/science_input.py --inputs <absolute path>` | 2026-09-26 |
-| `science.json` | A3c | measured (re-run) — every field matched | `HF_HOME=$PWD/paper/.hf-cache uv run --with torch --with transformers --with requests --with numpy scripts/science_rerun.py --inputs <absolute path>` | 2026-09-26 |
-| `agent-run.json` | A4 | reported (artifact counted) | `scripts/agent_run.py --inputs <absolute path>/discovery` | 2026-09-26 |
+| `drain1-rerun.json` | A1 | measured (re-run) | `tools/referee run --sign` via `paper/scripts/sealed_suite_results.sh`, recorded by `paper/scripts/record_referee.py --referee <tools/referee> --sign` | 2026-09-26 |
+| `drain1-from-git.csv` | A2 | reconstructed | `paper/scripts/drain1_from_git.py` | 2026-09-26 |
+| `drain1-record-check.json` | A2b | recovered record; pre-claim chain verified; write-time provenance not established | `paper/scripts/drain1_record_check.py --record <absolute path to the recovered .v2r>` | 2026-09-26 |
+| `science-input.json` | A3a/b | measured (fresh fetch) | `paper/scripts/science_input.py --inputs <absolute path>` | 2026-09-26 |
+| `science.json` | A3c | measured (re-run) — every field matched | `HF_HOME=$PWD/paper/.hf-cache uv run --with torch --with transformers --with requests --with numpy paper/scripts/science_rerun.py --inputs <absolute path>` | 2026-09-26 |
+| `agent-run.json` | A4 | reported (artifact counted) | `paper/scripts/agent_run.py --inputs <absolute path>/discovery` | 2026-09-26 |
 | `weave-count.json` | A4 | queried | recorded by hand from the trace store's count query on the day | 2026-09-26 |
-| `taxonomy.csv` | A5 | documented | hand-authored; checked by `scripts/taxonomy_check.py --plugin-root <plugin checkout>` | 2026-09-26 |
-| `plugin-tests.json` | A6 | measured (re-run) | `scripts/plugin_tests.py --plugin-repo <plugin checkout> --tag v0.64.0` | 2026-09-26 |
-| `repo-tests.json` | — | measured (re-run) | `scripts/repo_tests.py` (this repository's suites and the full mutant sweep) | 2026-09-30 |
-| `candidate-record/` | A2b | copies | written by `scripts/drain1_record_check.py`; digests in `drain1-record-check.json` | 2026-09-26 |
+| `taxonomy.csv` | A5 | documented | hand-authored; checked by `paper/scripts/taxonomy_check.py --plugin-root <plugin checkout>` | 2026-09-26 |
+| `plugin-tests.json` | A6 | measured (re-run) | `paper/scripts/plugin_tests.py --plugin-repo <plugin checkout> --tag v0.64.0` | 2026-09-26 |
+| `repo-tests.json` | — | measured (re-run) | `paper/scripts/repo_tests.py` (this repository's suites and the full mutant sweep) | 2026-09-30 |
+| `candidate-record/` | A2b | copies | written by `paper/scripts/drain1_record_check.py`; digests in `drain1-record-check.json` | 2026-09-26 |
 
 The **evidence-location rule** applies to every script that reads the published run: it
 takes `--inputs <absolute path>`; a missing or empty directory is an error (exit 2) that

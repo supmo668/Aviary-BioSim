@@ -623,3 +623,15 @@ def test_every_default_output_lands_under_the_repository(script, monkeypatch):
 def pathlib_resolve(p):
     import pathlib
     return pathlib.Path(p).resolve()
+
+
+def test_every_recipe_command_in_the_evidence_readme_runs_from_the_repo_root():
+    """QG Q12: the README's recipe column named scripts relative to paper/ while their
+    defaults and HF_HOME assumed the repository root, so no single cwd ran them all."""
+    import re
+    readme = (_repo() / "paper" / "README.md").read_text()
+    table = readme[readme.index("## Files"):readme.index("The **evidence-location rule**")]
+    cited = re.findall(r"(?<![\w/])((?:paper/)?scripts/[\w./-]+\.(?:py|sh))", table)
+    assert cited, "the recipe table cites no scripts"
+    for path in cited:
+        assert (_repo() / path).is_file(), f"{path} does not exist relative to the repository root"
