@@ -172,7 +172,9 @@ def test_recorder_labels_measured_only_on_a_clean_verdict(script, tmp_path):
     ('{"total":6,"passed":5,"failed":1,"skipped":0}', 1),         # ran and failed
     ('{"total":6,"passed":5,"failed":0,"skipped":1}', 1),         # a skip is not a pass
     ("not json at all", 0),                                        # unreadable
-], ids=["no-results", "failed", "skipped", "unreadable"])
+    ('{"total":6,"passed":6,"failed":0,"skipped":0}', 1),         # clean JSON, nonzero exit (QG Q24)
+    ('{"total":0,"passed":0,"failed":0,"skipped":0}', 0),         # zero tests ran (QG Q24)
+], ids=["no-results", "failed", "skipped", "unreadable", "clean-json-nonzero-exit", "zero-tests"])
 def test_recorder_records_not_measured_and_exits_2_otherwise(script, tmp_path, stdout, code):
     R = script("record_referee")
     out = tmp_path / "drain1-rerun.json"
@@ -180,6 +182,26 @@ def test_recorder_records_not_measured_and_exits_2_otherwise(script, tmp_path, s
     d = json.loads(out.read_text())
     assert d["label"].startswith("NOT MEASURED")
     assert d["referee_exit"] == code
+
+
+def test_recorder_runs_the_suite_over_the_commit_it_records(script, tmp_path, monkeypatch):
+    """QG Q19: --commit was written into the evidence as archived_commit, but the referee
+    command ran DRAIN1_END_COMMIT (default 2e00aa3), so a non-default --commit produced
+    evidence naming one tree while the tests ran over another."""
+    R = script("record_referee")
+    monkeypatch.delenv("DRAIN1_END_COMMIT", raising=False)
+    seen = tmp_path / "seen-commit"
+    stub = tmp_path / "referee"
+    stub.write_text("#!/bin/sh\n"
+                    f"printf '%s' \"${{DRAIN1_END_COMMIT:-unset}}\" > '{seen}'\n"
+                    "printf '%s\\n' '{\"total\":6,\"passed\":6,\"failed\":0,\"skipped\":0}'\n")
+    stub.chmod(0o755)
+    out = tmp_path / "drain1-rerun.json"
+    assert R.main(["--referee", str(stub), "--out", str(out), "--commit", "abc1234"]) == 0
+    assert seen.read_text() == "abc1234"
+    d = json.loads(out.read_text())
+    assert d["archived_commit"] == "abc1234"
+    assert d["provenance"]["archived_commit_env"] == "abc1234"
 
 
 # --- A2: pass 1 reconstructed from version control -------------------------------------

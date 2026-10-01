@@ -54,7 +54,10 @@ def main(argv=None) -> int:
     ap.add_argument("--sign", action="store_true")
     a = ap.parse_args(argv)
     cmd = [a.referee, "run"] + (["--sign"] if a.sign else [])
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    # The suite runs over the commit this evidence names: the referee command reads
+    # DRAIN1_END_COMMIT, so --commit is passed through rather than merely recorded (QG Q19).
+    env = {**os.environ, "DRAIN1_END_COMMIT": a.commit}
+    r = subprocess.run(cmd, capture_output=True, text=True, env=env)
     coarse = coarse_from(r.stdout)
     ran = coarse is not None and int(coarse.get("total", 0)) > 0
     clean = ran and int(coarse.get("failed", 0)) == 0 and int(coarse.get("skipped", 0)) == 0
@@ -63,7 +66,7 @@ def main(argv=None) -> int:
         "referee_command": REFEREE_COMMAND, "referee_argv": cmd,
         # The referee resolves the command from the tree it is run in: record where.
         "cwd": str(Path.cwd()), "branch": branch,
-        "archived_commit_env": os.environ.get("DRAIN1_END_COMMIT", "(default in the script)"),
+        "archived_commit_env": env["DRAIN1_END_COMMIT"],
     })
     if clean and r.returncode == 0:
         label = f"measured (re-run, {prov['recorded_at'][:10]})"
