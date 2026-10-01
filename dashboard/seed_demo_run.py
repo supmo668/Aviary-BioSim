@@ -87,13 +87,15 @@ def main(root: Path, target: str = DEFAULT_TARGET) -> int:
             "sealed_test": f"tests/sealed/v2r/test_{uid.lower().replace('-', '')}.py",
             "sealed_test_sha": None, "state": state, "attempts": attempts,
             "pre_claim_sha": None,
-            "evidence": f".v2r/parked/{uid}.out" if state == "parked" else None,
+            # relative to the run dir's parent, as the dashboard resolves it — so it names
+            # the fixture's own parked/ directory, never the live one
+            "evidence": f"{v2r.name}/parked/{uid}.out" if state == "parked" else None,
             "park_branch": f"park/{uid}" if state == "parked" else None,
         }
         for uid, req, stmt, attempts, state in UNITS
     ]
     yaml.safe_dump(
-        {"version": 1,
+        {"produced_by": FIXTURE_MARK, "version": 1,
          "run": {"drain": 3, "seed": 1337, "instinct_pin": DRAINS[-1][1], "ceilings": ceilings},
          "units": units},
         (v2r / "register.yaml").open("w"), sort_keys=False)

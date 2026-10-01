@@ -78,3 +78,22 @@ def test_refuses_any_spelling_or_descendant_of_the_live_dir(tmp_path, target):
     assert (live / "register.yaml").read_text() == "version: 1\n"
     assert not (live / "run-record-1.yaml").exists()
     assert not (live / "sub").exists()
+
+
+def test_fixture_evidence_resolves_inside_the_fixture_dir_and_the_register_is_marked(tmp_path):
+    """QG Q28: the dashboard resolves a unit's evidence against the run dir's parent, so a
+    fixture pointing at `.v2r/parked/...` shows live evidence (or none) under a fixture.
+    Every evidence path must land inside the fixture dir, and the register itself must
+    carry the fixture mark, not only the run records."""
+    import yaml
+    m = load()
+    assert m.main(tmp_path) == 0
+    target = tmp_path / ".v2r-demo"
+    reg = yaml.safe_load((target / "register.yaml").read_text())
+    assert reg["produced_by"] == m.FIXTURE_MARK
+    evs = [u["evidence"] for u in reg["units"] if u["evidence"]]
+    assert evs, "the fixture parks units, so it must carry evidence"
+    for ev in evs:
+        p = (target.parent / ev).resolve()
+        assert p.exists(), ev
+        assert p.is_relative_to(target.resolve()), ev
