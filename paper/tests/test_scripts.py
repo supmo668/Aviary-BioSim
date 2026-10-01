@@ -354,8 +354,12 @@ def test_science_input_reports_a_mismatch(script, tmp_path, monkeypatch, capsys)
     monkeypatch.setattr(S, "fetch_fresh", lambda a: {"sequence": "MAAAD", "release": "", "release_date": "",
                                                      "http_last_modified": "", "entry_version": ""})
     out = tmp_path / "o.json"
-    assert S.main(["--inputs", str(inputs), "--out", str(out)]) == 0
-    assert json.loads(out.read_text())["match"] is False
+    # QG Q6: a mismatch is labelled so in the file (claims.py then refuses to build on it)
+    # and exits non-zero, like every other runner — not "measured" with exit 0.
+    assert S.main(["--inputs", str(inputs), "--out", str(out)]) == 1
+    d = json.loads(out.read_text())
+    assert d["match"] is False
+    assert d["label"].startswith("MISMATCH")
     assert "MISMATCH" in capsys.readouterr().out
 
 
@@ -684,3 +688,18 @@ def test_science_rerun_records_the_snapshot_revision_of_the_named_model(script, 
     assert f["weights_file"] == "model.safetensors"
     assert f["weights_sha256"] == hashlib.sha256(b"the right weights").hexdigest()
     assert f["weights_bytes"] == len(b"the right weights")
+
+
+@pytest.mark.parametrize("match, per_position, measured", [
+    ({"a": True, "b": True}, True, True),
+    ({"a": True, "b": False}, True, False),
+    ({"a": True, "b": True}, False, False),      # QG Q6: the per-position means are a result too
+])
+def test_science_rerun_labels_measured_only_when_every_comparison_matched(script, match, per_position, measured):
+    """main.tex says every headline value AND all per-position means matched; the label —
+    the field claims.py checks — must require both, or a per-position drift builds green."""
+    S = script("science_rerun")
+    label, rc = S.verdict(match, per_position, "2026-10-01")
+    assert label.startswith("measured (re-run, 2026-10-01)") is measured
+    assert label.startswith("MISMATCH") is (not measured)
+    assert rc == (0 if measured else 1)

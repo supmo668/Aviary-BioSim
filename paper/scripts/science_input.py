@@ -101,10 +101,13 @@ def main(argv=None) -> int:
         "match": H(published_seq) == H(fresh["sequence"]),
         "provenance": P.block(inputs_path=inputs, modules=("requests",)),
     }
+    if not out["match"]:
+        # The file says so itself, and claims.py refuses to build on a MISMATCH label (QG Q6).
+        out["label"] = "MISMATCH — the fresh record differs from the published input; reported"
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(out, indent=2))
     print(("MATCH" if out["match"] else "MISMATCH — flag the coordinator before any prose"), a.out)
-    return 0
+    return 0 if out["match"] else 1
 
 
 if __name__ == "__main__":

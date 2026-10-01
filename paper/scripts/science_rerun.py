@@ -105,6 +105,14 @@ def model_facts(model_id: str) -> dict:
             "weights_sha256": hashlib.sha256(blob.read_bytes()).hexdigest()}
 
 
+def verdict(match: dict, per_position_mean_matches: bool, day: str):
+    """The evidence label and exit code. The paper states that every headline value AND every
+    per-position mean matched; both must hold for the file to call itself measured (QG Q6)."""
+    if all(match.values()) and per_position_mean_matches:
+        return f"measured (re-run, {day})", 0
+    return "MISMATCH — reported; see limitations", 1
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--inputs", required=True, help="ABSOLUTE path to the published run's science/out")
@@ -142,13 +150,12 @@ def main(argv=None) -> int:
                                      "fresh_results_path": str(fresh_path),
                                      "cwd": str(Path.cwd())}),
     }
-    out["label"] = (f"measured (re-run, {out['provenance']['recorded_at'][:10]})"
-                    if all(match.values()) else "MISMATCH — reported; see limitations")
+    out["label"], rc = verdict(match, out["per_position_mean_matches"], out["provenance"]["recorded_at"][:10])
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(out, indent=2))
     print(out["label"], "| headline:", out["headline"]["substitutions"], out["headline"]["cysteine_mean"],
           out["headline"]["other_mean"], out["headline"]["c_peptide_controls"], "| match:", match)
-    return 0 if all(match.values()) else 1
+    return rc
 
 
 if __name__ == "__main__":
