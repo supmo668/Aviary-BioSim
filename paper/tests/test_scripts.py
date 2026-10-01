@@ -657,3 +657,30 @@ def test_every_recipe_command_in_the_evidence_readme_runs_from_the_repo_root():
     assert cited, "the recipe table cites no scripts"
     for path in cited:
         assert (_repo() / path).is_file(), f"{path} does not exist relative to the repository root"
+
+
+def test_science_rerun_records_the_snapshot_revision_of_the_named_model(script, tmp_path, monkeypatch):
+    """QG Q2: the HF cache stores snapshots/<revision>/model.safetensors as a symlink into
+    blobs/. Resolving first recorded the blob directory as the 'revision' and the blob hash
+    as the 'weights_file'; rglob over the whole hub could also hash a different model."""
+    import hashlib
+    S = script("science_rerun")
+    hub = tmp_path / "hub"
+
+    def cache(model_id, rev, content):
+        root = hub / f"models--{model_id.replace('/', '--')}"
+        blob = root / "blobs" / hashlib.sha256(content).hexdigest()
+        blob.parent.mkdir(parents=True)
+        blob.write_bytes(content)
+        snap = root / "snapshots" / rev
+        snap.mkdir(parents=True)
+        (snap / "model.safetensors").symlink_to(blob)
+
+    cache("aaa/other-model", "1111111", b"the wrong weights")      # sorts first in the hub
+    cache("facebook/esm2_t33_650M_UR50D", "08e4846e", b"the right weights")
+    monkeypatch.setenv("HF_HOME", str(tmp_path))
+    f = S.model_facts("facebook/esm2_t33_650M_UR50D")
+    assert f["revision"] == "08e4846e"
+    assert f["weights_file"] == "model.safetensors"
+    assert f["weights_sha256"] == hashlib.sha256(b"the right weights").hexdigest()
+    assert f["weights_bytes"] == len(b"the right weights")

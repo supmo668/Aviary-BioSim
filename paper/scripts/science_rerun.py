@@ -92,14 +92,17 @@ def run_experiment(seed: int) -> Path:
 
 
 def model_facts(model_id: str) -> dict:
-    hub = Path(os.environ["HF_HOME"]) / "hub"
-    weights = sorted(hub.rglob("*.safetensors")) or sorted(hub.rglob("*.bin"))
+    # Only the named model's snapshots: the hub may cache others. The revision and file name
+    # are read from the snapshot path BEFORE resolving — the snapshot entry is a symlink into
+    # blobs/, whose directory and file names are content hashes, not the revision (QG Q2).
+    snaps = Path(os.environ["HF_HOME"]) / "hub" / f"models--{model_id.replace('/', '--')}" / "snapshots"
+    weights = sorted(snaps.glob("*/*.safetensors")) or sorted(snaps.glob("*/*.bin"))
     if not weights:
-        raise SystemExit(f"ERROR: no model weights found under {hub}")
-    w = weights[0].resolve()
+        raise SystemExit(f"ERROR: no weights for {model_id} under {snaps}")
+    w, blob = weights[0], weights[0].resolve()
     return {"model_id": model_id, "revision": w.parent.name,
-            "weights_file": w.name, "weights_bytes": w.stat().st_size,
-            "weights_sha256": hashlib.sha256(w.read_bytes()).hexdigest()}
+            "weights_file": w.name, "weights_bytes": blob.stat().st_size,
+            "weights_sha256": hashlib.sha256(blob.read_bytes()).hexdigest()}
 
 
 def main(argv=None) -> int:
