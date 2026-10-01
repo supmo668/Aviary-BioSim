@@ -1,5 +1,6 @@
 """A7 — the claims-traceability check, on synthetic evidence."""
 import json
+import re
 import sys
 import textwrap
 from pathlib import Path
@@ -229,3 +230,51 @@ def test_the_real_appendix_carries_no_f33_value():
     table = C.claims_table(list(claims.values()))
     for cid in ("accession", "uprelease", "seqsha"):
         assert str(claims[cid]["value"]) not in table.replace(r"\allowbreak{}", "").replace(r"\_", "_"), cid
+
+
+# --- the paper's own text against its claims (QG Q9, Q11, Q14) ---------------------------
+
+def _paper():
+    return Path(__file__).resolve().parents[1]
+
+
+def _kind(label: str) -> str:
+    return re.split(r"[(;]", label)[0].strip()
+
+
+def test_every_label_kind_in_use_is_defined_in_the_paper_and_the_readme():
+    """QG Q9: the paper promised 'one of five labels' while three claims carried a sixth,
+    'recovered record'. Every kind used must be in both legends, and the count must agree."""
+    import yaml as _y
+    kinds = {_kind(c["label"]) for c in _y.safe_load((_paper() / "claims.yaml").read_text())["claims"]}
+    tex = (_paper() / "main.tex").read_text()
+    readme = (_paper() / "README.md").read_text()
+    for k in kinds:
+        assert f"\\emph{{{k}}}" in tex, f"main.tex does not define the label {k!r}"
+        assert f"**{k}**" in readme, f"paper/README.md does not define the label {k!r}"
+    words = {5: "five", 6: "six", 7: "seven"}
+    assert f"one of {words[len(kinds)]} labels" in tex
+
+
+def test_every_c_peptide_control_in_the_evidence_is_cited():
+    """QG Q11: the agent probed five C-peptide positions; the paper printed three, with no
+    recorded rule for which. Every control the evidence holds must be a cited claim."""
+    import yaml as _y
+    sci = json.loads((_paper() / "evidence" / "science.json").read_text())
+    claims = _y.safe_load((_paper() / "claims.yaml").read_text())["claims"]
+    by_source = {c["source"]: c["id"] for c in claims}
+    tex = (_paper() / "main.tex").read_text()
+    for pos in sci["headline"]["c_peptide_controls"]:
+        src = f"science.json:headline.c_peptide_controls.{pos}"
+        assert src in by_source, f"no claim for the control at position {pos}"
+        assert f"\\claim{by_source[src]}{{}}" in tex, f"control at {pos} is not cited in main.tex"
+
+
+def test_the_readme_gives_the_referee_configuration_the_paper_points_to():
+    """QG Q14: main.tex sends readers to the README for the configuration key and the
+    referee command; it had neither."""
+    readme = (_paper() / "README.md").read_text()
+    rr = (_paper() / "scripts" / "record_referee.py").read_text()
+    cmd = re.search(r'REFEREE_COMMAND = "([^"]+)"', rr).group(1)
+    assert "tests.referee_command" in readme
+    assert cmd in readme

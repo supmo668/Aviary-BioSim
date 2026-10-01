@@ -16,8 +16,23 @@ a value disagrees, or a claim that was only *reported* is phrased as *measured*.
 | **reported** | taken from the published run's artifact, not re-derived |
 | **documented** | a taxonomy row that cites its source |
 | **queried** | an external store answered on the date given |
+| **recovered record** | a copy found after the fact; checked for consistency against history, its time of writing not established |
 
-A label is a field inside the evidence file, not prose around it.
+A label is a field inside the evidence file, not prose around it. `claims.py` refuses a claim whose
+label the evidence file does not itself carry, and any file labelled `NOT …` or `MISMATCH …`.
+
+## The sealed-suite referee
+
+The sealed suite is re-run by the plugin's `referee`, which resolves its command from the project
+configuration key `tests.referee_command` (per module: `tests.referee_command_<module>`, read first).
+For this paper the key was `tests.referee_command_aviary-biosim`, set in the parent repository's
+`agency.yaml`, to
+
+```
+sh paper/scripts/sealed_suite_results.sh
+```
+
+The script's exit-code contract is in its header; `paper/scripts/record_referee.py` records the run.
 
 ## Files
 

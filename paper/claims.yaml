@@ -18,6 +18,8 @@ claims:
   - {id: ctrlA, value: 1.53, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.62", text: "C-peptide control, position 62 to alanine"}
   - {id: ctrlB, value: 1.08, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.79", text: "C-peptide control, position 79 to alanine"}
   - {id: ctrlC, value: -0.1, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.83", text: "C-peptide control, position 83 to alanine"}
+  - {id: ctrlD, value: 0.18, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.70", text: "C-peptide control, position 70 (scan's alanine score)"}
+  - {id: ctrlE, value: 0.17, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.72", text: "C-peptide control, position 72 (scan's alanine score)"}
   - {id: rerunsec, value: 9.6, label: "measured (re-run, 2026-09-26)", source: "science.json:runtime_s", text: "seconds for the re-run scan"}
   - {id: pubsec, value: 7.3, label: "reported", source: "science.json:published_runtime_s", text: "seconds the published run reported"}
   - {id: weightsgb, value: 2609506392, label: "measured (re-run, 2026-09-26)", source: "science.json:weights_bytes", text: "bytes of model weights, digest recorded"}
@@ -25,6 +27,7 @@ claims:
   - {id: meas, value: 66, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:measurements", text: "measurements the agent chose"}
   - {id: rounds, value: 5, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:rounds", text: "rounds"}
   - {id: tokens, value: 15115, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:completion_tokens_total", text: "completion tokens across the rounds that recorded a count"}
+  - {id: notokens, value: 1, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:rounds_without_a_token_count", text: "rounds that recorded no token count"}
   - {id: positions, value: 34, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:distinct_positions", text: "distinct positions measured"}
   - {id: traceroots, value: 1, label: "queried (2026-09-26)", source: "weave-count.json:run_discovery_root_traces", text: "root trace of the discovery run in the trace store"}
   - {id: tracetotal, value: 36, label: "queried (2026-09-26)", source: "weave-count.json:project_total", text: "traces in the project"}
