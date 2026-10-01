@@ -15,10 +15,26 @@ finally:
     sys.path[:] = sys_path_saved
 
 
+def _label_for(name, claims):
+    """The label a synthetic evidence file carries when a test does not set one: the
+    strongest label any claim citing it uses (a claim may only ever DOWNGRADE to reported)."""
+    labels = [c["label"] for c in claims if c["source"].split(":")[0] == name]
+    strong = [l for l in labels if not l.startswith("reported")]
+    return (strong or labels or ["measured"])[0]
+
+
 def setup(tmp_path, claims, tex, evidence):
     (tmp_path / "evidence").mkdir()
     for name, body in evidence.items():
-        (tmp_path / "evidence" / name).write_text(json.dumps(body) if not name.endswith(".csv") else body)
+        if name.endswith(".csv"):
+            (tmp_path / "evidence" / name).write_text(body)
+            side = (tmp_path / "evidence" / name).with_suffix(".provenance.json")
+            if not side.exists():
+                side.write_text(json.dumps({"label": _label_for(name, claims)}))
+            continue
+        if isinstance(body, dict) and "label" not in body:
+            body = {"label": _label_for(name, claims), **body}
+        (tmp_path / "evidence" / name).write_text(json.dumps(body))
     (tmp_path / "claims.yaml").write_text(yaml.safe_dump({"claims": claims}))
     if tex is not None:
         (tmp_path / "main.tex").write_text(textwrap.dedent(tex))
@@ -142,3 +158,49 @@ def test_a_long_string_claim_can_wrap_in_the_appendix_table(tmp_path):
     assert r"\allowbreak" in row and row.replace(r"\allowbreak{}", "").count(digest) == 1
     assert r"\allowbreak" not in next(l for l in table.splitlines() if l.startswith(r"\texttt{rel}"))
     assert digest in (root / "claims.tex").read_text(), "the text macro carries the digest unbroken"
+
+
+# --- QG Q4: a claim's label is checked against the evidence file's own label ------------
+
+@pytest.mark.parametrize("ev_label", ["MISMATCH — reported; see limitations",
+                                      "NOT MEASURED — the referee did not produce a passing verdict",
+                                      "NOT GREEN — a suite failed"])
+def test_fails_when_the_evidence_says_it_did_not_pass(tmp_path, ev_label):
+    """A file whose own label says the run failed must not build, even if its numbers
+    still equal claims.yaml — the paper would print them as measured."""
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "measured (re-run, 2026-09-26)", "source": "e.json:n", "text": ""}],
+        r"\claimn{}", {"e.json": {"label": ev_label, "n": 6}})
+    assert any("evidence label" in e and "e.json" in e for e in C.check(root))
+
+
+def test_fails_when_a_claim_upgrades_its_evidence_label(tmp_path):
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "measured (re-run, 2026-09-26)", "source": "e.json:n", "text": ""}],
+        r"\claimn{}", {"e.json": {"label": "reported (artifact counted, 2026-09-26)", "n": 6}})
+    assert any("evidence label" in e for e in C.check(root))
+
+
+def test_a_claim_may_downgrade_to_reported(tmp_path):
+    """The published run's values sit inside a re-run file: reporting them is honest."""
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "reported", "source": "e.json:published.n", "text": ""}],
+        r"\claimn{}", {"e.json": {"label": "measured (re-run, 2026-09-26)", "published": {"n": 6}}})
+    assert C.check(root) == []
+
+
+def test_fails_when_the_evidence_has_no_label(tmp_path):
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "measured", "source": "e.json:n", "text": ""}],
+        r"\claimn{}", {"e.json": {"label": None, "n": 6}})
+    assert any("no label" in e for e in C.check(root))
+
+
+def test_a_csv_label_comes_from_its_rows_or_its_sidecar(tmp_path):
+    root = setup(tmp_path,
+        [{"id": "r", "value": 2, "label": "documented", "source": "t.csv:rows", "text": ""}],
+        None, {"t.csv": "id,label\n1,\"documented, tested\"\n2,documented\n"})
+    (tmp_path / "evidence" / "t.provenance.json").unlink()
+    assert C.check(root) == []
+    (tmp_path / "evidence" / "t.csv").write_text("id,label\n1,reported\n2,documented\n")
+    assert any("evidence label" in e for e in C.check(root))

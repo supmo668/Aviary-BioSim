@@ -5,8 +5,10 @@
 # ///
 """A7 — every number in the paper maps to a file:field under paper/evidence/ with a label.
 
-Exit 1 on: an unmapped number in main.tex, a missing evidence file, a value mismatch, or a
-claim labelled reported/reconstructed/documented/recovered/queried phrased as measured.
+Exit 1 on: an unmapped number in main.tex, a missing evidence file, a value mismatch, a
+claim whose label is not supported by the evidence file's own label (or whose file says it
+did not pass), or a claim labelled reported/reconstructed/documented/recovered/queried
+phrased as measured.
 Emits claims.tex: one \\newcommand per claim, so the TeX never carries a literal number.
 """
 import json
@@ -27,6 +29,45 @@ MEASURED_WORDS = re.compile(r"\b(measured|we measure|re-run|reran|re-ran)\b", re
 # heading such as \paragraph{The agent's run.} — otherwise a caption and the paragraph
 # after it read as one sentence and every claim in it inherits the caption's wording.
 SENTENCE = re.compile(r"(?<=[.!?])\s+|\n\s*\n|(?<=[.!?]\})\s*")
+
+
+FAILING_LABEL = re.compile(r"^\s*(NOT\b|MISMATCH\b)", re.I)
+
+
+def evidence_labels(root: Path, file: str) -> list:
+    """The label(s) an evidence file gives itself. A JSON file: its top-level `label`. A CSV:
+    its `.provenance.json` sidecar's label, else every row's `label` column."""
+    import csv
+    p = root / "evidence" / file
+    if p.suffix != ".csv":
+        d = json.loads(p.read_text())
+        return [d.get("label") if isinstance(d, dict) else None]
+    side = p.with_suffix(".provenance.json")
+    if side.exists():
+        return [json.loads(side.read_text()).get("label")]
+    with p.open(newline="") as f:
+        return [row.get("label") for row in csv.DictReader(f)] or [None]
+
+
+def label_error(c: dict, labels: list):
+    """Why the claim's label is not supported by its evidence, or None (QG Q4).
+
+    A label is a field inside the evidence file. The claim must say no more than the file:
+    its label is a prefix of the file's own label, or it DOWNGRADES to `reported` (the
+    published run's values held inside a re-run file). A file that labels itself as not
+    having passed (NOT MEASURED, NOT GREEN, MISMATCH) supports no claim at all."""
+    file = c["source"].partition(":")[0]
+    for ev in labels:
+        if not ev:
+            return f"evidence label: {file} has no label (claim {c['id']})"
+        if FAILING_LABEL.match(ev):
+            return f"evidence label: {file} says {ev!r}; claim {c['id']} cannot stand on it"
+    if c["label"].split()[0] == "reported":
+        return None
+    if all(ev.startswith(c["label"]) for ev in labels):
+        return None
+    return (f"evidence label: claim {c['id']} is labelled {c['label']!r} but {file} says "
+            f"{sorted(set(labels))[0]!r}")
 
 
 def resolve(root: Path, source: str):
@@ -116,6 +157,9 @@ def check(root: Path) -> list[str]:
             ok = v == want
         if not ok:
             errs.append(f"mismatch {c['id']}: claims.yaml={want} evidence={v} ({c['source']})")
+        lerr = label_error(c, evidence_labels(root, c["source"].partition(":")[0]))
+        if lerr:
+            errs.append(lerr)
         macros.append(f"\\newcommand{{\\claim{c['id']}}}{{{fmt(want)}}}")
         if c["label"].split()[0] != "measured":
             for sent in re.split(SENTENCE, tex):
