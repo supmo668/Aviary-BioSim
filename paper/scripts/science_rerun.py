@@ -105,8 +105,8 @@ def model_facts(model_id: str) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--inputs", required=True, help="ABSOLUTE path to the published run's science/out")
-    ap.add_argument("--agent-run", default="paper/evidence/agent-run.json")
-    ap.add_argument("--out", default="paper/evidence/science.json")
+    ap.add_argument("--agent-run", default=P.evidence("agent-run.json"))
+    ap.add_argument("--out", default=P.evidence("science.json"))
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
     if "HF_HOME" not in os.environ or "paper/.hf-cache" not in os.environ["HF_HOME"]:

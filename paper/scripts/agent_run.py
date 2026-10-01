@@ -43,9 +43,9 @@ def counts(artifact: dict) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--inputs", required=True, help="ABSOLUTE path to <science/out>/discovery")
-    ap.add_argument("--science", default="paper/evidence/science.json",
+    ap.add_argument("--science", default=P.evidence("science.json"),
                     help="A3c evidence; if present, its control positions are intersected")
-    ap.add_argument("--out", default="paper/evidence/agent-run.json")
+    ap.add_argument("--out", default=P.evidence("agent-run.json"))
     a = ap.parse_args(argv)
     inputs = P.require_inputs(a.inputs)
     path = inputs / "discovery.json"

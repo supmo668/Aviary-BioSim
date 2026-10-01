@@ -552,3 +552,74 @@ def test_publish_manifest_is_complete_and_nothing_deposits():
         assert (paper / a["path"]).exists(), a["path"]
     assert all(v.get("enabled") is False for v in m["venues"].values())
     assert m["manual"]["arxiv"]["prepared_only"] is True
+
+
+# --- QG Q1/Q12: the scripts must not depend on the working directory -------------------
+
+def _repo():
+    import pathlib
+    return pathlib.Path(__file__).resolve().parents[2]
+
+
+def test_drain1_rows_are_the_same_from_any_working_directory(script, monkeypatch):
+    """git pathspecs are cwd-relative: run from paper/, `ls-tree … demo/tests` matched
+    nothing and every sealed_test came back empty with exit 0."""
+    D = script("drain1_from_git")
+    monkeypatch.chdir(_repo() / "paper")
+    rows = D.rows(first="28af3c4", last="2e00aa3")
+    assert len(rows) == 6
+    assert all(r["sealed_test"].startswith("demo/tests/") for r in rows), [r["sealed_test"] for r in rows]
+
+
+def test_drain1_from_git_main_refuses_an_empty_sealed_test(script, monkeypatch, tmp_path, capsys):
+    """A row with no sealed test is a failed reconstruction, not a CSV with a blank column."""
+    D = script("drain1_from_git")
+    real = D.rows
+    monkeypatch.setattr(D, "rows", lambda *a, **k: [dict(r, sealed_test="") for r in real(*a, **k)])
+    assert D.main(["--out", str(tmp_path / "x.csv")]) == 2
+    assert not (tmp_path / "x.csv").exists()
+    assert "sealed_test" in capsys.readouterr().err
+
+
+def test_run_state_check_is_the_same_from_any_working_directory(script, monkeypatch):
+    """`git log -- .v2r/` from paper/ checks paper/.v2r/ — 'never tracked' by accident."""
+    R = script("drain1_record_check")
+    monkeypatch.chdir(_repo())
+    at_root = R.run_state_ever_tracked()
+    monkeypatch.chdir(_repo() / "paper")
+    assert R.run_state_ever_tracked() == at_root
+    # and the probe is live: a directory that IS tracked is reported as tracked from paper/
+    assert R.run_state_ever_tracked("paper/evidence") is True
+
+
+def test_every_default_output_lands_under_the_repository(script, monkeypatch):
+    """Defaults were root-relative strings; from paper/ they wrote paper/paper/evidence/."""
+    import argparse
+    monkeypatch.chdir(_repo() / "paper")
+    evidence = (_repo() / "paper" / "evidence").resolve()
+    for name in ("drain1_from_git", "drain1_record_check", "record_referee", "science_input",
+                 "science_rerun", "agent_run", "plugin_tests", "repo_tests", "taxonomy_check"):
+        mod = script(name)
+        seen = {}
+        orig = argparse.ArgumentParser.parse_args
+
+        def grab(self, args=None, namespace=None, _seen=seen, _orig=orig):
+            for act in self._actions:
+                if act.dest in ("out", "copy_to", "agent_run", "science", "csv") and act.default:
+                    _seen[act.dest] = act.default
+            raise SystemExit(0)
+        monkeypatch.setattr(argparse.ArgumentParser, "parse_args", grab)
+        try:
+            mod.main([])
+        except SystemExit:
+            pass
+        monkeypatch.setattr(argparse.ArgumentParser, "parse_args", orig)
+        assert seen, name
+        for dest, default in seen.items():
+            p = pathlib_resolve(default)
+            assert p.is_relative_to(evidence), f"{name} --{dest} default {default!r} -> {p}"
+
+
+def pathlib_resolve(p):
+    import pathlib
+    return pathlib.Path(p).resolve()

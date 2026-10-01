@@ -80,7 +80,7 @@ def published_record(inputs: Path) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--inputs", required=True, help="ABSOLUTE path to the published run's science/out")
-    ap.add_argument("--out", default="paper/evidence/science-input.json")
+    ap.add_argument("--out", default=P.evidence("science-input.json"))
     a = ap.parse_args(argv)
     inputs = P.require_inputs(a.inputs)
     rec = published_record(inputs)

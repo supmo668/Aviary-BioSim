@@ -35,7 +35,7 @@ def guard(evidence: str) -> Path:
 
 
 def sha() -> str:
-    return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+    return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True, cwd=PAPER.parent).strip()
 
 
 def footer(fig, source: str):

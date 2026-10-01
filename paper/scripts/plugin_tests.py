@@ -44,7 +44,7 @@ def main(argv=None) -> int:
     ap.add_argument("--plugin-repo", required=True, help="ABSOLUTE path to the plugin git repository")
     ap.add_argument("--tag", default="v0.64.0")
     ap.add_argument("--suites", nargs="*", default=DEFAULT_SUITES)
-    ap.add_argument("--out", default="paper/evidence/plugin-tests.json")
+    ap.add_argument("--out", default=P.evidence("plugin-tests.json"))
     a = ap.parse_args(argv)
     repo = P.require_inputs(a.plugin_repo)
     commit = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "--short", a.tag], text=True).strip()

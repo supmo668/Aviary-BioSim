@@ -50,7 +50,7 @@ def mtime(p: Path) -> str:
 
 def run_state_ever_tracked(dirname: str = ".v2r") -> bool:
     log = subprocess.run(["git", "log", "--all", "--oneline", "--", f"{dirname}/"],
-                         capture_output=True, text=True).stdout.strip()
+                         capture_output=True, text=True, cwd=P.REPO).stdout.strip()
     return bool(log)
 
 
@@ -58,8 +58,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--record", required=True, help="ABSOLUTE path to the recovered .v2r directory")
     ap.add_argument("--register", default=DEFAULT_REGISTER, help="the register tool with verify-record")
-    ap.add_argument("--out", default="paper/evidence/drain1-record-check.json")
-    ap.add_argument("--copy-to", default="paper/evidence/candidate-record")
+    ap.add_argument("--out", default=P.evidence("drain1-record-check.json"))
+    ap.add_argument("--copy-to", default=P.evidence("candidate-record"))
     ap.add_argument("--first", default=D.FIRST)
     ap.add_argument("--last", default=D.LAST)
     a = ap.parse_args(argv)

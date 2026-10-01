@@ -25,7 +25,7 @@ FIRST, LAST = "28af3c4", "2e00aa3"
 
 
 def _git(*args: str) -> str:
-    return subprocess.check_output(["git", *args], text=True)
+    return subprocess.check_output(["git", *args], text=True, cwd=P.REPO)
 
 
 def rows(first: str = FIRST, last: str = LAST) -> list[dict]:
@@ -48,13 +48,18 @@ def rows(first: str = FIRST, last: str = LAST) -> list[dict]:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="paper/evidence/drain1-from-git.csv")
+    ap.add_argument("--out", default=P.evidence("drain1-from-git.csv"))
     ap.add_argument("--first", default=FIRST)
     ap.add_argument("--last", default=LAST)
     a = ap.parse_args(argv)
     r = rows(a.first, a.last)
     if not r:
         print(f"ERROR: no close commits matched in {a.first}^..{a.last}", file=sys.stderr)
+        return 2
+    blank = [x["unit"] for x in r if not x["sealed_test"]]
+    if blank:
+        print(f"ERROR: no sealed_test found for {', '.join(blank)} — the reconstruction "
+              "failed; nothing written", file=sys.stderr)
         return 2
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)

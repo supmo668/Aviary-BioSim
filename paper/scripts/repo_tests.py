@@ -49,7 +49,7 @@ def run(cmd: list[str]) -> dict:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="paper/evidence/repo-tests.json")
+    ap.add_argument("--out", default=P.evidence("repo-tests.json"))
     ap.add_argument("--no-mutants", action="store_true")
     a = ap.parse_args(argv)
     suites = {name: run(cmd) for name, cmd in SUITES.items()}

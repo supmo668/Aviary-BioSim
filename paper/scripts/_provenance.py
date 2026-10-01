@@ -16,9 +16,19 @@ from pathlib import Path
 
 LAST_ERROR = ""
 
+# Every git call and every default path is anchored here, never to the working
+# directory: a git pathspec is cwd-relative, so run from paper/ a reconstruction
+# silently matched nothing (QG Q1).
+REPO = Path(__file__).resolve().parents[2]
+
+
+def evidence(name: str) -> str:
+    """The default location of an evidence file, independent of the working directory."""
+    return str(REPO / "paper" / "evidence" / name)
+
 
 def git_sha() -> str:
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=REPO).strip()
 
 
 def versions(*modules: str) -> dict:

@@ -50,7 +50,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--referee", required=True, help="path to tools/referee")
     ap.add_argument("--commit", default="2e00aa3")
-    ap.add_argument("--out", default="paper/evidence/drain1-rerun.json")
+    ap.add_argument("--out", default=P.evidence("drain1-rerun.json"))
     ap.add_argument("--sign", action="store_true")
     a = ap.parse_args(argv)
     cmd = [a.referee, "run"] + (["--sign"] if a.sign else [])
@@ -58,7 +58,7 @@ def main(argv=None) -> int:
     coarse = coarse_from(r.stdout)
     ran = coarse is not None and int(coarse.get("total", 0)) > 0
     clean = ran and int(coarse.get("failed", 0)) == 0 and int(coarse.get("skipped", 0)) == 0
-    branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
+    branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, cwd=P.REPO).stdout.strip()
     prov = P.block(inputs_path=None, extra={
         "referee_command": REFEREE_COMMAND, "referee_argv": cmd,
         # The referee resolves the command from the tree it is run in: record where.

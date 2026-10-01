@@ -55,7 +55,7 @@ def check(csv_path: Path, plugin_root: Path | None) -> tuple[list[str], dict]:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--csv", default="paper/evidence/taxonomy.csv")
+    ap.add_argument("--csv", default=str(REPO / "paper" / "evidence" / "taxonomy.csv"))
     ap.add_argument("--plugin-root", default=None)
     a = ap.parse_args(argv)
     failures, stats = check(Path(a.csv), Path(a.plugin_root) if a.plugin_root else None)
