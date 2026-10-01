@@ -63,3 +63,18 @@ def test_seeded_records_are_marked_as_fixture(tmp_path):
     for n in (1, 2, 3):
         rec = yaml.safe_load((tmp_path / ".v2r-demo" / f"run-record-{n}.yaml").read_text())
         assert rec["produced_by"] == "dashboard/seed_demo_run.py (FIXTURE — not a run that happened)"
+
+
+@pytest.mark.parametrize("target", [".V2R", ".v2r/sub", "link"])
+def test_refuses_any_spelling_or_descendant_of_the_live_dir(tmp_path, target):
+    """QG Q5: on a case-insensitive filesystem `.V2R` IS `.v2r`; a subdirectory of the live
+    dir or a symlink to it is inside it. Each must be refused and leave the live register intact."""
+    m = load()
+    live = tmp_path / ".v2r"
+    live.mkdir()
+    (live / "register.yaml").write_text("version: 1\n")
+    (tmp_path / "link").symlink_to(live, target_is_directory=True)
+    assert m.main(tmp_path, target=target) == 2
+    assert (live / "register.yaml").read_text() == "version: 1\n"
+    assert not (live / "run-record-1.yaml").exists()
+    assert not (live / "sub").exists()

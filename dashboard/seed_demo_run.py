@@ -14,6 +14,7 @@ happened; a fixture written there is indistinguishable from a real record to eve
 consumer, and this script once overwrote pass 1's own record that way. Point the
 dashboard's path box at `.v2r-demo` to see the fixture.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -57,9 +58,20 @@ DRAINS = [
 ]
 
 
+def _inside_live_dir(root: Path, v2r: Path) -> bool:
+    """True when `v2r` is the live directory or anything under it, by any spelling.
+
+    Compared case-folded: on a case-insensitive filesystem (macOS APFS by default) `.V2R`
+    is `.v2r`. Over-refusing a genuinely distinct `.V2R` on a case-sensitive one is the
+    safe direction."""
+    live = str((root / LIVE_DIR).resolve()).casefold()
+    cand = str(v2r.resolve()).casefold()
+    return cand == live or cand.startswith(live + os.sep)
+
+
 def main(root: Path, target: str = DEFAULT_TARGET) -> int:
     v2r = root / target
-    if v2r.name == LIVE_DIR or v2r.resolve() == (root / LIVE_DIR).resolve():
+    if _inside_live_dir(root, v2r):
         # Refuse whatever is or is not inside: an empty live directory is still the
         # live directory, and the next real pass would inherit the fixture.
         print(f"refusing to write fixture data into the live run-state directory {v2r}; "
