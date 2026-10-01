@@ -56,5 +56,6 @@ prospective; the association between this experiment's protein and its public re
 already published by this repository (the run's own prompt and the submission text), so
 restating it for reproducibility creates no new one. Ruled by the coordinator on
 2026-09-26 (F33), with the principal told so they can override before submission. The
-value appears in the evidence file and the methods only — never in tests, fixtures or
-messages.
+values (identifier, release, digest) are printed in the methods and stored in the evidence
+file only; `claims.yaml` and the generated `claims.tex` carry them to the methods, and they
+are kept out of the appendix table (`table: false`). Never in tests, fixtures or messages.

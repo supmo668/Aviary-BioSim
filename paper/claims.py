@@ -133,6 +133,8 @@ def claims_table(claims: list[dict]) -> str:
              "\\begin{longtable}{@{}lp{2.6cm}p{3.2cm}p{5.6cm}@{}}",
              "\\toprule id & value & label & evidence (file:field) \\\\ \\midrule \\endhead"]
     for c in claims:
+        if c.get("table", True) is False:
+            continue          # a macro, but not an appendix row (F33 scope: methods + evidence only)
         lines.append(f"\\texttt{{{_tex(c['id'])}}} & {_cell(c['value'])} & {_tex(c['label'])} & "
                      f"\\texttt{{{_tex(c['source'])}}} \\\\")
     lines += ["\\bottomrule", "\\end{longtable}", ""]

@@ -9,10 +9,12 @@ claims:
   - {id: othermeanall, value: -5.53, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.other_mean", text: "mean score at every other residue including the signal peptide"}
   - {id: matsubs, value: 1634, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.n_substitutions_mature", text: "substitutions in the mature protein"}
   - {id: seqlen, value: 110, label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:published.length", text: "residues in the input sequence"}
-  # F33 (confirmed 2026-09-28): identifier, release and digest published here and in evidence/ only
-  - {id: accession, value: "P01308", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:identifier", text: "UniProt accession of the input"}
-  - {id: uprelease, value: "2026_03", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:fresh.release", text: "UniProt release the input was fetched from"}
-  - {id: seqsha, value: "99603f8fb1e9872e2d24ee1e9f85108c2bddea6b148a0f1099e16ba2715c8263", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:fresh.sequence_sha256", text: "SHA-256 of the input sequence"}
+  # F33 (confirmed 2026-09-28): identifier, release and digest are printed in the methods and
+  # stored in evidence/ only. This file and the generated claims.tex carry them to the methods;
+  # `table: false` keeps them out of the appendix table.
+  - {id: accession, table: false, value: "P01308", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:identifier", text: "UniProt accession of the input"}
+  - {id: uprelease, table: false, value: "2026_03", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:fresh.release", text: "UniProt release the input was fetched from"}
+  - {id: seqsha, table: false, value: "99603f8fb1e9872e2d24ee1e9f85108c2bddea6b148a0f1099e16ba2715c8263", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:fresh.sequence_sha256", text: "SHA-256 of the input sequence"}
   - {id: ctrlA, value: 1.53, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.62", text: "C-peptide control, position 62 to alanine"}
   - {id: ctrlB, value: 1.08, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.79", text: "C-peptide control, position 79 to alanine"}
   - {id: ctrlC, value: -0.1, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.83", text: "C-peptide control, position 83 to alanine"}

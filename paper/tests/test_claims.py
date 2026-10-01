@@ -146,7 +146,7 @@ def test_a_string_claim_is_escaped_for_tex_in_macro_and_table(tmp_path):
 
 def test_a_long_string_claim_can_wrap_in_the_appendix_table(tmp_path):
     # A 64-character digest in a column that cannot wrap runs off the page.
-    digest = "99603f8fb1e9872e2d24ee1e9f85108c2bddea6b148a0f1099e16ba2715c8263"
+    digest = "0123456789abcdef" * 4                      # invented; never a real input's digest
     root = setup(tmp_path,
         [{"id": "sha", "value": digest, "label": "measured", "source": "e.json:s", "text": "t"},
          {"id": "rel", "value": "2026_03", "label": "measured", "source": "e.json:r", "text": "t"}],
@@ -204,3 +204,28 @@ def test_a_csv_label_comes_from_its_rows_or_its_sidecar(tmp_path):
     assert C.check(root) == []
     (tmp_path / "evidence" / "t.csv").write_text("id,label\n1,reported\n2,documented\n")
     assert any("evidence label" in e for e in C.check(root))
+
+
+def test_a_claim_marked_table_false_is_a_macro_but_not_an_appendix_row(tmp_path):
+    """QG Q7: the F33 ruling publishes the input's identifier, release and digest in the
+    methods and the evidence file only; the appendix table reprinted all three."""
+    root = setup(tmp_path,
+        [{"id": "acc", "value": "X00000", "label": "measured", "source": "e.json:a", "text": "t", "table": False},
+         {"id": "n", "value": 6, "label": "measured", "source": "e.json:n", "text": "t"}],
+        r"\claimacc{} \claimn{}", {"e.json": {"a": "X00000", "n": 6}})
+    assert C.check(root) == []
+    assert r"\newcommand{\claimacc}{X00000}" in (root / "claims.tex").read_text()
+    table = (root / "claims-table.tex").read_text()
+    assert "X00000" not in table and r"\texttt{acc}" not in table
+    assert r"\texttt{n}" in table
+
+
+def test_the_real_appendix_carries_no_f33_value():
+    """Whatever the claims say, the generated appendix of THIS paper must not print the
+    published input's identifier, release or digest."""
+    import yaml as _y
+    paper = Path(__file__).resolve().parents[1]
+    claims = {c["id"]: c for c in _y.safe_load((paper / "claims.yaml").read_text())["claims"]}
+    table = C.claims_table(list(claims.values()))
+    for cid in ("accession", "uprelease", "seqsha"):
+        assert str(claims[cid]["value"]) not in table.replace(r"\allowbreak{}", "").replace(r"\_", "_"), cid
