@@ -124,7 +124,8 @@ def test_generates_the_appendix_table(tmp_path):
         None, {"e.json": {"x_y": 2090}})
     assert C.check(root) == []
     table = (root / "claims-table.tex").read_text()
-    assert "longtable" in table and "2,090" in table and "e.json:x\\_y" in table
+    assert "longtable" in table and "2,090" in table
+    assert "e.json:x\\_y" in table.replace(r"\allowbreak{}", "")   # paths may break (Q29)
 
 
 def test_a_heading_or_blank_line_ends_a_sentence(tmp_path):
@@ -157,7 +158,8 @@ def test_a_long_string_claim_can_wrap_in_the_appendix_table(tmp_path):
     assert r"\begin{longtable}{@{}lp{" in table, "the value column must be a wrapping p column"
     row = next(l for l in table.splitlines() if l.startswith(r"\texttt{sha}"))
     assert r"\allowbreak" in row and row.replace(r"\allowbreak{}", "").count(digest) == 1
-    assert r"\allowbreak" not in next(l for l in table.splitlines() if l.startswith(r"\texttt{rel}"))
+    rel_row = next(l for l in table.splitlines() if l.startswith(r"\texttt{rel}"))
+    assert r"\allowbreak" not in rel_row.split("&")[1], "a short VALUE gets no break points"
     assert digest in (root / "claims.tex").read_text(), "the text macro carries the digest unbroken"
 
 
@@ -278,3 +280,17 @@ def test_the_readme_gives_the_referee_configuration_the_paper_points_to():
     cmd = re.search(r'REFEREE_COMMAND = "([^"]+)"', rr).group(1)
     assert "tests.referee_command" in readme
     assert cmd in readme
+
+
+def test_a_long_evidence_path_can_wrap_in_the_appendix_table(tmp_path):
+    """QG Q29: file:field paths in a fixed-width column ran up to 192pt off the page,
+    because \\texttt never breaks a word. Break points go after / . and : only."""
+    src = "repo-tests.json:suites..claude/skills/v2r-loop/scripts/tests.passed"
+    root = setup(tmp_path, [{"id": "n", "value": 1, "label": "measured", "source": src, "text": "t"}],
+                 None, {"repo-tests.json": {"suites": {".claude/skills/v2r-loop/scripts/tests": {"passed": 1}}}})
+    assert C.check(root) == []
+    row = next(l for l in (root / "claims-table.tex").read_text().splitlines() if l.startswith(r"\texttt{n}"))
+    cell = row.split("&")[3]
+    assert cell.count(r"\allowbreak{}") >= 5
+    flat = cell.replace(r"\allowbreak{}", "").replace(r"\mbox{-}", "-")
+    assert "repo-tests.json:suites..claude/skills/v2r-loop/scripts/tests.passed" in flat
