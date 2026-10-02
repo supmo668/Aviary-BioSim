@@ -49,7 +49,7 @@ Run every command below **from the repository root**. The scripts anchor their g
 | `weave-count.json` | A4 | queried | recorded by hand from the trace store's count query on the day | 2026-09-26 |
 | `taxonomy.csv` | A5 | documented | hand-authored; checked by `paper/scripts/taxonomy_check.py --plugin-root <plugin checkout>` | 2026-09-26 |
 | `plugin-tests.json` | A6 | measured (re-run) | `paper/scripts/plugin_tests.py --plugin-repo <plugin checkout> --tag v0.64.0` | 2026-09-26 |
-| `repo-tests.json` | — | measured (re-run) | `paper/scripts/repo_tests.py` (this repository's suites and the full mutant sweep) | 2026-09-30 |
+| `repo-tests.json` | — | measured (re-run) | `paper/scripts/repo_tests.py` (this repository's suites and the full mutant sweep) | 2026-10-02 |
 | `candidate-record/` | A2b | copies | written by `paper/scripts/drain1_record_check.py`; digests in `drain1-record-check.json` | 2026-09-26 |
 
 The **evidence-location rule** applies to every script that reads the published run: it
