@@ -19,11 +19,12 @@
   "provenance": {
     "git_sha": "3c75410f2889d5a6f7654678956789c37b19395e",
     "recorded_at": "2026-09-26T21:25:29Z",
-    "inputs_path": "/Users/mo/github/personal/bioFM/projects/aviary-biosim/science/out",
+    "inputs_path": "~/github/personal/bioFM/projects/aviary-biosim/science/out",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "versions": {
       "requests": "2.34.2"
-    }
+    },
+    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06): <repo>/ for this checkout, ~/ for the home directory; every other value is as the script wrote it"
   }
 }

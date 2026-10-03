@@ -41,6 +41,28 @@ def versions(*modules: str) -> dict:
     return out
 
 
+HOME = Path.home().resolve()
+
+
+def redact(value):
+    """Absolute paths made publishable: a path inside this repository becomes `<repo>/…`,
+    one under the home directory becomes `~/…`. Applied to every string an evidence file
+    carries, recursively; numbers, digests and labels are untouched. The repository is
+    public and its evidence recorded the machine's username and directory layout (QG F06)."""
+    if isinstance(value, str):
+        repo, home = str(REPO), str(HOME)
+        if value.startswith(repo + "/") or value == repo:
+            return "<repo>" + value[len(repo):]
+        if value.startswith(home + "/") or value == home:
+            return "~" + value[len(home):]
+        return value.replace(repo + "/", "<repo>/").replace(home + "/", "~/")
+    if isinstance(value, dict):
+        return {k: redact(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [redact(v) for v in value]
+    return value
+
+
 def block(inputs_path: str | Path | None, extra: dict | None = None,
           modules: tuple[str, ...] = ()) -> dict:
     b = {
@@ -53,7 +75,7 @@ def block(inputs_path: str | Path | None, extra: dict | None = None,
         "versions": versions(*modules),
     }
     b.update(extra or {})
-    return b
+    return redact(b)
 
 
 def require_inputs(path: str | Path) -> Path:

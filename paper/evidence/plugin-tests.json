@@ -60,11 +60,12 @@
   "provenance": {
     "git_sha": "8c01aa5e43122461b0b37a23a4c134777e95088c",
     "recorded_at": "2026-09-26T21:30:55Z",
-    "inputs_path": "/Users/mo/github/aiadlc",
+    "inputs_path": "~/github/aiadlc",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "versions": {},
     "tag": "v0.64.0",
-    "scratch_worktree": true
+    "scratch_worktree": true,
+    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06): <repo>/ for this checkout, ~/ for the home directory; every other value is as the script wrote it"
   }
 }

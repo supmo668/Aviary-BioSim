@@ -99,6 +99,7 @@ def main(argv=None) -> int:
         "provenance": prov,
     }
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    out = P.redact(out)                  # the referee's own output names paths too (QG F06)
     Path(a.out).write_text(json.dumps(out, indent=2))
     print(label, a.out)
     return 0 if clean and r.returncode == 0 else 2

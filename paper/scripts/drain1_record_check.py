@@ -147,6 +147,7 @@ def main(argv=None) -> int:
                               extra={"range": f"{a.first}^..{a.last}"}),
     }
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    out = P.redact(out)                  # candidate, tool, output_tail, copied_to are paths too (QG F06)
     Path(a.out).write_text(json.dumps(out, indent=2))
     print(out["label"], "->", a.out)
     return 0

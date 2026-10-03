@@ -194,7 +194,7 @@
   "provenance": {
     "git_sha": "47afb557978a86a7c24be06935077f050a692019",
     "recorded_at": "2026-09-26T21:32:54Z",
-    "inputs_path": "/Users/mo/github/personal/bioFM/projects/aviary-biosim/science/out",
+    "inputs_path": "~/github/personal/bioFM/projects/aviary-biosim/science/out",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "versions": {
@@ -204,9 +204,9 @@
       "requests": "2.34.2"
     },
     "uv": "uv 0.11.16 (Homebrew 2026-05-21 aarch64-apple-darwin)",
-    "hf_home": "/Users/mo/github/personal/bioFM/worktrees/aviary-biosim-272-scratch/paper/.hf-cache",
-    "fresh_results_path": "/Users/mo/github/personal/bioFM/worktrees/aviary-biosim-272-scratch/science/out/esm/results.json",
-    "cwd": "/Users/mo/github/personal/bioFM/worktrees/aviary-biosim-272-scratch",
+    "hf_home": "<repo>/paper/.hf-cache",
+    "fresh_results_path": "<repo>/science/out/esm/results.json",
+    "cwd": "<repo>",
     "model_facts_corrected": {
       "on": "2026-10-01T21:35:20Z",
       "why": "QG Q2: the 2026-09-26 run resolved the HF snapshot symlink before naming it, recording the blob directory and blob hash as revision and weights_file. Recomputed by the fixed model_facts() against the same cache; weights_bytes and weights_sha256 unchanged (asserted), so no measured value moved.",
@@ -214,6 +214,7 @@
         "revision": "65",
         "weights_file": "654e18b2ed8da68ca30034bee605bf68217b6aee368daa3b009694d209a3a339"
       }
-    }
+    },
+    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06): <repo>/ for this checkout, ~/ for the home directory; every other value is as the script wrote it"
   }
 }

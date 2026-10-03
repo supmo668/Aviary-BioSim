@@ -26,6 +26,39 @@ def test_provenance_block_records_versions_and_says_when_a_module_is_absent(prov
     assert blk["versions"]["module_that_does_not_exist_xq"].startswith("not importable")
 
 
+def test_provenance_block_publishes_no_home_or_checkout_path(prov):
+    """QG F06: the repository is public and its evidence recorded the machine's username
+    and directory layout through inputs_path, cwd and every extra. A path inside the
+    repository becomes <repo>/…, one under the home directory ~/…; nothing else changes."""
+    from pathlib import Path
+    home, repo = str(Path.home().resolve()), str(prov.REPO)
+    blk = prov.block(inputs_path=f"{repo}/science/out",
+                     extra={"cwd": repo, "hf_home": f"{home}/.cache/hf", "argv": [f"{home}/bin/tool", "run"],
+                            "tail": f"UNVERIFIED {home}/x/y.yaml not readable", "seed": 7, "digest": "ab" * 32})
+    assert blk["inputs_path"] == "<repo>/science/out"
+    assert blk["cwd"] == "<repo>"
+    assert blk["hf_home"] == "~/.cache/hf"
+    assert blk["argv"] == ["~/bin/tool", "run"]
+    assert blk["tail"] == "UNVERIFIED ~/x/y.yaml not readable"
+    assert blk["seed"] == 7 and blk["digest"] == "ab" * 32
+    assert home not in json.dumps(blk)
+
+
+def test_committed_evidence_carries_no_home_directory_path():
+    """The files as committed, not only the writers: every evidence file is checked for the
+    machine's home directory and for the common home prefixes."""
+    from pathlib import Path
+    home = str(Path.home().resolve())
+    evidence = Path(__file__).resolve().parents[1] / "evidence"
+    offenders = []
+    for f in sorted(evidence.rglob("*")):
+        if f.is_file() and f.suffix in (".json", ".csv", ".yaml", ".txt"):
+            text = f.read_text(errors="replace")
+            if home in text or "/Users/" in text or "/home/" in text:
+                offenders.append(str(f.relative_to(evidence)))
+    assert offenders == []
+
+
 def test_require_inputs_errors_on_missing_dir_and_names_the_path(prov, tmp_path, capsys):
     missing = tmp_path / "not-there"
     with pytest.raises(SystemExit) as e:
