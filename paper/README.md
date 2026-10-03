@@ -42,7 +42,7 @@ Run every command below **from the repository root**. The scripts anchor their g
 |---|---|---|---|---|
 | `drain1-rerun.json` | A1 | measured (re-run) | `tools/referee run --sign` via `paper/scripts/sealed_suite_results.sh`, recorded by `paper/scripts/record_referee.py --referee <tools/referee> --sign` | 2026-09-26 |
 | `drain1-from-git.csv` | A2 | reconstructed | `paper/scripts/drain1_from_git.py` | 2026-09-26 |
-| `drain1-record-check.json` | A2b | recovered record; pre-claim chain verified; write-time provenance not established | `paper/scripts/drain1_record_check.py --record <absolute path to the recovered .v2r>` | 2026-09-26 |
+| `drain1-record-check.json` | A2b | recovered record; pre-claim chain verified; write-time provenance not established | `paper/scripts/drain1_record_check.py --record <absolute path to the recovered .v2r> --register <plugin checkout>/tools/register` | 2026-09-26 |
 | `science-input.json` | A3a/b | measured (fresh fetch) | `paper/scripts/science_input.py --inputs <absolute path>` | 2026-09-26 |
 | `science.json` | A3c | measured (re-run) — every field matched | `HF_HOME=$PWD/paper/.hf-cache uv run --with torch --with transformers --with requests --with numpy paper/scripts/science_rerun.py --inputs <absolute path>` | 2026-09-26 |
 | `agent-run.json` | A4 | reported (artifact counted) | `paper/scripts/agent_run.py --inputs <absolute path>/discovery` | 2026-09-26 |

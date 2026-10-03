@@ -325,12 +325,36 @@ def _stub_register(tmp_path, exit_code):
     return str(stub)
 
 
-def test_record_check_errors_on_a_missing_record_dir_naming_the_path(script, tmp_path):
+def test_record_check_errors_on_a_missing_record_dir_naming_the_path(script, tmp_path, capsys):
     C = script("drain1_record_check")
     missing = tmp_path / "absent"
     with pytest.raises(SystemExit) as e:
-        C.main(["--record", str(missing), "--out", str(tmp_path / "o.json"), "--copy-to", str(tmp_path / "c")])
+        C.main(["--record", str(missing), "--register", _stub_register(tmp_path, 0),
+                "--out", str(tmp_path / "o.json"), "--copy-to", str(tmp_path / "c")])
     assert e.value.code == 2
+    assert str(missing) in capsys.readouterr().err
+
+
+def test_record_check_requires_the_register_tool_and_names_it_when_absent(script, tmp_path, capsys):
+    """QG F07: --register defaulted to one machine's absolute plugin-cache path; anywhere
+    else the file did not exist, verify-record was silently skipped (ran: false) and the
+    script still exited 0 — a skipped verification indistinguishable from a performed one."""
+    C = script("drain1_record_check")
+    rec = _synthetic_record(tmp_path, script)
+    assert "DEFAULT_REGISTER" not in dir(C), "no machine-specific default may remain"
+    with pytest.raises(SystemExit):                      # argparse: --register is required
+        C.main(["--record", str(rec), "--out", str(tmp_path / "o.json"), "--copy-to", str(tmp_path / "c")])
+    missing = tmp_path / "no-such-register"
+    rc = C.main(["--record", str(rec), "--register", str(missing),
+                 "--out", str(tmp_path / "o.json"), "--copy-to", str(tmp_path / "c")])
+    assert rc == 2
+    assert str(missing) in capsys.readouterr().err
+    assert not (tmp_path / "o.json").exists()
+
+
+def test_record_check_source_carries_no_home_directory_path():
+    src = (REPO / "paper" / "scripts" / "drain1_record_check.py").read_text()
+    assert "/Users/" not in src and "/home/" not in src
 
 
 def test_record_check_verifies_the_chain_and_never_checks_the_test_digest(script, tmp_path):

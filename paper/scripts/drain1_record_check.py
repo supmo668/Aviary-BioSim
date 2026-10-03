@@ -37,9 +37,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 import _provenance as P  # noqa: E402
 import drain1_from_git as D  # noqa: E402
 
-DEFAULT_REGISTER = "/Users/mo/.claude/plugins/cache/aiadlc-plugins/aiadlc/0.69.0/tools/register"
-
-
 def sha256(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
@@ -57,7 +54,8 @@ def run_state_ever_tracked(dirname: str = ".v2r") -> bool:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--record", required=True, help="ABSOLUTE path to the recovered .v2r directory")
-    ap.add_argument("--register", default=DEFAULT_REGISTER, help="the register tool with verify-record")
+    ap.add_argument("--register", required=True,
+                    help="ABSOLUTE path to the plugin's register tool (its verify-record subcommand is run)")
     ap.add_argument("--out", default=P.evidence("drain1-record-check.json"))
     ap.add_argument("--copy-to", default=P.evidence("candidate-record"))
     ap.add_argument("--first", default=D.FIRST)
@@ -65,6 +63,12 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
 
     record = P.require_inputs(a.record)          # exit 2, naming the path, if missing/empty
+    if not Path(a.register).is_file():
+        # The tool used to default to one machine's plugin-cache path; anywhere else it was
+        # absent, verify-record was skipped (ran: false) and the exit code was still 0, so a
+        # skipped verification looked like a performed one (QG F07). Named error, exit 2.
+        print(f"ERROR: --register {a.register} does not exist", file=sys.stderr)
+        return 2
     reg_file, run_file = record / "register.yaml", record / "run-record-1.yaml"
     for f in (reg_file, run_file):
         if not f.exists():
@@ -85,10 +89,8 @@ def main(argv=None) -> int:
         })
     matches = sum(1 for x in units if x["pre_claim_sha_is_parent_of_close"])
 
-    verify = {"tool": a.register, "ran": False, "exit": None, "output_tail": ""}
-    if a.register and Path(a.register).exists():
-        r = subprocess.run([a.register, "verify-record", str(run_file)], capture_output=True, text=True)
-        verify.update(ran=True, exit=r.returncode, output_tail=(r.stdout + r.stderr)[-600:])
+    r = subprocess.run([a.register, "verify-record", str(run_file)], capture_output=True, text=True)
+    verify = {"tool": a.register, "ran": True, "exit": r.returncode, "output_tail": (r.stdout + r.stderr)[-600:]}
     verify["meaning"] = ("exit 0: the record carries the register's provenance stamp and its digest "
                          "matches; exit 3: UNVERIFIED — which the tool itself defines as 'predates "
                          "provenance, or something else wrote it', NOT as forged. A record from the "
