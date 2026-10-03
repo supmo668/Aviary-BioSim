@@ -47,7 +47,14 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=P.evidence("plugin-tests.json"))
     a = ap.parse_args(argv)
     repo = P.require_inputs(a.plugin_repo)
-    commit = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "--short", a.tag], text=True).strip()
+    # <tag>^{commit}: an annotated tag's own id is the tag object, and the claim this feeds
+    # says "plugin commit". An unknown tag is a named error, exit 2, not a traceback (QG F13).
+    r = subprocess.run(["git", "-C", str(repo), "rev-parse", "--short", "--verify", "--end-of-options",
+                        f"{a.tag}^{{commit}}"], capture_output=True, text=True)
+    if r.returncode != 0:
+        print(f"ERROR: tag {a.tag} not found in {repo}: {r.stderr.strip()}", file=sys.stderr)
+        return 2
+    commit = r.stdout.strip()
     with tempfile.TemporaryDirectory(prefix="plugin-suites-") as tmp:
         wt = Path(tmp) / a.tag
         subprocess.run(["git", "-C", str(repo), "worktree", "add", "--detach", str(wt), a.tag],

@@ -490,18 +490,27 @@ def test_plugin_summary_regex_matches_the_libs_own_line(script):
     assert T.parse_summary("2 run, 0 failed\n---\n5 run, 2 failed\n") == (5, 2), "the last one wins"
 
 
+def _plugin_repo(tmp_path, suites: dict, annotated_tag: bool = False):
+    """A throwaway git repository with tests/<name> files and a tag v9.9.9 at its one commit."""
+    import subprocess
+    repo = tmp_path / "plugin"
+    (repo / "tests").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    for name, body in suites.items():
+        (repo / "tests" / name).write_text(body)
+    git = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(git + ["add", "."], check=True)
+    subprocess.run(git + ["commit", "-q", "-m", "x"], check=True)
+    subprocess.run(git + ["tag"] + (["-a", "-m", "release"] if annotated_tag else []) + ["v9.9.9"], check=True)
+    return repo
+
+
 def test_plugin_tests_runs_each_suite_in_a_scratch_worktree_and_removes_it(script, tmp_path):
     T = script("plugin_tests")
-    repo = tmp_path / "plugin"
-    repo.mkdir()
     import subprocess
-    subprocess.run(["git", "init", "-q", str(repo)], check=True)
-    (repo / "tests").mkdir()
-    (repo / "tests" / "good.test.sh").write_text("echo ok\necho ---\necho '2 run, 0 failed'\nexit 0\n")
-    (repo / "tests" / "bad.test.sh").write_text("echo ---\necho '2 run, 1 failed'\nexit 1\n")
-    subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "x"], check=True)
-    subprocess.run(["git", "-C", str(repo), "tag", "v9.9.9"], check=True)
+    repo = _plugin_repo(tmp_path, {
+        "good.test.sh": "echo ok\necho ---\necho '2 run, 0 failed'\nexit 0\n",
+        "bad.test.sh": "echo ---\necho '2 run, 1 failed'\nexit 1\n"})
     out = tmp_path / "o.json"
     rc = T.main(["--plugin-repo", str(repo), "--tag", "v9.9.9", "--suites", "good.test.sh", "bad.test.sh",
                  "--out", str(out)])
@@ -511,6 +520,44 @@ def test_plugin_tests_runs_each_suite_in_a_scratch_worktree_and_removes_it(scrip
     assert d["suites"]["bad.test.sh"]["failed"] == 1 and d["suites"]["bad.test.sh"]["exit"] == 1
     wts = subprocess.run(["git", "-C", str(repo), "worktree", "list"], capture_output=True, text=True).stdout
     assert "v9.9.9" not in wts, "the scratch worktree must be removed afterwards"
+
+
+@pytest.mark.parametrize("body", [
+    "echo started\nexit 0\n",                              # no summary line, exit 0 (stopped early)
+    "echo ---\necho '2 run, 1 failed'\nexit 0\n",          # summary says failed, exit 0
+    "echo ---\necho '2 run, 0 failed'\nexit 1\n",          # summary clean, non-zero exit
+], ids=["no-summary-exit0", "failed-exit0", "clean-exit1"])
+def test_plugin_tests_is_not_green_unless_summary_exit_and_failures_all_agree(script, tmp_path, body):
+    """QG F03: the only failing suite in the test above had failed=1 AND exit=1, so each
+    conjunct of the all-green rule could be deleted alone with the suite still green."""
+    T = script("plugin_tests")
+    repo = _plugin_repo(tmp_path, {"s.test.sh": body})
+    out = tmp_path / "o.json"
+    rc = T.main(["--plugin-repo", str(repo), "--tag", "v9.9.9", "--suites", "s.test.sh", "--out", str(out)])
+    assert rc == 1
+    assert json.loads(out.read_text())["label"].startswith("NOT GREEN")
+
+
+def test_plugin_tests_records_the_commit_behind_an_annotated_tag(script, tmp_path):
+    """The `plugincommit` claim says 'plugin commit'; `rev-parse <tag>` on an annotated tag
+    is the tag object, not the commit."""
+    import subprocess
+    T = script("plugin_tests")
+    repo = _plugin_repo(tmp_path, {"s.test.sh": "echo ---\necho '1 run, 0 failed'\n"}, annotated_tag=True)
+    out = tmp_path / "o.json"
+    assert T.main(["--plugin-repo", str(repo), "--tag", "v9.9.9", "--suites", "s.test.sh", "--out", str(out)]) == 0
+    head = subprocess.run(["git", "-C", str(repo), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    assert json.loads(out.read_text())["commit"] == head
+
+
+def test_plugin_tests_errors_on_an_unknown_tag_naming_it(script, tmp_path, capsys):
+    """QG F13: an unknown --tag raised CalledProcessError out of rev-parse."""
+    T = script("plugin_tests")
+    repo = _plugin_repo(tmp_path, {"s.test.sh": "echo ---\necho '1 run, 0 failed'\n"})
+    out = tmp_path / "o.json"
+    assert T.main(["--plugin-repo", str(repo), "--tag", "v0.0.0-absent", "--suites", "s.test.sh", "--out", str(out)]) == 2
+    assert "v0.0.0-absent" in capsys.readouterr().err
+    assert not out.exists()
 
 
 # --- A5: the taxonomy is machine-checked -------------------------------------------
