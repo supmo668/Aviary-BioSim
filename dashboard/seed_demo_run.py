@@ -14,7 +14,6 @@ happened; a fixture written there is indistinguishable from a real record to eve
 consumer, and this script once overwrote pass 1's own record that way. Point the
 dashboard's path box at `.v2r-demo` to see the fixture.
 """
-import os
 import sys
 from pathlib import Path
 
@@ -58,25 +57,43 @@ DRAINS = [
 ]
 
 
-def _inside_live_dir(root: Path, v2r: Path) -> bool:
-    """True when `v2r` is the live directory or anything under it, by any spelling.
+def _is_live_path(p: Path) -> bool:
+    """True when `p`, resolved, IS a live run-state directory or lies under one — any
+    `.v2r` component, anywhere in the path, not only ROOT's own (QG F05: `ROOT=.v2r
+    --target .` and an absolute --target naming another checkout's `.v2r` both passed a
+    check that only compared against ROOT/.v2r).
 
     Compared case-folded: on a case-insensitive filesystem (macOS APFS by default) `.V2R`
     is `.v2r`. Over-refusing a genuinely distinct `.V2R` on a case-sensitive one is the
     safe direction."""
-    live = str((root / LIVE_DIR).resolve()).casefold()
-    cand = str(v2r.resolve()).casefold()
-    return cand == live or cand.startswith(live + os.sep)
+    return any(part.casefold() == LIVE_DIR for part in p.resolve().parts)
+
+
+# Everything this script writes, relative to the target. Each is checked for a symlink
+# before any write: open("w") and mkdir(exist_ok=True) follow links, so a planted
+# `.v2r-demo/register.yaml -> ../.v2r/register.yaml` redirected the fixture into the
+# live directory with rc 0 (QG F05).
+WRITTEN = ["register.yaml", *(f"run-record-{d}.yaml" for d, *_ in DRAINS),
+           "parked", "parked/U-020.out", "parked/U-023.out"]
+
+
+def _refuse(msg: str) -> int:
+    print(f"refusing to write fixture data: {msg}; use the default {DEFAULT_TARGET}/ "
+          f"or pass another --target", file=sys.stderr)
+    return 2
 
 
 def main(root: Path, target: str = DEFAULT_TARGET) -> int:
     v2r = root / target
-    if _inside_live_dir(root, v2r):
+    if _is_live_path(root) or _is_live_path(v2r):
         # Refuse whatever is or is not inside: an empty live directory is still the
         # live directory, and the next real pass would inherit the fixture.
-        print(f"refusing to write fixture data into the live run-state directory {v2r}; "
-              f"use the default {DEFAULT_TARGET}/ or pass another --target", file=sys.stderr)
-        return 2
+        return _refuse(f"{v2r} is, or lies inside, a live run-state directory ({LIVE_DIR})")
+    if not target or v2r.resolve() == root.resolve():
+        return _refuse(f"--target {target!r} is ROOT itself")
+    links = [rel for rel in WRITTEN if (v2r / rel).is_symlink()]
+    if links:
+        return _refuse(f"{v2r} already holds symlink(s) where this script writes: {', '.join(links)}")
     v2r.mkdir(parents=True, exist_ok=True)
     ceilings = {"max_drains": 3, "max_attempts": 3, "max_wall_clock_s": 21600, "max_spend_usd": 25}
 

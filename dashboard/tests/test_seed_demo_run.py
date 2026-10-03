@@ -80,6 +80,77 @@ def test_refuses_any_spelling_or_descendant_of_the_live_dir(tmp_path, target):
     assert not (live / "sub").exists()
 
 
+def _live(tmp_path):
+    live = tmp_path / ".v2r"
+    live.mkdir()
+    (live / "register.yaml").write_text("version: 1\n")
+    (live / "parked").mkdir()
+    return live
+
+
+def _assert_live_untouched(live):
+    assert (live / "register.yaml").read_text() == "version: 1\n"
+    assert not (live / "run-record-1.yaml").exists()
+    assert list((live / "parked").iterdir()) == []
+    assert not (live / ".v2r-demo").exists()
+
+
+def test_refuses_a_root_that_is_or_lies_inside_the_live_dir(tmp_path, capsys):
+    """QG F05(b): the guard compared ROOT/target against ROOT/.v2r only, so ROOT=.v2r with
+    --target . overwrote the live register, and the default target wrote .v2r/.v2r-demo/."""
+    m = load()
+    live = _live(tmp_path)
+    assert m.main(live, target=".") == 2
+    assert m.main(live) == 2
+    assert m.main(live / "parked", target="x") == 2
+    _assert_live_untouched(live)
+    assert ".v2r" in capsys.readouterr().err
+
+
+def test_refuses_an_absolute_target_that_is_a_live_dir_elsewhere(tmp_path):
+    """QG F05(c): a live directory outside ROOT is still a live directory."""
+    m = load()
+    other = tmp_path / "other"
+    other.mkdir()
+    live = _live(other)
+    root = tmp_path / "root"
+    root.mkdir()
+    assert m.main(root, target=str(live)) == 2
+    assert m.main(root, target="../other/.v2r") == 2
+    _assert_live_untouched(live)
+
+
+@pytest.mark.parametrize("link", ["register.yaml", "parked", "run-record-1.yaml"])
+def test_refuses_to_write_through_a_symlink_inside_the_target(tmp_path, link):
+    """QG F05(d): open("w") and mkdir(exist_ok=True) follow symlinks; a planted link inside
+    .v2r-demo/ redirected the fixture into the live directory with rc 0."""
+    m = load()
+    live = _live(tmp_path)
+    demo = tmp_path / ".v2r-demo"
+    demo.mkdir()
+    (demo / link).symlink_to(live / link, target_is_directory=(link == "parked"))
+    assert m.main(tmp_path) == 2
+    _assert_live_untouched(live)
+
+
+@pytest.mark.parametrize("target", ["", "."])
+def test_refuses_an_empty_target_that_would_write_into_root(tmp_path, target):
+    m = load()
+    assert m.main(tmp_path, target=target) == 2
+    assert not (tmp_path / "register.yaml").exists()
+
+
+def test_cli_target_flag_reaches_main(tmp_path):
+    import subprocess, sys as _sys
+    r = subprocess.run([_sys.executable, "-B", str(SEEDER), str(tmp_path), "--target", "demo2"],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert (tmp_path / "demo2" / "register.yaml").exists()
+    r = subprocess.run([_sys.executable, "-B", str(SEEDER), str(tmp_path), "--target", ".v2r"],
+                       capture_output=True, text=True)
+    assert r.returncode == 2 and ".v2r" in r.stderr
+
+
 def test_fixture_evidence_resolves_inside_the_fixture_dir_and_the_register_is_marked(tmp_path):
     """QG Q28: the dashboard resolves a unit's evidence against the run dir's parent, so a
     fixture pointing at `.v2r/parked/...` shows live evidence (or none) under a fixture.
