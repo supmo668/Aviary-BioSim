@@ -39,6 +39,13 @@ def coarse_from(stdout: str):
     return None
 
 
+def _count(coarse: dict, key: str) -> int:
+    """A verdict count; a missing field is 0, a null one is -1 so it can never read as
+    clean (`int(None)` was a TypeError and no evidence file got written)."""
+    v = coarse.get(key, 0)
+    return -1 if v is None else int(v)
+
+
 def receipt_hash_from(text: str):
     """The Hash E the referee reports when it signs, or None."""
     import re
@@ -53,14 +60,22 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=P.evidence("drain1-rerun.json"))
     ap.add_argument("--sign", action="store_true")
     a = ap.parse_args(argv)
+    if not Path(a.referee).is_file():
+        # Named error, exit 2 — not a FileNotFoundError traceback out of subprocess (QG F13).
+        print(f"ERROR: --referee {a.referee} does not exist", file=sys.stderr)
+        return 2
     cmd = [a.referee, "run"] + (["--sign"] if a.sign else [])
     # The suite runs over the commit this evidence names: the referee command reads
     # DRAIN1_END_COMMIT, so --commit is passed through rather than merely recorded (QG Q19).
     env = {**os.environ, "DRAIN1_END_COMMIT": a.commit}
     r = subprocess.run(cmd, capture_output=True, text=True, env=env)
     coarse = coarse_from(r.stdout)
-    ran = coarse is not None and int(coarse.get("total", 0)) > 0
-    clean = ran and int(coarse.get("failed", 0)) == 0 and int(coarse.get("skipped", 0)) == 0
+    ran = coarse is not None and _count(coarse, "total") > 0
+    # Every field the referee's coarse verdict carries must be clean: a failure, a skip,
+    # a result the PLAN did not account for, or a PLAN error — any one of them, even
+    # with exit 0, is not a passing verdict (QG F09).
+    clean = (ran and _count(coarse, "failed") == 0 and _count(coarse, "skipped") == 0
+             and _count(coarse, "unaccounted") == 0 and not coarse.get("plan_error"))
     branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, cwd=P.REPO).stdout.strip()
     prov = P.block(inputs_path=None, extra={
         "referee_command": REFEREE_COMMAND, "referee_argv": cmd,

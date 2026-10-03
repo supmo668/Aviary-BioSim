@@ -174,7 +174,15 @@ def test_recorder_labels_measured_only_on_a_clean_verdict(script, tmp_path):
     ("not json at all", 0),                                        # unreadable
     ('{"total":6,"passed":6,"failed":0,"skipped":0}', 1),         # clean JSON, nonzero exit (QG Q24)
     ('{"total":0,"passed":0,"failed":0,"skipped":0}', 0),         # zero tests ran (QG Q24)
-], ids=["no-results", "failed", "skipped", "unreadable", "clean-json-nonzero-exit", "zero-tests"])
+    # QG F09: each verdict field alone, with the referee exiting 0 — every failing case
+    # above also exits non-zero, so the field checks could be deleted unnoticed.
+    ('{"total":6,"passed":5,"failed":1,"skipped":0}', 0),
+    ('{"total":6,"passed":5,"failed":0,"skipped":1}', 0),
+    ('{"total":6,"passed":5,"failed":0,"skipped":0,"unaccounted":1}', 0),
+    ('{"total":6,"passed":6,"failed":0,"skipped":0,"plan_error":"PLAN 7 but 6 results"}', 0),
+    ('{"total":null,"passed":null,"failed":null,"skipped":null}', 0),
+], ids=["no-results", "failed", "skipped", "unreadable", "clean-json-nonzero-exit", "zero-tests",
+        "failed-exit0", "skipped-exit0", "unaccounted-exit0", "plan-error-exit0", "null-total"])
 def test_recorder_records_not_measured_and_exits_2_otherwise(script, tmp_path, stdout, code):
     R = script("record_referee")
     out = tmp_path / "drain1-rerun.json"
@@ -182,6 +190,17 @@ def test_recorder_records_not_measured_and_exits_2_otherwise(script, tmp_path, s
     d = json.loads(out.read_text())
     assert d["label"].startswith("NOT MEASURED")
     assert d["referee_exit"] == code
+
+
+def test_recorder_errors_on_a_missing_referee_naming_the_path(script, tmp_path, capsys):
+    """QG F13: a mistyped --referee raised FileNotFoundError out of subprocess.run — a
+    traceback, nothing written — instead of exit 2 naming the path."""
+    R = script("record_referee")
+    out = tmp_path / "drain1-rerun.json"
+    missing = tmp_path / "no-such-referee"
+    assert R.main(["--referee", str(missing), "--out", str(out)]) == 2
+    assert str(missing) in capsys.readouterr().err
+    assert not out.exists()
 
 
 def test_recorder_runs_the_suite_over_the_commit_it_records(script, tmp_path, monkeypatch):
