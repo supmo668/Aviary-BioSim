@@ -18,7 +18,11 @@ from pathlib import Path
 
 import yaml
 
-NUMBER = re.compile(r"(?<![\w\\{.-])-?\d[\d,]*(?:\.\d+)?(?![\w}])")
+# Braces are NOT excluded: macro arguments that legitimately hold digits (\ref{sec:2},
+# p{2.6cm}, [width=0.8\linewidth]) are stripped by REF or carry ALLOW_LINE, so excluding
+# brace-adjacent digits only hid a literal number inside \textbf{} or \emph{} (QG F12).
+# A digit glued to a letter (ESM-2, 650M, U-020) is part of a name, not a quantity.
+NUMBER = re.compile(r"(?<![\w\\.-])-?\d[\d,]*(?:\.\d+)?(?!\w)")
 ALLOW_LINE = "% claims: ignore-line"
 YEAR = re.compile(r"\b(19\d{2}|20[0-3]\d)\b")     # plausible years only; 2090 is a count
 REF = re.compile(r"\\(ref|cite|label|eqref|S|section|subsection|input|includegraphics|usepackage|documentclass|"

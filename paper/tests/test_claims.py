@@ -177,6 +177,36 @@ def test_fails_when_the_evidence_says_it_did_not_pass(tmp_path, ev_label):
     assert any("evidence label" in e and "e.json" in e for e in C.check(root))
 
 
+@pytest.mark.parametrize("ev_label", ["MISMATCH — reported; see limitations",
+                                      "NOT MEASURED — the referee did not produce a passing verdict"])
+def test_a_reported_claim_cannot_stand_on_a_file_that_did_not_pass(tmp_path, ev_label):
+    """QG F01: `reported` skips the prefix check (the allowed downgrade), so the failing-label
+    check at label_error is the ONLY thing between a MISMATCH file and the paper. The test
+    above never reached it — a measured claim is refused by the prefix check first."""
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "reported", "source": "e.json:published.n", "text": ""}],
+        r"\claimn{}", {"e.json": {"label": ev_label, "published": {"n": 6}}})
+    errs = C.check(root)
+    assert any("evidence label" in e and "cannot stand" in e for e in errs), errs
+
+
+def test_fails_when_a_float_claim_differs_from_its_evidence(tmp_path):
+    """QG F02: the float path compares within 1e-9; a drifted mean must be a mismatch."""
+    root = setup(tmp_path,
+        [{"id": "mean", "value": -13.02, "label": "measured", "source": "e.json:y", "text": "t"}],
+        r"\claimmean{}", {"e.json": {"y": -13.03}})
+    assert any(e.startswith("mismatch mean") for e in C.check(root))
+
+
+@pytest.mark.parametrize("tex", [r"We closed \textbf{48} tasks.", r"\emph{17} failures remained."])
+def test_a_number_inside_a_formatting_macro_is_still_unmapped(tmp_path, tex):
+    """QG F12: the number gate excluded brace-adjacent digits to skip macro arguments such
+    as \\ref{sec:2}; those are stripped by REF first, so the exclusion only hid a literal
+    number wrapped in \\textbf or \\emph."""
+    root = setup(tmp_path, [], tex, {})
+    assert any("unmapped number" in e for e in C.check(root))
+
+
 def test_fails_when_a_claim_upgrades_its_evidence_label(tmp_path):
     root = setup(tmp_path,
         [{"id": "n", "value": 6, "label": "measured (re-run, 2026-09-26)", "source": "e.json:n", "text": ""}],
