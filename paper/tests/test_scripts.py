@@ -473,10 +473,51 @@ def test_compare_flags_any_headline_difference(script):
     assert m["cysteine_mean"] is False and m["substitutions"] is True
 
 
+HEADLINE_KEYS = ["substitutions", "cysteine_mean", "other_mean", "cysteine_positions", "c_peptide_region",
+                 "c_peptide_controls", "mature_from_position", "cysteine_mean_mature", "other_mean_mature",
+                 "n_substitutions_mature"]
+
+
+@pytest.mark.parametrize("key", HEADLINE_KEYS)
+def test_compare_covers_every_headline_key(script, key):
+    """QG F04: compare() carries a hand-typed key tuple; dropping any key but cysteine_mean
+    silently stopped comparing it while science.json still said every field matched."""
+    S = script("science_rerun")
+    a = S.headline(_synthetic_results(), [3, 5])
+    b = json.loads(json.dumps(a))
+    v = b[key]
+    b[key] = (v + 1 if isinstance(v, (int, float)) else
+              {"3": 0.0} if isinstance(v, dict) else [99] if isinstance(v, list) else "x")
+    m = S.compare(a, b)
+    assert m[key] is False, key
+    assert all(m[k] for k in HEADLINE_KEYS if k != key)
+
+
+def test_compare_compares_every_headline_key_the_scan_produces(script):
+    """Every headline key except the per-position list is a compared key — a key added to
+    headline() without a compare() entry would be published unchecked."""
+    S = script("science_rerun")
+    a = S.headline(_synthetic_results(), [3])
+    assert set(S.compare(a, a)) == set(a) - {"per_position_mean"}
+
+
 def test_science_rerun_refuses_a_non_isolated_hf_home(script, tmp_path, monkeypatch):
     S = script("science_rerun")
     monkeypatch.delenv("HF_HOME", raising=False)
     assert S.main(["--inputs", str(tmp_path), "--out", str(tmp_path / "o.json")]) == 2
+
+
+def test_science_rerun_errors_on_a_missing_agent_run_naming_the_path(script, tmp_path, monkeypatch, capsys):
+    """QG F08: the agent-run file was read with no check, so a clean rebuild raised a
+    FileNotFoundError traceback instead of the exit-2 named error every input gets."""
+    S = script("science_rerun")
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "paper/.hf-cache"))
+    inputs = tmp_path / "out" / "esm"
+    inputs.mkdir(parents=True)
+    (inputs / "results.json").write_text(json.dumps(_synthetic_results()))
+    missing = tmp_path / "no-agent-run.json"
+    assert S.main(["--inputs", str(tmp_path / "out"), "--agent-run", str(missing), "--out", str(tmp_path / "o.json")]) == 2
+    assert str(missing) in capsys.readouterr().err
 
 
 # --- A6: the plugin suites, re-run ----------------------------------------------------

@@ -52,6 +52,12 @@ Run every command below **from the repository root**. The scripts anchor their g
 | `repo-tests.json` | — | measured (re-run) | `paper/scripts/repo_tests.py` (this repository's suites and the full mutant sweep) | 2026-10-02 |
 | `candidate-record/` | A2b | copies | written by `paper/scripts/drain1_record_check.py`; digests in `drain1-record-check.json` | 2026-09-26 |
 
+**Order.** `science.json` and `agent-run.json` read each other: `science_rerun.py` takes the
+agent's measured positions from `agent-run.json` to pick the C-peptide controls, and
+`agent_run.py` reads `science.json` back to record which controls the agent chose. A clean
+rebuild therefore runs `agent_run.py`, then `science_rerun.py`, then `agent_run.py` again;
+each script names the file it is missing and exits 2 rather than guessing.
+
 The **evidence-location rule** applies to every script that reads the published run: it
 takes `--inputs <absolute path>`; a missing or empty directory is an error (exit 2) that
 names the path checked. The published run's files are not in this repository (`science/out/`

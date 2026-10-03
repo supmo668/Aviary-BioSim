@@ -125,6 +125,12 @@ def main(argv=None) -> int:
         return 2
     inputs = P.require_inputs(a.inputs)
     published_res = json.loads((inputs / "esm" / "results.json").read_text())
+    # agent_run.py writes this file (and reads science.json back for its controls), so a
+    # clean rebuild runs agent_run first; a missing file is a named error, exit 2 (QG F08).
+    if not Path(a.agent_run).is_file():
+        print(f"ERROR: --agent-run {a.agent_run} does not exist; run paper/scripts/agent_run.py first",
+              file=sys.stderr)
+        return 2
     agent_positions = json.loads(Path(a.agent_run).read_text())["positions_measured"]
 
     fresh_path = run_experiment(a.seed)
