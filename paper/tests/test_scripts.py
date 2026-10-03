@@ -93,6 +93,50 @@ def test_referee_command_reports_zero_collected_as_could_not_run():
     _assert_could_not_run(_run_referee_sh({"SUITE_PATH": "demo/__init__.py"}), "zero tests collected")
 
 
+def _clone_with_suite(tmp_path, body: str) -> tuple[_Path, str]:
+    """A throwaway local clone of this repository with one extra commit holding t/test_x.py,
+    so the referee command can be run end to end against a suite whose outcome the test
+    chose. Nothing touches the real repository's refs (QG F10)."""
+    clone = tmp_path / "clone"
+    subprocess.run(["git", "clone", "-q", "--local", "--no-hardlinks", str(REPO), str(clone)], check=True)
+    (clone / "t").mkdir()
+    (clone / "t" / "test_x.py").write_text(body)
+    git = ["git", "-C", str(clone), "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(git + ["add", "t"], check=True)
+    subprocess.run(git + ["commit", "-q", "-m", "suite under test"], check=True)
+    sha = subprocess.run(git + ["rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    return clone, sha
+
+
+def _run_referee_sh_in(clone: _Path, sha: str):
+    env = dict(os.environ, DRAIN1_END_COMMIT=sha, SUITE_PATH="t/test_x.py")
+    return subprocess.run(["/bin/sh", str(REFEREE_SH)], cwd=clone, env=env,
+                          capture_output=True, text=True, timeout=600)
+
+
+def test_referee_command_reports_a_passing_suite_with_plan_and_results_and_exit_0(tmp_path):
+    clone, sha = _clone_with_suite(tmp_path, "def test_a():\n    assert True\n\ndef test_b():\n    assert 1 == 1\n")
+    r = _run_referee_sh_in(clone, sha)
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    lines = r.stdout.splitlines()
+    assert lines[0] == "PLAN 2"
+    assert sorted(lines[1:3]) == ["RESULT pass test_x/test_a", "RESULT pass test_x/test_b"]
+    assert lines[3] == f"# archived commit {sha}"
+    assert "COULD-NOT-RUN" not in r.stderr
+
+
+def test_referee_command_exits_1_when_the_suite_ran_and_a_test_failed(tmp_path):
+    """QG F10: `[ "$PYRC" -eq 1 ] && exit 1` was never exercised; replaced by `:`, a failing
+    suite exited 0 to the recorder, which reads the exit code directly."""
+    clone, sha = _clone_with_suite(tmp_path, "def test_a():\n    assert True\n\ndef test_b():\n    assert False\n")
+    r = _run_referee_sh_in(clone, sha)
+    assert r.returncode == 1, (r.returncode, r.stderr)
+    lines = r.stdout.splitlines()
+    assert lines[0] == "PLAN 2"
+    assert "RESULT fail test_x/test_b" in lines and "RESULT pass test_x/test_a" in lines
+    assert "False" not in r.stdout, "no assertion text may reach the output"
+
+
 # --- the junit -> RESULT converter, on synthetic reports ---------------------------------
 
 JUNIT = """<?xml version="1.0"?>
