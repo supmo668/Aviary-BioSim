@@ -601,6 +601,68 @@ def test_plugin_tests_errors_on_an_unknown_tag_naming_it(script, tmp_path, capsy
     assert not out.exists()
 
 
+# --- the repository's own suites and mutant sweep, counted (QG F11) --------------------
+
+class _Proc:
+    def __init__(self, stdout: str, rc: int):
+        self.stdout, self.stderr, self.returncode = stdout, "", rc
+
+
+def _canned_repo_tests(monkeypatch, R, suite_out: str, suite_rc: int, mutant_out: str, mutant_rc: int):
+    """Every `uv run` the script makes answers with canned pytest / sweep output (the mutant
+    command is told apart by its run_mutants.py argument); git and platform calls go through."""
+    real = R.subprocess.run
+
+    def fake_run(cmd, **kw):
+        if cmd and cmd[0] != "uv":
+            return real(cmd, **kw)
+        if any("run_mutants.py" in c for c in cmd):
+            return _Proc(mutant_out, mutant_rc)
+        return _Proc(suite_out, suite_rc)
+    monkeypatch.setattr(R.subprocess, "run", fake_run)
+
+
+GREEN_SUITE = "....\n4 passed in 0.10s\n"
+GREEN_SWEEP = "48/48 live mutants killed; 1 retired\n"
+
+
+@pytest.mark.parametrize("suite_out, suite_rc, mutant_out, mutant_rc", [
+    (GREEN_SUITE, 0, GREEN_SWEEP, 0),
+], ids=["all-green"])
+def test_repo_tests_is_measured_when_every_suite_and_the_sweep_are_green(script, tmp_path, monkeypatch,
+                                                                         suite_out, suite_rc, mutant_out, mutant_rc):
+    R = script("repo_tests")
+    _canned_repo_tests(monkeypatch, R, suite_out, suite_rc, mutant_out, mutant_rc)
+    out = tmp_path / "o.json"
+    assert R.main(["--out", str(out)]) == 0
+    d = json.loads(out.read_text())
+    assert d["label"].startswith("measured (re-run, ")
+    assert d["mutants"] == {"killed": 48, "live": 48, "retired": 1, "exit": 0}
+    assert d["total_passed"] == 4 * len(R.SUITES)
+
+
+@pytest.mark.parametrize("suite_out, suite_rc, mutant_out, mutant_rc", [
+    ("ERROR: file or directory not found: paper/tests\n", 4, GREEN_SWEEP, 0),   # no summary, exit 4
+    ("...F\n3 failed, 1 passed in 0.2s\n", 1, GREEN_SWEEP, 0),                  # failures
+    ("3 failed, 1 passed in 0.2s\n", 0, GREEN_SWEEP, 0),                        # failures but exit 0
+    ("4 skipped in 0.1s\n", 0, GREEN_SWEEP, 0),                                 # nothing passed
+    (GREEN_SUITE, 0, "47/48 live mutants killed; 1 retired\n", 1),             # a survivor
+    (GREEN_SUITE, 0, "47/48 live mutants killed; 1 retired\n", 0),             # a survivor, exit 0
+    (GREEN_SUITE, 0, "Traceback (most recent call last) ...\n", 0),            # no count line at all
+    (GREEN_SUITE, 0, "", 1),                                                   # sweep died silently
+], ids=["suite-no-summary-exit4", "suite-failed", "suite-failed-exit0", "suite-only-skipped",
+        "mutant-survivor", "mutant-survivor-exit0", "mutant-no-count-line", "mutant-silent-exit1"])
+def test_repo_tests_is_not_green_unless_everything_parsed_and_passed(script, tmp_path, monkeypatch,
+                                                                     suite_out, suite_rc, mutant_out, mutant_rc):
+    """The file behind six claims. An unparsed mutant line left killed and live both None,
+    and None == None read as a full kill."""
+    R = script("repo_tests")
+    _canned_repo_tests(monkeypatch, R, suite_out, suite_rc, mutant_out, mutant_rc)
+    out = tmp_path / "o.json"
+    assert R.main(["--out", str(out)]) == 1
+    assert json.loads(out.read_text())["label"].startswith("NOT GREEN")
+
+
 # --- A5: the taxonomy is machine-checked -------------------------------------------
 
 HEADER = "id,symptom,why_it_passed_review,found_by,regression_test,label,comp_bio_analogue,source\n"

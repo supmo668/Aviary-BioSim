@@ -61,8 +61,11 @@ def main(argv=None) -> int:
         m = MUTANT_SUMMARY.findall(r.stdout + r.stderr)
         mutants = {"killed": int(m[-1][0]) if m else None, "live": int(m[-1][1]) if m else None,
                    "retired": int(m[-1][2]) if m else None, "exit": r.returncode}
+    # A sweep whose count line did not parse has killed = live = None, and None == None
+    # read as a full kill (QG F11): the count must exist before it can be compared.
     green = all(s["exit"] == 0 and s["passed"] and s["failed"] == 0 for s in suites.values()) and \
-            (mutants is None or (mutants["exit"] == 0 and mutants["killed"] == mutants["live"]))
+            (mutants is None or (mutants["exit"] == 0 and mutants["killed"] is not None
+                                 and mutants["killed"] == mutants["live"]))
     out = {
         "label": ("measured (re-run, " + P.block(None)["recorded_at"][:10] + ")") if green else "NOT GREEN — see suites",
         "suites": suites,
