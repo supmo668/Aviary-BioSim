@@ -1,6 +1,6 @@
 {
   "label": "recovered record; pre-claim chain verified 6/6; write-time provenance not established",
-  "candidate": "~/github/personal/bioFM/worktrees/aviary-biosim/.v2r",
+  "candidate": "<parent-project>/worktrees/aviary-biosim/.v2r",
   "run_record": {
     "drain": 1,
     "instinct_pin": null,
@@ -71,10 +71,10 @@
     }
   ],
   "register_verify_record": {
-    "tool": "~/.claude/plugins/cache/aiadlc-plugins/aiadlc/0.69.0/tools/register",
+    "tool": "<plugin:aiadlc 0.69.0>/tools/register",
     "ran": true,
     "exit": 3,
-    "output_tail": "UNVERIFIED ~/github/personal/bioFM/worktrees/aviary-biosim/.v2r/run-record-1.yaml \u2014 not readable as JSON (Expecting value: line 1 column 1 (char 0))\n",
+    "output_tail": "UNVERIFIED <parent-project>/worktrees/aviary-biosim/.v2r/run-record-1.yaml \u2014 not readable as JSON (Expecting value: line 1 column 1 (char 0))\n",
     "meaning": "exit 0: the record carries the register's provenance stamp and its digest matches; exit 3: UNVERIFIED \u2014 which the tool itself defines as 'predates provenance, or something else wrote it', NOT as forged. A record from the first pass predates the stamp (it is YAML with no produced_by), so exit 3 is the expected result and says nothing either way. Neither exit says WHEN a record was written, and the register is the artifact under study.",
     "record_predates_provenance_format": true
   },
@@ -108,13 +108,13 @@
   "provenance": {
     "git_sha": "c957672c23fb9674065e844063f7f093a1074fe1",
     "recorded_at": "2026-09-26T21:36:44Z",
-    "inputs_path": "~/github/personal/bioFM/worktrees/aviary-biosim/.v2r",
+    "inputs_path": "<parent-project>/worktrees/aviary-biosim/.v2r",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "versions": {
       "yaml": "6.0.3"
     },
     "range": "28af3c4^..2e00aa3",
-    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06): <repo>/ for this checkout, ~/ for the home directory; every other value is as the script wrote it"
+    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06, coordinator ruling #576): <repo>/ for this checkout, <parent-project>/ for its enclosing project, <plugin:NAME VERSION>/ for a plugin cache, ~/\u2026/NAME for any other home path; every other value is as the script wrote it"
   }
 }

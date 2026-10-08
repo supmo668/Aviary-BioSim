@@ -31,17 +31,26 @@ def test_provenance_block_publishes_no_home_or_checkout_path(prov):
     and directory layout through inputs_path, cwd and every extra. A path inside the
     repository becomes <repo>/…, one under the home directory ~/…; nothing else changes."""
     from pathlib import Path
-    home, repo = str(Path.home().resolve()), str(prov.REPO)
+    home, repo, parent = str(Path.home().resolve()), str(prov.REPO), str(prov.PARENT)
     blk = prov.block(inputs_path=f"{repo}/science/out",
                      extra={"cwd": repo, "hf_home": f"{home}/.cache/hf", "argv": [f"{home}/bin/tool", "run"],
-                            "tail": f"UNVERIFIED {home}/x/y.yaml not readable", "seed": 7, "digest": "ab" * 32})
+                            "tail": f"UNVERIFIED {home}/x/y.yaml not readable", "seed": 7, "digest": "ab" * 32,
+                            "sibling": f"{parent}/projects/same-repo/.v2r",
+                            "plugin": f"{home}/.claude/plugins/cache/some-plugins/someplug/1.2.3/tools/referee",
+                            "other": f"{home}/code/elsewhere/thing"})
     assert blk["inputs_path"] == "<repo>/science/out"
     assert blk["cwd"] == "<repo>"
-    assert blk["hf_home"] == "~/.cache/hf"
-    assert blk["argv"] == ["~/bin/tool", "run"]
-    assert blk["tail"] == "UNVERIFIED ~/x/y.yaml not readable"
     assert blk["seed"] == 7 and blk["digest"] == "ab" * 32
-    assert home not in json.dumps(blk)
+    # coordinator's rule (#576): the enclosing project is a role, a plugin is a name and a
+    # version, and any other home-relative path keeps only its last component
+    assert blk["sibling"] == "<parent-project>/projects/same-repo/.v2r"
+    assert blk["plugin"] == "<plugin:someplug 1.2.3>/tools/referee"
+    assert blk["argv"] == ["~/…/tool", "run"]
+    assert blk["hf_home"] == "~/…/hf"
+    assert blk["tail"] == "UNVERIFIED ~/…/y.yaml not readable"
+    assert blk["other"] == "~/…/thing"
+    dumped = json.dumps(blk, ensure_ascii=False)
+    assert home not in dumped and parent not in dumped
 
 
 def test_committed_evidence_carries_no_home_directory_path():

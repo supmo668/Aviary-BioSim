@@ -400,13 +400,13 @@
     "versions": {},
     "referee_command": "sh paper/scripts/sealed_suite_results.sh",
     "referee_argv": [
-      "~/.claude/plugins/cache/aiadlc-plugins/aiadlc/0.69.0/tools/referee",
+      "<plugin:aiadlc 0.69.0>/tools/referee",
       "run",
       "--sign"
     ],
     "cwd": "<repo>",
     "branch": "whitepaper",
     "archived_commit_env": "(default in the script)",
-    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06): <repo>/ for this checkout, ~/ for the home directory; every other value is as the script wrote it"
+    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06, coordinator ruling #576): <repo>/ for this checkout, <parent-project>/ for its enclosing project, <plugin:NAME VERSION>/ for a plugin cache, ~/\u2026/NAME for any other home path; every other value is as the script wrote it"
   }
 }

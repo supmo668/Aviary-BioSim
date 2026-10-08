@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as _dt
 import importlib
 import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -42,20 +43,35 @@ def versions(*modules: str) -> dict:
 
 
 HOME = Path.home().resolve()
+# The checkout's enclosing project: both layouts this repository is checked out in
+# (<parent>/projects/<repo> and <parent>/worktrees/<repo>-…) put it two levels up.
+PARENT = REPO.parents[1]
+_PLUGIN_CACHE = re.compile(r"~/\.claude/plugins/cache/[^/]+/(?P<name>[^/]+)/(?P<ver>[^/]+)")
+_OTHER_HOME = re.compile(r"~/(?:[^/\s]+/)+(?P<base>[^/\s]+)")
 
 
 def redact(value):
-    """Absolute paths made publishable: a path inside this repository becomes `<repo>/…`,
-    one under the home directory becomes `~/…`. Applied to every string an evidence file
-    carries, recursively; numbers, digests and labels are untouched. The repository is
-    public and its evidence recorded the machine's username and directory layout (QG F06)."""
+    """Absolute paths made publishable, recursively over every string an evidence file
+    carries; numbers, digests and labels are untouched. The repository is public and its
+    evidence recorded the machine's username and directory layout (QG F06).
+
+    Coordinator's rule (#576): a path is either a LOCATOR inside the artifact — normalised
+    to `<repo>/…` — or a claim about the ENVIRONMENT, which names the thing and its
+    version, never the filesystem. So the enclosing project becomes `<parent-project>/…`,
+    a plugin-cache path becomes `<plugin:NAME VERSION>/…`, and any other home-relative
+    path keeps only its last component, `~/…/NAME`."""
     if isinstance(value, str):
-        repo, home = str(REPO), str(HOME)
-        if value.startswith(repo + "/") or value == repo:
-            return "<repo>" + value[len(repo):]
-        if value.startswith(home + "/") or value == home:
-            return "~" + value[len(home):]
-        return value.replace(repo + "/", "<repo>/").replace(home + "/", "~/")
+        repo, home, parent = str(REPO), str(HOME), str(PARENT)
+        s = value
+        for prefix, token in ((repo, "<repo>"), (parent, "<parent-project>"), (home, "~")):
+            if s == prefix or s.startswith(prefix + "/"):
+                s = token + s[len(prefix):]
+                break
+        s = s.replace(repo + "/", "<repo>/").replace(parent + "/", "<parent-project>/").replace(home + "/", "~/")
+        if parent.startswith(home + "/"):          # the same project, already written home-relative
+            s = s.replace("~" + parent[len(home):], "<parent-project>")
+        s = _PLUGIN_CACHE.sub(lambda m: f"<plugin:{m['name']} {m['ver']}>", s)
+        return _OTHER_HOME.sub(lambda m: f"~/…/{m['base']}", s)
     if isinstance(value, dict):
         return {k: redact(v) for k, v in value.items()}
     if isinstance(value, list):
