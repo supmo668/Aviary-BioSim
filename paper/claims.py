@@ -132,9 +132,11 @@ def _cell(v) -> str:
 
 
 def _path_cell(source: str) -> str:
-    """An evidence file:field for the table, breakable after / . and : (QG Q29) —
-    \\texttt never breaks a word, so a long path ran off the page."""
-    return re.sub(r"([/.:])", lambda m: m.group(1) + "\\allowbreak{}", _tex(source))
+    """An evidence file:field for the table, breakable after / . : and _ (QG Q29, A7-14) —
+    \\texttt never breaks a word, so a long path ran off the page. Underscores count too:
+    a field named for what it holds (`named_by_the_agent_in_c_peptide_count`) offers no
+    other break point, and the row overflowed instead of wrapping."""
+    return re.sub(r"([/.:]|\\_)", lambda m: m.group(1) + "\\allowbreak{}", _tex(source))
 
 
 def claims_table(claims: list[dict]) -> str:

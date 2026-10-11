@@ -96,25 +96,25 @@
       "sha256": "b9f6b78ac4131715d80eddbd78c491c57f7c292748767d2ff4b233a8a78dc652",
       "bytes": 3048,
       "mtime_utc": "2026-09-13T18:48:41+00:00",
-      "copied_to": "paper/evidence/candidate-record/register.yaml"
+      "copied_to": "<repo>/paper/evidence/candidate-record/register.yaml"
     },
     "run-record-1.yaml": {
       "sha256": "f4d8531f7794e70c8ce74e86a642fc30042089843ef4b1689bfbf8aa48801525",
       "bytes": 301,
       "mtime_utc": "2026-09-13T18:48:53+00:00",
-      "copied_to": "paper/evidence/candidate-record/run-record-1.yaml"
+      "copied_to": "<repo>/paper/evidence/candidate-record/run-record-1.yaml"
     }
   },
   "provenance": {
-    "git_sha": "c957672c23fb9674065e844063f7f093a1074fe1",
-    "recorded_at": "2026-09-26T21:36:44Z",
+    "git_sha": "95c992280b07541813e3e35bdeb2a6816d96b4ab",
+    "tree_clean": true,
+    "recorded_at": "2026-10-11T04:17:24Z",
     "inputs_path": "<parent-project>/worktrees/aviary-biosim/.v2r",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "versions": {
       "yaml": "6.0.3"
     },
-    "range": "28af3c4^..2e00aa3",
-    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06, coordinator ruling #576): <repo>/ for this checkout, <parent-project>/ for its enclosing project, <plugin:NAME VERSION>/ for a plugin cache, ~/\u2026/NAME for any other home path; every other value is as the script wrote it"
+    "range": "28af3c4^..2e00aa3"
   }
 }

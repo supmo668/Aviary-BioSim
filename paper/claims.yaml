@@ -3,37 +3,42 @@
 # unmapped number, missing file, value mismatch, or a non-measured claim phrased as measured.
 claims:
   # --- the science experiment (A3c re-run; A3a/b input check) ---
-  - {id: subs, value: 2090, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.substitutions", text: "single-residue substitutions scored"}
-  - {id: cysmean, value: -13.02, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.cysteine_mean_mature", text: "mean score at the six disulfide cysteines (mature protein)"}
-  - {id: othermean, value: -5.85, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.other_mean_mature", text: "mean score at every other mature-protein residue"}
-  - {id: othermeanall, value: -5.53, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.other_mean", text: "mean score at every other residue including the signal peptide"}
-  - {id: matsubs, value: 1634, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.n_substitutions_mature", text: "substitutions in the mature protein"}
-  - {id: seqlen, value: 110, label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:published.length", text: "residues in the input sequence"}
+  - {id: subs, value: 2090, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.substitutions", text: "single-residue substitutions scored"}
+  - {id: cysmean, value: -13.02, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.cysteine_mean_mature", text: "mean score at the six disulfide cysteines (mature protein)"}
+  - {id: othermean, value: -5.85, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.other_mean_mature", text: "mean score at every other mature-protein residue"}
+  - {id: othermeanall, value: -5.53, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.other_mean", text: "mean score at every other residue including the signal peptide"}
+  - {id: matsubs, value: 1634, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.n_substitutions_mature", text: "substitutions in the mature protein"}
+  - {id: seqlen, value: 110, label: "measured (fresh fetch, 2026-10-11)", source: "science-input.json:published.length", text: "residues in the input sequence"}
   # F33 (confirmed 2026-09-28): identifier, release and digest are printed in the methods and
   # stored in evidence/ only. This file and the generated claims.tex carry them to the methods;
   # `table: false` keeps them out of the appendix table.
-  - {id: accession, table: false, value: "P01308", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:identifier", text: "UniProt accession of the input"}
-  - {id: uprelease, table: false, value: "2026_03", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:fresh.release", text: "UniProt release the input was fetched from"}
-  - {id: seqsha, table: false, value: "99603f8fb1e9872e2d24ee1e9f85108c2bddea6b148a0f1099e16ba2715c8263", label: "measured (fresh fetch, 2026-09-26)", source: "science-input.json:fresh.sequence_sha256", text: "SHA-256 of the input sequence"}
-  - {id: ctrlA, value: 1.53, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.62", text: "C-peptide control, position 62 to alanine"}
-  - {id: ctrlB, value: 1.08, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.79", text: "C-peptide control, position 79 to alanine"}
-  - {id: ctrlC, value: -0.1, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.83", text: "C-peptide control, position 83 to alanine"}
-  - {id: ctrlD, value: 0.18, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.70", text: "C-peptide control, position 70 (scan's alanine score)"}
-  - {id: ctrlE, value: 0.17, label: "measured (re-run, 2026-09-26)", source: "science.json:headline.c_peptide_controls.72", text: "C-peptide control, position 72 (scan's alanine score)"}
-  - {id: rerunsec, value: 9.6, label: "measured (re-run, 2026-09-26)", source: "science.json:runtime_s", text: "seconds for the re-run scan"}
+  - {id: accession, table: false, value: "P01308", label: "measured (fresh fetch, 2026-10-11)", source: "science-input.json:identifier", text: "UniProt accession of the input"}
+  - {id: uprelease, table: false, value: "2026_03", label: "measured (fresh fetch, 2026-10-11)", source: "science-input.json:fresh.release", text: "UniProt release the input was fetched from"}
+  - {id: seqsha, table: false, value: "99603f8fb1e9872e2d24ee1e9f85108c2bddea6b148a0f1099e16ba2715c8263", label: "measured (fresh fetch, 2026-10-11)", source: "science-input.json:fresh.sequence_sha256", text: "SHA-256 of the input sequence"}
+  - {id: ctrlA, value: 1.53, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.c_peptide_controls.62", text: "C-peptide control, position 62 to alanine"}
+  - {id: ctrlB, value: 1.08, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.c_peptide_controls.79", text: "C-peptide control, position 79 to alanine"}
+  - {id: ctrlC, value: -0.1, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.c_peptide_controls.83", text: "C-peptide control, position 83 to alanine"}
+  - {id: ctrlD, value: 0.18, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.c_peptide_controls.70", text: "C-peptide control, position 70 (scan's alanine score)"}
+  - {id: ctrlE, value: 0.17, label: "measured (re-run, 2026-10-11)", source: "science.json:headline.c_peptide_controls.72", text: "C-peptide control, position 72 (scan's alanine score)"}
+  - {id: rerunsec, value: 13.1, label: "measured (re-run, 2026-10-11)", source: "science.json:runtime_s", text: "seconds for the re-run scan"}
   - {id: pubsec, value: 7.3, label: "reported", source: "science.json:published_runtime_s", text: "seconds the published run reported"}
-  - {id: weightsgb, value: 2609506392, label: "measured (re-run, 2026-09-26)", source: "science.json:weights_bytes", text: "bytes of model weights, digest recorded"}
+  - {id: weightsgb, value: 2609506392, label: "measured (re-run, 2026-10-11)", source: "science.json:weights_bytes", text: "bytes of model weights, digest recorded"}
   # --- the discovery agent (A4) ---
-  - {id: meas, value: 66, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:measurements", text: "measurements the agent chose"}
-  - {id: rounds, value: 5, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:rounds", text: "rounds"}
-  - {id: tokens, value: 15115, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:completion_tokens_total", text: "completion tokens across the rounds that recorded a count"}
-  - {id: notokens, value: 1, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:rounds_without_a_token_count", text: "rounds that recorded no token count"}
-  - {id: positions, value: 34, label: "reported (artifact counted, 2026-09-26)", source: "agent-run.json:distinct_positions", text: "distinct positions measured"}
+  - {id: meas, value: 66, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:measurements", text: "measurements the agent chose"}
+  - {id: rounds, value: 5, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:rounds", text: "rounds"}
+  - {id: tokens, value: 15115, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:completion_tokens_total", text: "completion tokens across the rounds that recorded a count"}
+  - {id: notokens, value: 1, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:rounds_without_a_token_count", text: "rounds that recorded no token count"}
+  - {id: ctrlnamed, value: 7, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:control_positions.named_by_the_agent_count", text: "positions the agent itself listed as tolerant controls"}
+  - {id: ctrlnamedcpep, value: 5, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:control_positions.named_by_the_agent_in_c_peptide_count", text: "of those falling in the C-peptide region as the scan annotates it"}
+  - {id: cysround, value: 1, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:cysteines_first_requested_in_round", text: "round in which the agent first requested the cysteines"}
+  - {id: positions, value: 34, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:distinct_positions", text: "distinct positions measured"}
   - {id: traceroots, value: 1, label: "queried (2026-09-26)", source: "weave-count.json:run_discovery_root_traces", text: "root trace of the discovery run in the trace store"}
   - {id: tracetotal, value: 36, label: "queried (2026-09-26)", source: "weave-count.json:project_total", text: "traces in the project"}
   # --- pass 1 (A1, A2, A2b) ---
-  - {id: sealed, value: 75, label: "measured (re-run, 2026-09-26)", source: "drain1-rerun.json:referee.total", text: "independent tests re-run through the referee"}
-  - {id: sealedfail, value: 0, label: "measured (re-run, 2026-09-26)", source: "drain1-rerun.json:referee.failed", text: "of them failing"}
+  - {id: evcommit, value: "95c992280b07541813e3e35bdeb2a6816d96b4ab", label: "measured (re-run, 2026-10-11)", source: "science.json:provenance.git_sha", text: "repository commit the evidence was produced from, on a clean tree"}
+  - {id: traceprojroots, value: 4, label: "queried (2026-09-26)", source: "weave-count.json:project_roots", text: "root traces in the project"}
+  - {id: sealed, value: 75, label: "measured (re-run, 2026-10-11)", source: "drain1-rerun.json:referee.total", text: "independent tests re-run through the referee"}
+  - {id: sealedfail, value: 0, label: "measured (re-run, 2026-10-11)", source: "drain1-rerun.json:referee.failed", text: "of them failing"}
   - {id: units, value: 6, label: "reconstructed", source: "drain1-from-git.csv:rows", text: "tasks closed in the first pass"}
   - {id: chain, value: 6, label: "recovered record; pre-claim chain verified", source: "drain1-record-check.json:pre_claim_matches", text: "tasks whose pre-claim commit is the parent of the close"}
   - {id: closed, value: 6, label: "recovered record", source: "drain1-record-check.json:closed_count", text: "tasks the recovered record lists as closed"}

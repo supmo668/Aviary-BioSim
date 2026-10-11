@@ -1,5 +1,5 @@
 {
-  "label": "measured (re-run, 2026-09-26)",
+  "label": "measured (re-run, 2026-10-11)",
   "archived_commit": "2e00aa3",
   "referee_exit": 0,
   "referee": {
@@ -388,12 +388,13 @@
       }
     }
   },
-  "referee_stderr_tail": "referee: signed sealed-suite receipt (Hash E 6ad70cd)\n",
-  "referee_receipt_hash_e": "6ad70cd",
+  "referee_stderr_tail": "referee: signed sealed-suite receipt (Hash E 110fb69)\n",
+  "referee_receipt_hash_e": "110fb69",
   "note": "Hash E on the referee's receipt binds the CURRENT tree; the suite ran over the archived pass-end tree named above.",
   "provenance": {
-    "git_sha": "77260ca3bb3fff03c928f49f13394276024ee1a9",
-    "recorded_at": "2026-09-26T21:24:02Z",
+    "git_sha": "95c992280b07541813e3e35bdeb2a6816d96b4ab",
+    "tree_clean": true,
+    "recorded_at": "2026-10-11T04:17:33Z",
     "inputs_path": null,
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
@@ -406,7 +407,6 @@
     ],
     "cwd": "<repo>",
     "branch": "whitepaper",
-    "archived_commit_env": "(default in the script)",
-    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06, coordinator ruling #576): <repo>/ for this checkout, <parent-project>/ for its enclosing project, <plugin:NAME VERSION>/ for a plugin cache, ~/\u2026/NAME for any other home path; every other value is as the script wrote it"
+    "archived_commit_env": "2e00aa3"
   }
 }

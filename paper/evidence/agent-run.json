@@ -1,5 +1,5 @@
 {
-  "label": "reported (artifact counted, 2026-09-26)",
+  "label": "reported (artifact counted, 2026-10-11)",
   "measurements": 66,
   "rounds": 5,
   "requests_per_round": [
@@ -56,6 +56,71 @@
     109
   ],
   "distinct_positions": 34,
+  "requested_positions_per_round": [
+    [
+      31,
+      32,
+      40,
+      41,
+      42,
+      43,
+      44,
+      47,
+      48,
+      70,
+      83,
+      90,
+      91,
+      92,
+      95,
+      96,
+      100,
+      103,
+      105,
+      109
+    ],
+    [
+      25,
+      30,
+      35,
+      36,
+      49,
+      50,
+      62,
+      72,
+      79,
+      99,
+      101,
+      102
+    ],
+    [
+      20,
+      21,
+      30,
+      31,
+      35,
+      43,
+      48,
+      49,
+      70,
+      95,
+      96,
+      100,
+      105,
+      109
+    ],
+    [
+      31,
+      43,
+      95,
+      96,
+      100,
+      109
+    ],
+    []
+  ],
+  "cysteines_first_requested_in_round": 1,
+  "c_peptide_first_requested_in_round": 1,
   "control_positions": {
     "c_peptide_positions_from_science_json": [
       62,
@@ -70,18 +135,41 @@
       72,
       79,
       83
-    ]
+    ],
+    "named_by_the_agent": [
+      20,
+      25,
+      62,
+      70,
+      72,
+      79,
+      83
+    ],
+    "named_by_the_agent_count": 7,
+    "named_by_the_agent_in_c_peptide": [
+      62,
+      70,
+      72,
+      79,
+      83
+    ],
+    "named_by_the_agent_in_c_peptide_count": 5,
+    "named_by_the_agent_outside_c_peptide": [
+      20,
+      25
+    ],
+    "region_named_by_the_agent": null
   },
   "artifact_sha256": "ed9b4e2f5f01f24ab3aa6ba027fd47da55441d5028dc4a09a9b99cd91998d340",
   "artifact_bytes": 29650,
   "artifact_mtime_utc": "2026-09-13T19:23:20+00:00",
   "provenance": {
-    "git_sha": "3de31dadcc6bf2e9e5d5cf18c7ea5912af408e0c",
-    "recorded_at": "2026-09-26T21:31:33Z",
+    "git_sha": "95c992280b07541813e3e35bdeb2a6816d96b4ab",
+    "tree_clean": true,
+    "recorded_at": "2026-10-11T04:15:43Z",
     "inputs_path": "<parent-project>/projects/aviary-biosim/science/out/discovery",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
-    "versions": {},
-    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06, coordinator ruling #576): <repo>/ for this checkout, <parent-project>/ for its enclosing project, <plugin:NAME VERSION>/ for a plugin cache, ~/\u2026/NAME for any other home path; every other value is as the script wrote it"
+    "versions": {}
   }
 }
