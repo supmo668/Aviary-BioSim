@@ -51,17 +51,17 @@ Run every command below **from the repository root**. The scripts anchor their g
 
 | file | task | label | produced by | date |
 |---|---|---|---|---|
-| `drain1-rerun.json` | A1 | measured (re-run) | `tools/referee run --sign` via `paper/scripts/sealed_suite_results.sh`, recorded by `paper/scripts/record_referee.py --referee <tools/referee> --sign` | 2026-09-26 |
-| `drain1-from-git.csv` | A2 | reconstructed | `paper/scripts/drain1_from_git.py` | 2026-09-26 |
-| `drain1-record-check.json` | A2b | recovered record; pre-claim chain verified; write-time provenance not established | `paper/scripts/drain1_record_check.py --record <absolute path to the recovered .v2r> --register <plugin checkout>/tools/register` | 2026-09-26 |
-| `science-input.json` | A3a/b | measured (fresh fetch) | `paper/scripts/science_input.py --inputs <absolute path>` | 2026-09-26 |
-| `science.json` | A3c | measured (re-run) — every field matched | `HF_HOME=$PWD/paper/.hf-cache uv run --with torch --with transformers --with requests --with numpy paper/scripts/science_rerun.py --inputs <absolute path>` | 2026-09-26 |
-| `agent-run.json` | A4 | reported (artifact counted) | `paper/scripts/agent_run.py --inputs <absolute path>/discovery` | 2026-09-26 |
+| `drain1-rerun.json` | A1 | measured (re-run) | `tools/referee run --sign` via `paper/scripts/sealed_suite_results.sh`, recorded by `paper/scripts/record_referee.py --referee <tools/referee> --sign` | 2026-10-11 |
+| `drain1-from-git.csv` | A2 | reconstructed | `paper/scripts/drain1_from_git.py` | 2026-10-11 |
+| `drain1-record-check.json` | A2b | recovered record; pre-claim chain verified; write-time provenance not established | `paper/scripts/drain1_record_check.py --record <absolute path to the recovered .v2r> --register <plugin checkout>/tools/register` | 2026-10-11 |
+| `science-input.json` | A3a/b | measured (fresh fetch) | `paper/scripts/science_input.py --inputs <absolute path>` | 2026-10-11 |
+| `science.json` | A3c | measured (re-run) — every field matched | `HF_HOME=$PWD/paper/.hf-cache uv run --with torch --with transformers --with requests --with numpy paper/scripts/science_rerun.py --inputs <absolute path>` | 2026-10-11 |
+| `agent-run.json` | A4 | reported (artifact counted) | `paper/scripts/agent_run.py --inputs <absolute path>/discovery` | 2026-10-11 |
 | `weave-count.json` | A4 | queried | recorded by hand from the trace store's count query on the day | 2026-09-26 |
 | `taxonomy.csv` | A5 | documented | hand-authored; checked by `paper/scripts/taxonomy_check.py --plugin-root <plugin checkout>` | 2026-09-26 |
-| `plugin-tests.json` | A6 | measured (re-run) | `paper/scripts/plugin_tests.py --plugin-repo <plugin checkout> --tag v0.64.0` | 2026-09-26 |
-| `repo-tests.json` | — | measured (re-run) | `paper/scripts/repo_tests.py` (this repository's suites and the full mutant sweep) | 2026-10-08 |
-| `candidate-record/` | A2b | copies | written by `paper/scripts/drain1_record_check.py`; digests in `drain1-record-check.json` | 2026-09-26 |
+| `plugin-tests.json` | A6 | measured (re-run) | `paper/scripts/plugin_tests.py --plugin-repo <plugin checkout> --tag v0.64.0` | 2026-10-11 |
+| `repo-tests.json` | — | measured (re-run) | `paper/scripts/repo_tests.py` (this repository's suites and the full mutant sweep) | 2026-10-11 |
+| `candidate-record/` | A2b | copies | written by `paper/scripts/drain1_record_check.py`; digests in `drain1-record-check.json` | 2026-10-11 |
 
 **Order.** `science.json` and `agent-run.json` read each other: `science_rerun.py` takes the
 agent's measured positions from `agent-run.json` to pick the C-peptide controls, and
@@ -89,8 +89,10 @@ about a path the check exempts.
 paths, and `claims.py` then refuses every claim resting on that file. Untracked filenames are
 reduced to a count in the published list, since a working checkout carries scratch and
 credential files whose names should not ship. **An absent `tree_clean` means not established,
-never clean** — `claims.py` refuses a `measured` or `reconstructed` claim on a file without it
-unless the file is named in `UNPINNED_ALLOWED` with a reason and disclosed in the paper.
+never clean** — `claims.py` refuses *any* claim, whatever its label, resting on a file without
+it, unless the file is named in `UNPINNED_ALLOWED` with a reason and disclosed in the paper.
+The two standing exceptions are `weave-count.json` and `taxonomy.csv`: no script produces
+either, so neither has a producing commit to pin, and both are disclosed in the appendix.
 
 The **evidence-location rule** applies to every script that reads the published run: it
 takes `--inputs <absolute path>`; a missing or empty directory is an error (exit 2) that

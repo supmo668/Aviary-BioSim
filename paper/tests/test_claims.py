@@ -284,6 +284,24 @@ def test_a_named_exception_may_stand_unpinned_with_a_recorded_reason(tmp_path):
     assert all(C.UNPINNED_ALLOWED.values()), "every exception must carry a reason"
 
 
+def test_an_allowlisted_file_that_HAS_a_provenance_block_but_no_tree_clean_is_allowed(tmp_path, monkeypatch):
+    """Both escapes in pinning_error() must stay covered. The two standing exceptions have no
+    provenance block at all, so they return at the earlier `not isinstance(prov, dict)` check
+    and the allow-list branch AFTER the tree_clean test became unreachable from every test —
+    deleting it survived the suite. This case reaches it: a block that exists but says nothing
+    about the tree, which is the shape a file predating the rule actually has."""
+    monkeypatch.setitem(C.UNPINNED_ALLOWED, "legacy.json", "predates the rule; disclosed")
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "measured", "source": "legacy.json:n", "text": ""}],
+        r"\claimn{}", {"legacy.json": {"label": "measured", "n": 6,
+                                       "provenance": {"git_sha": "0" * 40}}})
+    assert C.pinning_error(root, "legacy.json") is None
+    assert C.check(root) == []
+    # and without the allow-list entry the very same file is refused
+    monkeypatch.delitem(C.UNPINNED_ALLOWED, "legacy.json")
+    assert "no tree_clean" in (C.pinning_error(root, "legacy.json") or "")
+
+
 def test_the_one_commit_invariant_refuses_a_set_rebuilt_from_two_commits(tmp_path):
     """QG F15. The appendix says five file groups were rebuilt from ONE commit but binds a
     macro resolving to just one file's sha, so the plural sentence was asserted, not checked."""
