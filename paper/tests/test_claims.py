@@ -24,6 +24,11 @@ def _label_for(name, claims):
     return (strong or labels or ["measured"])[0]
 
 
+# claims.py refuses evidence that does not establish its own pinning (QG F1), so a synthetic
+# evidence file stands in for a properly pinned one unless a test sets its provenance itself.
+PINNED = {"git_sha": "0" * 40, "tree_clean": True}
+
+
 def setup(tmp_path, claims, tex, evidence):
     (tmp_path / "evidence").mkdir()
     for name, body in evidence.items():
@@ -31,10 +36,12 @@ def setup(tmp_path, claims, tex, evidence):
             (tmp_path / "evidence" / name).write_text(body)
             side = (tmp_path / "evidence" / name).with_suffix(".provenance.json")
             if not side.exists():
-                side.write_text(json.dumps({"label": _label_for(name, claims)}))
+                side.write_text(json.dumps({"label": _label_for(name, claims), **PINNED}))
             continue
         if isinstance(body, dict) and "label" not in body:
             body = {"label": _label_for(name, claims), **body}
+        if isinstance(body, dict) and "provenance" not in body:
+            body = {**body, "provenance": dict(PINNED)}
         (tmp_path / "evidence" / name).write_text(json.dumps(body))
     (tmp_path / "claims.yaml").write_text(yaml.safe_dump({"claims": claims}))
     if tex is not None:
@@ -234,9 +241,80 @@ def test_a_csv_label_comes_from_its_rows_or_its_sidecar(tmp_path):
         [{"id": "r", "value": 2, "label": "documented", "source": "t.csv:rows", "text": ""}],
         None, {"t.csv": "id,label\n1,\"documented, tested\"\n2,documented\n"})
     (tmp_path / "evidence" / "t.provenance.json").unlink()
-    assert C.check(root) == []
+    # Only the LABEL question is under test here. Deleting the sidecar also removes the
+    # file's pinning evidence, which claims.py now refuses separately (QG F1) — that
+    # refusal is correct and is asserted in its own test.
+    assert [e for e in C.check(root) if "evidence label" in e] == []
     (tmp_path / "evidence" / "t.csv").write_text("id,label\n1,reported\n2,documented\n")
     assert any("evidence label" in e for e in C.check(root))
+
+
+def _pinning_case(tmp_path, provenance):
+    return setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "measured", "source": "e.json:n", "text": ""}],
+        r"\claimn{}", {"e.json": {"label": "measured", "n": 6, "provenance": provenance}})
+
+
+def test_a_claim_cannot_stand_on_evidence_produced_on_a_dirty_tree(tmp_path):
+    """QG F1. tree_clean was written by every producer and read by nothing, so evidence
+    recorded on a dirty tree satisfied every check while the paper asserted the opposite."""
+    root = _pinning_case(tmp_path, {"git_sha": "0" * 40, "tree_clean": False,
+                                    "dirty_paths": ["paper/scripts/x.py"]})
+    errs = C.check(root)
+    assert any("dirty tree" in e and "paper/scripts/x.py" in e for e in errs), errs
+
+
+def test_a_claim_cannot_stand_on_evidence_that_never_established_its_pinning(tmp_path):
+    """An ABSENT tree_clean is not a pass: it means the guarantee was never checked. This is
+    the live case — one shipped file predates the rule — so silence must not read as clean."""
+    root = _pinning_case(tmp_path, {"git_sha": "0" * 40})
+    assert any("no tree_clean" in e for e in C.check(root)), C.check(root)
+
+
+def test_a_named_exception_may_stand_unpinned_with_a_recorded_reason(tmp_path):
+    """The one documented exception is declared, not forgotten: it carries a reason here and
+    a disclosure in the paper, so dropping the disclosure cannot pass silently."""
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "measured", "source": "plugin-tests.json:n", "text": ""}],
+        r"\claimn{}", {"plugin-tests.json": {"label": "measured", "n": 6,
+                                             "provenance": {"git_sha": "0" * 40}}})
+    assert C.check(root) == []
+    assert "plugin-tests.json" in C.UNPINNED_ALLOWED and C.UNPINNED_ALLOWED["plugin-tests.json"]
+
+
+def test_the_one_commit_invariant_refuses_a_set_rebuilt_from_two_commits(tmp_path):
+    """QG F15. The appendix says five file groups were rebuilt from ONE commit but binds a
+    macro resolving to just one file's sha, so the plural sentence was asserted, not checked."""
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "measured", "source": "science.json:n", "text": ""}],
+        r"\claimn{}",
+        {"science.json": {"label": "measured", "n": 6,
+                          "provenance": {"git_sha": "a" * 40, "tree_clean": True}},
+         "agent-run.json": {"label": "measured", "n": 6,
+                            "provenance": {"git_sha": "b" * 40, "tree_clean": True}}})
+    assert any("one-commit invariant" in e for e in C.check(root)), C.check(root)
+
+
+def test_the_one_commit_invariant_passes_when_they_agree(tmp_path):
+    root = setup(tmp_path,
+        [{"id": "n", "value": 6, "label": "measured", "source": "science.json:n", "text": ""}],
+        r"\claimn{}",
+        {"science.json": {"label": "measured", "n": 6,
+                          "provenance": {"git_sha": "a" * 40, "tree_clean": True}},
+         "agent-run.json": {"label": "measured", "n": 6,
+                            "provenance": {"git_sha": "a" * 40, "tree_clean": True}}})
+    assert C.check(root) == []
+
+
+def test_every_committed_evidence_file_is_pinned_or_a_declared_exception():
+    """The shipped set, not only the writers: each real evidence file either carries
+    tree_clean true or is named in UNPINNED_ALLOWED with a reason."""
+    root = Path(__file__).resolve().parents[1]
+    for f in sorted((root / "evidence").glob("*.json")):
+        if f.name.endswith(".provenance.json"):
+            continue
+        err = C.pinning_error(root, f.name)
+        assert err is None, err
 
 
 def test_a_claim_marked_table_false_is_a_macro_but_not_an_appendix_row(tmp_path):

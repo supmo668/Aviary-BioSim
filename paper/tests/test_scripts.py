@@ -11,6 +11,8 @@ import pytest
 
 
 def test_provenance_block_names_every_required_field(prov):
+    prov.dirty_paths = lambda: []
+    prov.require_clean_tree()
     blk = prov.block(inputs_path="/nowhere", extra={"seed": 0})
     for k in ("git_sha", "recorded_at", "inputs_path", "python", "seed"):
         assert k in blk, k
@@ -20,6 +22,8 @@ def test_provenance_block_names_every_required_field(prov):
 
 
 def test_provenance_block_records_versions_and_says_when_a_module_is_absent(prov):
+    prov.dirty_paths = lambda: []
+    prov.require_clean_tree()
     blk = prov.block(inputs_path=None, modules=("json", "module_that_does_not_exist_xq"))
     assert blk["inputs_path"] is None
     assert "json" in blk["versions"]
@@ -32,6 +36,8 @@ def test_provenance_block_publishes_no_home_or_checkout_path(prov):
     repository becomes <repo>/…, one under the home directory ~/…; nothing else changes."""
     from pathlib import Path
     home, repo, parent = str(Path.home().resolve()), str(prov.REPO), str(prov.PARENT)
+    prov.dirty_paths = lambda: []
+    prov.require_clean_tree()
     blk = prov.block(inputs_path=f"{repo}/science/out",
                      extra={"cwd": repo, "hf_home": f"{home}/.cache/hf", "argv": [f"{home}/bin/tool", "run"],
                             "tail": f"UNVERIFIED {home}/x/y.yaml not readable", "seed": 7, "digest": "ab" * 32,
@@ -80,17 +86,107 @@ def test_a_dirty_tree_is_refused_so_the_recorded_sha_identifies_the_producing_co
     assert "paper/scripts/science_rerun.py" in capsys.readouterr().err
 
 
+def _status(prov, monkeypatch, *entries):
+    """Stub `git status --porcelain -z`, capturing the argv so the invocation is asserted
+    rather than assumed: mocking check_output wholesale let the real call lose --porcelain
+    and cwd=REPO with every test still green (QG F17)."""
+    seen = {}
+
+    def fake(argv, **kw):
+        seen["argv"], seen["kw"] = argv, kw
+        return "\0".join(entries) + ("\0" if entries else "")
+
+    monkeypatch.setattr(prov.subprocess, "check_output", fake)
+    return seen
+
+
+def test_dirty_paths_asks_git_for_machine_readable_status_in_the_repository(prov, monkeypatch):
+    seen = _status(prov, monkeypatch, " M paper/scripts/a.py")
+    prov.dirty_paths()
+    assert seen["argv"] == ["git", "status", "--porcelain", "-z", "--no-renames"]
+    assert seen["kw"]["cwd"] == prov.REPO
+
+
 def test_the_evidence_a_rebuild_writes_does_not_count_as_a_dirty_tree(prov, monkeypatch):
-    """`tree_clean` is a claim about the CODE that produced the file, which is what A7-2
-    found unsupported. A full rebuild writes eight evidence files in sequence, so the
-    first producer's own output would otherwise make every later one refuse. Generated
-    evidence is the product, not the producer; a changed SCRIPT still counts."""
-    monkeypatch.setattr(prov.subprocess, "check_output",
-                        lambda *a, **k: " M paper/evidence/science-input.json\n?? paper/evidence/x.json\n")
+    """`tree_clean` is a claim about the CODE that produced the file. A full rebuild writes
+    its evidence in sequence, so the first producer's own output would otherwise make every
+    later one refuse. Only files a producer WRITES are exempt; a changed script still counts."""
+    _status(prov, monkeypatch, " M paper/evidence/science-input.json", "?? paper/evidence/agent-run.json")
     assert prov.dirty_paths() == []
-    monkeypatch.setattr(prov.subprocess, "check_output",
-                        lambda *a, **k: " M paper/evidence/science.json\n M paper/scripts/agent_run.py\n")
+    _status(prov, monkeypatch, " M paper/evidence/science.json", " M paper/scripts/agent_run.py")
     assert prov.dirty_paths() == ["paper/scripts/agent_run.py"]
+
+
+def test_the_hand_authored_evidence_is_an_input_and_still_counts_as_dirty(prov, monkeypatch):
+    """QG F2: taxonomy.csv and weave-count.json are written by no script — they are inputs
+    that back published counts. A blanket directory exemption hid an uncommitted hand edit
+    to either while every producer still recorded tree_clean true."""
+    _status(prov, monkeypatch, " M paper/evidence/taxonomy.csv")
+    assert prov.dirty_paths() == ["paper/evidence/taxonomy.csv"]
+    _status(prov, monkeypatch, " M paper/evidence/weave-count.json")
+    assert prov.dirty_paths() == ["paper/evidence/weave-count.json"]
+
+
+def test_a_rename_out_of_the_evidence_directory_does_not_read_as_clean(prov, monkeypatch):
+    """QG F4: git's rename form is `R  old -> new` in ONE entry. Slicing it and prefix-testing
+    the whole string meant renaming a file OUT of the exempt directory excluded a staged file
+    elsewhere, and the run recorded tree_clean TRUE over a tree that did not contain it —
+    affirmatively false, not merely unproven. `--no-renames` reports the two sides separately."""
+    _status(prov, monkeypatch, "D  paper/evidence/taxonomy.csv", "A  paper/scripts/renamed.py")
+    assert prov.dirty_paths() == ["paper/evidence/taxonomy.csv", "paper/scripts/renamed.py"]
+    with pytest.raises(SystemExit):
+        prov.require_clean_tree()
+
+
+def test_a_path_that_merely_starts_like_an_exempt_one_still_counts(prov, monkeypatch):
+    _status(prov, monkeypatch, " M paper/evidence/science.json.bak", " M paper/evidence-notes.txt")
+    assert prov.dirty_paths() == ["paper/evidence/science.json.bak", "paper/evidence-notes.txt"]
+
+
+def test_the_published_dirty_list_withholds_untracked_filenames(prov, monkeypatch):
+    """QG F11: a checkout carries untracked scratch, credential and client-named files, and
+    this list ships in a public deposit. Untracked names become a count; tracked names, which
+    are public already, are listed under the same cap the refusal message uses."""
+    _status(prov, monkeypatch, " M paper/scripts/a.py", "?? .env.production", "?? notes-for-a-client.md")
+    published = prov.publishable_dirty()
+    assert "paper/scripts/a.py" in published
+    assert "(2 untracked file(s), names withheld)" in published
+    assert not any(".env" in p or "client" in p for p in published)
+    # the refusal decision still sees them — an uncommitted new module is exactly the state
+    # that makes a recorded commit fail to describe the code that ran
+    assert len(prov.dirty_paths()) == 3
+
+
+def test_the_published_dirty_list_is_capped_like_the_refusal_message(prov, monkeypatch):
+    _status(prov, monkeypatch, *[f" M paper/scripts/f{i}.py" for i in range(12)])
+    published = prov.publishable_dirty()
+    assert len(published) == 11 and "(+2 more tracked)" in published
+
+
+def test_the_refusal_names_every_dirty_path_up_to_the_cap_and_says_how_many_it_omitted(prov, capsys):
+    """QG F17: the test asserted only the FIRST path, so a producer that named one of fifty
+    dirty files passed. Cutting the slice to [:1] survived the whole suite."""
+    prov.dirty_paths = lambda: [f"paper/scripts/f{i}.py" for i in range(3)]
+    with pytest.raises(SystemExit):
+        prov.require_clean_tree()
+    err = capsys.readouterr().err
+    assert all(f"paper/scripts/f{i}.py" in err for i in range(3))
+
+    prov.dirty_paths = lambda: [f"paper/scripts/g{i}.py" for i in range(12)]
+    with pytest.raises(SystemExit):
+        prov.require_clean_tree()
+    err = capsys.readouterr().err
+    assert "paper/scripts/g9.py" in err and "paper/scripts/g10.py" not in err
+    assert "(+2 more)" in err
+
+
+def test_block_refuses_to_claim_a_tree_state_the_guard_never_checked(prov):
+    """QG F3: the old default recomputed at write time, by which point the script had written
+    its own exempt evidence, so it almost always evaluated TRUE — a producer that forgot the
+    guard still published tree_clean true, asserting a guarantee that was never checked."""
+    prov.dirty_paths = lambda: ["paper/scripts/x.py"]
+    with pytest.raises(RuntimeError, match="without require_clean_tree"):
+        prov.block(inputs_path=None)
 
 
 def test_a_clean_tree_passes_and_the_block_says_so(prov):
@@ -99,14 +195,26 @@ def test_a_clean_tree_passes_and_the_block_says_so(prov):
     assert prov.block(inputs_path=None)["tree_clean"] is True
 
 
-def test_an_explicitly_allowed_dirty_tree_is_recorded_as_dirty_not_hidden(prov):
-    """The escape hatch may not quietly produce evidence that LOOKS clean: the block has
-    to carry tree_clean false and the paths, so a reader sees the run was not pinned."""
-    prov.dirty_paths = lambda: ["paper/scripts/science_rerun.py"]
+def test_an_explicitly_allowed_dirty_tree_is_recorded_as_dirty_not_hidden(prov, monkeypatch, capsys):
+    """The escape hatch may not quietly produce evidence that LOOKS clean: the block has to
+    carry tree_clean false and the paths, AND say so on stderr — deleting the warning
+    survived the whole suite, because the test took no capsys (QG F17)."""
+    _status(prov, monkeypatch, " M paper/scripts/science_rerun.py")
     assert prov.require_clean_tree(allow_dirty=True) is False
+    err = capsys.readouterr().err
+    assert "WARNING" in err and "NOT pinned" in err and "paper/scripts/science_rerun.py" in err
     blk = prov.block(inputs_path=None)
     assert blk["tree_clean"] is False
     assert blk["dirty_paths"] == ["paper/scripts/science_rerun.py"]
+
+
+def test_the_recorded_dirty_list_is_the_one_from_before_the_run_not_a_re_sample(prov, monkeypatch):
+    """QG F17: only the boolean was checked, so re-sampling the LIST at write time survived —
+    which would publish the evidence the run had just written as the dirty paths."""
+    _status(prov, monkeypatch, " M paper/scripts/a.py")
+    prov.require_clean_tree(allow_dirty=True)
+    _status(prov, monkeypatch, " M paper/scripts/b.py")
+    assert prov.block(inputs_path=None)["dirty_paths"] == ["paper/scripts/a.py"]
 
 
 def test_the_block_reports_the_tree_state_from_before_the_run_wrote_anything(prov):
@@ -136,21 +244,29 @@ PRODUCERS = [
 
 
 @pytest.mark.parametrize("name,argv", PRODUCERS, ids=[p[0] for p in PRODUCERS])
-def test_every_producer_refuses_to_write_evidence_from_a_dirty_tree(name, argv, monkeypatch, capsys):
+def test_every_producer_refuses_to_write_evidence_from_a_dirty_tree(name, argv, monkeypatch,
+                                                                    capsys, tmp_path):
     """A7-2, wired up: the refusal belongs to every script that writes an evidence file,
     not only to _provenance. Loaded WITHOUT the conftest clean-tree patch on purpose —
     this is the one test that must see the real guard. Every path passed is absent, so
     the only thing that can produce this exact refusal is the tree check."""
     from conftest import load_script
-    monkeypatch.delitem(__import__("sys").modules, "_provenance", raising=False)
     mod = load_script(name)
-    mod.P.dirty_paths = lambda: ["paper/scripts/sentinel_dirty.py"]
+    monkeypatch.setattr(mod.P, "dirty_paths", lambda: ["paper/scripts/sentinel_dirty.py"])
+    out = tmp_path / "out.json"
+    argv = argv + ["--out", str(out)]
+    if name == "drain1_record_check":
+        argv += ["--copy-to", str(tmp_path / "copies")]
     with pytest.raises(SystemExit) as e:
         mod.main(argv)
     assert e.value.code == 2
     err = capsys.readouterr().err
     assert "the working tree is dirty" in err
     assert "paper/scripts/sentinel_dirty.py" in err
+    # the refusal must precede the WRITE, which is what this test is named for. The output
+    # used to be left at the default — the LIVE paper/evidence/ — so moving the guard to
+    # after the writes still passed, and the run modified real evidence (QG F10).
+    assert not out.exists(), f"{name} wrote its evidence before refusing"
 
 
 def test_require_inputs_errors_on_missing_dir_and_names_the_path(prov, tmp_path, capsys):
@@ -633,15 +749,25 @@ def _invented_artifact_with_controls():
              "requested": ['score_variant({"accession":"X","position":62,"mutant":"A"})'],
              "results": ["r"], "completion_tokens": 5},
             {"round": 3, "reasoning": (
+                # a prose line mentioning controls, followed by bullets, must NOT be read as
+                # a heading; and an earlier scratch list must not beat the final write-up
+                "We used tolerant positions as a control.\n- Z99Z **+9.9**\n"
+                "## Preliminary controls\n- A11A **+0.5**\n"
                 "### Least tolerant\n- C31A **-13.9**\n- C43A **-16.1**\n"
                 "### Control positions that tolerate substitution\n"
                 "- F25A **+3.1**\n- Q62A **+1.5**\n- D20A **+1.4**\n- P79A **+1.1**\n"
+                "#### Caveat\n- K65A **+0.4**\n"      # a sub-heading must not truncate the list
                 "- P72A **+0.2**\n- G70A **+0.2**\n- E83A **-0.1**\n"
-                "## What this implies\nprose that must not be copied\n"),
+                "- see also Figure S2B and Table T4C\n"   # cross-refs are not substitutions
+                "```python\n# control group for the assay\n- W88W is not a variant\n```\n"
+                "## What this implies\nprose that must not be copied\n- C31A **-13.9**\n"),
              "measurements": []},
         ],
         "conclusion": "secret conclusion",
-        "audit_trail": ["score_variant({'accession': 'X', 'position': 31, 'mutant': 'A'}) -> ok"],
+        # the agent measured everything it named; a position it never measured cannot be one
+        # of its controls, which is what filters the cross-reference tokens back out
+        "audit_trail": [f"score_variant({{'accession': 'X', 'position': {p}, 'mutant': 'A'}}) -> ok"
+                        for p in (20, 25, 31, 43, 62, 65, 70, 72, 79, 83)],
     }
 
 
@@ -663,12 +789,44 @@ def test_agent_run_records_the_controls_the_agent_itself_named(script, tmp_path)
     assert A.main(["--inputs", str(d), "--out", str(out), "--science", str(science)]) == 0
     text = out.read_text()
     c = json.loads(text)["control_positions"]
-    assert c["named_by_the_agent"] == [20, 25, 62, 70, 72, 79, 83]
-    assert c["named_by_the_agent_count"] == 7
-    assert c["named_by_the_agent_in_c_peptide"] == [62, 70, 72, 79, 83]
-    assert c["named_by_the_agent_in_c_peptide_count"] == 5
+    # 65 is INSIDE the region but is NOT one of the science-derived controls, so classifying
+    # against the region and classifying against `c_peptide_controls` give different answers
+    # and the test can tell them apart. They were numerically identical before, and swapping
+    # one for the other survived the whole suite — the A7-1 point was unverified (QG F17).
+    assert c["named_by_the_agent"] == [20, 25, 62, 65, 70, 72, 79, 83]
+    assert c["named_by_the_agent_count"] == 8
+    assert c["named_by_the_agent_in_c_peptide"] == [62, 65, 70, 72, 79, 83]
+    assert c["named_by_the_agent_in_c_peptide_count"] == 6
     assert c["named_by_the_agent_outside_c_peptide"] == [20, 25]
+    assert c["named_by_the_agent_in_c_peptide"] != c["c_peptide_positions_from_science_json"]
+    # the extraction is auditable: which round, which heading, what was thrown away
+    ex = c["named_by_the_agent_extraction"]
+    assert ex["round"] == 3 and "Control positions" in ex["heading"]
+    assert set(ex["discarded_not_measured"]) >= {2, 4}   # Figure S2B / Table T4C
     assert "prose that must not be copied" not in text and "secret conclusion" not in text
+
+
+def test_the_control_parser_ignores_code_fences_prose_and_earlier_scratch_lists(script):
+    """QG F7, three reproduced defects in one: a `#` comment inside a fenced code block was
+    read as a heading, any line containing 'control' was read as a heading, and the FIRST
+    matching heading won although the paper reports the agent's FINAL write-up."""
+    A = script("agent_run")
+    measured = [20, 25, 31, 43, 62, 65, 70, 72, 79, 83]
+    named, prov = A.controls_named_by_the_agent(_invented_artifact_with_controls(), measured)
+    assert 99 not in named          # the prose mention's bullet
+    assert 11 not in named          # the earlier "Preliminary controls" list
+    assert 88 not in named          # the comment inside the code fence
+    assert 65 in named              # a sub-heading did not truncate the list
+    assert prov["round"] == 3
+
+
+def test_the_control_parser_reports_no_list_rather_than_an_empty_one(script):
+    """QG F17: `return None` -> `return []` survived. An empty list is a positive assertion
+    that the agent named NO controls; absent means no control section was found at all."""
+    A = script("agent_run")
+    named, prov = A.controls_named_by_the_agent(
+        {"rounds": [{"reasoning": "no headings here at all"}]}, [1, 2, 3])
+    assert named is None and prov is None
 
 
 def test_agent_run_records_that_the_constrained_positions_were_requested_in_round_one(script, tmp_path):
@@ -690,6 +848,94 @@ def test_agent_run_records_that_the_constrained_positions_were_requested_in_roun
     assert j["cysteines_first_requested_in_round"] == 1
     # the region was probed in the SAME round, not after a finding
     assert j["c_peptide_first_requested_in_round"] == 1
+    # and ALL the cysteines were in that round — the paper says "the six ... together", which
+    # an any-of fact cannot support (QG F6)
+    assert j["all_cysteines_requested_in_round"] == 1
+
+
+def test_an_any_of_round_is_not_recorded_as_an_all_of_round(script, tmp_path):
+    """QG F6. `first_round_requesting` is an ANY-of fact, and `return 1` unconditionally
+    survived the whole suite because every asserted value was 1. The paper's load-bearing
+    sentence needs the all-of fact, so both are recorded and they must be able to differ."""
+    A = script("agent_run")
+    d = tmp_path / "discovery"
+    d.mkdir()
+    art = {
+        "objective": "o", "model": "m",
+        "rounds": [
+            # round 1 asks for ONE of the two; round 2 asks for BOTH together, so the any-of
+            # answer is 1 and the all-in-one-round answer is 2
+            {"round": 1, "requested": ['{"position": 31}'], "reasoning": "", "completion_tokens": 1},
+            {"round": 2, "requested": ['{"position": 31}', '{"position": 43}'],
+             "reasoning": "", "completion_tokens": 1},
+        ],
+        "conclusion": "c",
+        "audit_trail": ["score_variant({'position': 31}) -> ok"],
+    }
+    (d / "discovery.json").write_text(json.dumps(art))
+    science = tmp_path / "science.json"
+    science.write_text(json.dumps({"headline": {"c_peptide_region": [57, 87],
+                                                "c_peptide_controls": {},
+                                                "cysteine_positions": [31, 43]}}))
+    out = tmp_path / "agent-run.json"
+    assert A.main(["--inputs", str(d), "--out", str(out), "--science", str(science)]) == 0
+    j = json.loads(out.read_text())
+    assert j["cysteines_first_requested_in_round"] == 1      # one of them arrived in round 1
+    assert j["all_cysteines_requested_in_round"] == 2        # but not all until round 2
+    assert j["c_peptide_first_requested_in_round"] is None   # never requested
+
+
+def test_agent_run_says_pending_rather_than_null_when_the_science_input_is_absent(script, tmp_path):
+    """QG F19: a bare null conflated 'the agent never requested these' with 'the input was
+    missing and nothing was computed'. The round fields use the same sentinel as the rest."""
+    A = script("agent_run")
+    d = tmp_path / "discovery"
+    d.mkdir()
+    (d / "discovery.json").write_text(json.dumps(_invented_artifact_with_controls()))
+    out = tmp_path / "agent-run.json"
+    assert A.main(["--inputs", str(d), "--out", str(out),
+                   "--science", str(tmp_path / "absent.json")]) == 0
+    j = json.loads(out.read_text())
+    for k in ("cysteines_first_requested_in_round", "all_cysteines_requested_in_round",
+              "c_peptide_first_requested_in_round"):
+        assert isinstance(j[k], str) and j[k].startswith("pending"), k
+    assert j["science_json_sha256"] is None
+
+
+def test_agent_run_pins_the_science_json_it_read(script, tmp_path):
+    """QG F2: science.json is exempt from the tree check, so tree_clean says nothing about
+    it — yet three published fields are classified against its region annotation. The digest
+    is what pins that input, exactly as artifact_sha256 already pins the external artifact."""
+    import hashlib
+    A = script("agent_run")
+    d = tmp_path / "discovery"
+    d.mkdir()
+    (d / "discovery.json").write_text(json.dumps(_invented_artifact_with_controls()))
+    science = tmp_path / "science.json"
+    science.write_text(json.dumps({"headline": {"c_peptide_region": [57, 87],
+                                                "c_peptide_controls": {"62": 1.5},
+                                                "cysteine_positions": [31, 43]}}))
+    out = tmp_path / "agent-run.json"
+    assert A.main(["--inputs", str(d), "--out", str(out), "--science", str(science)]) == 0
+    assert json.loads(out.read_text())["science_json_sha256"] == \
+        hashlib.sha256(science.read_bytes()).hexdigest()
+
+
+def test_agent_run_errors_on_a_malformed_c_peptide_region_naming_the_field(script, tmp_path, capsys):
+    """QG F18: a partially written sibling gave a bare TypeError/ValueError traceback instead
+    of this project's convention — ERROR plus exit 2, naming what was wrong."""
+    A = script("agent_run")
+    d = tmp_path / "discovery"
+    d.mkdir()
+    (d / "discovery.json").write_text(json.dumps(_invented_artifact_with_controls()))
+    science = tmp_path / "science.json"
+    science.write_text(json.dumps({"headline": {"c_peptide_region": [57, None],
+                                                "c_peptide_controls": {},
+                                                "cysteine_positions": [31]}}))
+    out = tmp_path / "agent-run.json"
+    assert A.main(["--inputs", str(d), "--out", str(out), "--science", str(science)]) == 2
+    assert "c_peptide_region" in capsys.readouterr().err
+    assert not out.exists()
 
 
 def test_agent_run_errors_when_the_artifact_is_absent_naming_the_path(script, tmp_path, capsys):

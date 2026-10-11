@@ -23,46 +23,107 @@ POSITION = re.compile(r"'position':\s*(\d+)")
 # `requested` entries are JSON-quoted, the audit trail is repr-quoted: accept either.
 REQUESTED_POSITION = re.compile(r"[\"']position[\"']:\s*(\d+)")
 CONTROL_HEADING = re.compile(r"control", re.I)
+# A substitution token: wild-type letter, position, mutant letter. Harvested matches are
+# intersected with the positions the agent actually measured, because this shape also fits a
+# cross-reference or a panel label ("Figure S2B", "Table T4C") and those inflated the count
+# of named controls — a number the abstract now prints (QG F7).
 VARIANT = re.compile(r"\b[A-Z](\d+)[A-Z]\b")
+FENCE = ("```", "~~~")
+BULLET = ("-", "*", "+")
 
 
 def requested_positions_per_round(artifact: dict) -> list[list[int]]:
     """Which positions each round ASKED for — the order the agent actually worked in."""
-    return [sorted({int(m) for req in r.get("requested", []) for m in REQUESTED_POSITION.findall(req)})
-            for r in artifact.get("rounds", [])]
+    out = []
+    for r in artifact.get("rounds", []):
+        found: set[int] = set()
+        for req in r.get("requested", []):
+            text = req if isinstance(req, str) else json.dumps(req)
+            found |= {int(m) for m in REQUESTED_POSITION.findall(text)}
+        out.append(sorted(found))
+    return out
 
 
 def first_round_requesting(per_round: list[list[int]], positions) -> int | None:
     """The 1-based round that first requested ANY of `positions`, or None."""
     wanted = set(positions)
+    if not wanted:
+        return None
     for i, got in enumerate(per_round, 1):
         if wanted & set(got):
             return i
     return None
 
 
-def controls_named_by_the_agent(artifact: dict) -> list[int] | None:
+def first_round_requesting_all(per_round: list[list[int]], positions) -> int | None:
+    """The 1-based round that requested EVERY one of `positions`, or None.
+
+    The paper's sentence is "round 1 requested the six cysteines and two C-peptide positions
+    together", which an any-of fact cannot support: it would read the same if one cysteine
+    came in round 1 and the rest in round 4 (QG F6).
+    """
+    wanted = set(positions)
+    if not wanted:
+        return None
+    for i, got in enumerate(per_round, 1):
+        if wanted <= set(got):
+            return i
+    return None
+
+
+def controls_named_by_the_agent(artifact: dict, measured: list[int] | None = None):
     """The positions the agent ITSELF put under a 'control' heading in its write-up.
 
-    A4's rule holds: positions only, never the prose around them. The paper used to
-    describe these as a region the agent probed; the agent named neither a region nor
-    these positions as belonging to one, so what it did name is what the evidence
-    carries (A7-1).
+    A4's rule holds: positions only, never the prose around them. The paper used to describe
+    these as a region the agent probed; the agent named neither a region nor these positions
+    as belonging to one, so what it did name is what the evidence carries (A7-1).
+
+    Returns (positions, provenance-of-the-extraction) or (None, None) when no control
+    heading was found. The LAST matching heading wins, because the paper reports this as the
+    agent's final write-up and an earlier scratch list silently replaced it (QG F7).
     """
-    for r in artifact.get("rounds", []):
+    hit = None
+    for ridx, r in enumerate(artifact.get("rounds", []), 1):
         lines = (r.get("reasoning") or "").splitlines()
+        in_fence = False
         for i, line in enumerate(lines):
-            if not (line.lstrip().startswith("#") and CONTROL_HEADING.search(line)):
+            stripped = line.lstrip()
+            if stripped.startswith(FENCE):
+                in_fence = not in_fence
                 continue
+            # A `#` comment inside a fenced code block is not a heading; treating it as one
+            # let a code comment supply the published count (QG F7).
+            if in_fence or not stripped.startswith("#") or not CONTROL_HEADING.search(line):
+                continue
+            level = len(stripped) - len(stripped.lstrip("#"))
             found: list[int] = []
+            scanned = 0
+            sub_fence = False
             for nxt in lines[i + 1:]:
-                if nxt.lstrip().startswith("#"):
+                ns = nxt.lstrip()
+                if ns.startswith(FENCE):
+                    sub_fence = not sub_fence
+                    continue
+                if sub_fence:
+                    continue
+                # Stop only at a heading of the same or higher level, so a sub-heading inside
+                # the control section does not truncate the list.
+                if ns.startswith("#") and (len(ns) - len(ns.lstrip("#"))) <= level:
                     break
-                if nxt.lstrip().startswith(("-", "*")):
+                if ns.startswith(BULLET) or re.match(r"\d+[.)]\s", ns) or ns.startswith("|"):
+                    scanned += 1
                     found += [int(m) for m in VARIANT.findall(nxt)]
             if found:
-                return sorted(set(found))
-    return None
+                hit = (sorted(set(found)), {"round": ridx, "heading": stripped,
+                                            "list_lines_scanned": scanned})
+    if hit is None:
+        return None, None
+    positions, prov = hit
+    if measured is not None:
+        kept = [p for p in positions if p in set(measured)]
+        prov["discarded_not_measured"] = [p for p in positions if p not in set(measured)]
+        positions = kept
+    return positions, prov
 
 
 def counts(artifact: dict) -> dict:
@@ -103,21 +164,34 @@ def main(argv=None) -> int:
     artifact = json.loads(raw)
     c = counts(artifact)
     per_round = requested_positions_per_round(artifact)
-    named = controls_named_by_the_agent(artifact)
+    named, named_prov = controls_named_by_the_agent(artifact, c["positions_measured"])
     controls = None
     sci = Path(a.science)
-    cpep_round = cys_round = None
+    PENDING = "pending: paper/evidence/science.json not present"
+    cpep_round = cys_round = cys_all_round = PENDING
+    science_digest = None
     if sci.exists():
-        s = json.loads(sci.read_text())
+        science_bytes = sci.read_bytes()
+        # science.json lives under paper/evidence/, which the tree check exempts, so its
+        # state is NOT covered by tree_clean; the digest is what pins the region annotation
+        # these fields were classified against (QG F2).
+        science_digest = hashlib.sha256(science_bytes).hexdigest()
+        s = json.loads(science_bytes)
         head = s.get("headline", {})
         ctrl = sorted(int(p) for p in head.get("c_peptide_controls", {}))
         controls = {"c_peptide_positions_from_science_json": ctrl,
                     "measured_by_the_agent": [p for p in ctrl if p in c["positions_measured"]]}
+        region = head.get("c_peptide_region")
+        if not (isinstance(region, list) and len(region) == 2
+                and all(isinstance(v, int) for v in region)):
+            print(f"ERROR: {sci} headline.c_peptide_region is not a pair of integers: "
+                  f"{region!r}", file=sys.stderr)
+            return 2
+        lo, hi = region
         # The agent's OWN control list, classified against the region the scan annotates
-        # — not against the list above, which is derived from the agent's positions and so
+        # — not against `ctrl` above, which is derived from the agent's own positions and so
         # could only ever agree with itself (A7-1).
-        lo, hi = head.get("c_peptide_region", [None, None])
-        if named is not None and lo is not None:
+        if named is not None:
             inside = [p for p in named if lo <= p <= hi]
             controls.update({
                 "named_by_the_agent": named,
@@ -125,25 +199,32 @@ def main(argv=None) -> int:
                 "named_by_the_agent_in_c_peptide": inside,
                 "named_by_the_agent_in_c_peptide_count": len(inside),
                 "named_by_the_agent_outside_c_peptide": [p for p in named if not lo <= p <= hi],
-                "region_named_by_the_agent": None,
+                "named_by_the_agent_extraction": named_prov,
             })
-        if lo is not None:
-            cpep_round = first_round_requesting(per_round, range(lo, hi + 1))
-        cys_round = first_round_requesting(per_round, head.get("cysteine_positions", []))
+        cpep_round = first_round_requesting(per_round, range(lo, hi + 1))
+        cys = head.get("cysteine_positions", [])
+        cys_round = first_round_requesting(per_round, cys)
+        cys_all_round = first_round_requesting_all(per_round, cys)
+    # Built ONCE: two calls meant two git invocations and let the label's date and
+    # provenance.recorded_at straddle UTC midnight, a skew claims.py would not catch.
+    prov = P.block(inputs_path=inputs)
     out = {
-        "label": "reported (artifact counted, " + P.block(None)["recorded_at"][:10] + ")",
+        "label": "reported (artifact counted, " + prov["recorded_at"][:10] + ")",
         **c,
         "requested_positions_per_round": per_round,
         "cysteines_first_requested_in_round": cys_round,
+        "all_cysteines_requested_in_round": cys_all_round,
         "c_peptide_first_requested_in_round": cpep_round,
-        "control_positions": controls if controls is not None else "pending: paper/evidence/science.json not present",
+        "control_positions": controls if controls is not None else PENDING,
         "artifact_sha256": hashlib.sha256(raw).hexdigest(),
         "artifact_bytes": len(raw),
         "artifact_mtime_utc": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
                                       .replace(microsecond=0).isoformat(),
-        "provenance": P.block(inputs_path=inputs),
+        "science_json_sha256": science_digest,
+        "provenance": prov,
     }
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    out = P.redact(out)                  # the artifact's own fields name things too (QG F13)
     Path(a.out).write_text(json.dumps(out, indent=2))
     print(f"{c['measurements']} measurements, {c['rounds']} rounds -> {a.out}")
     return 0

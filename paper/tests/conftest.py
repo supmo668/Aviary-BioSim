@@ -30,6 +30,12 @@ def load_script(name: str):
         spec.loader.exec_module(module)
     finally:
         sys.path[:] = saved
+        # The script's own `import _provenance` registers it in sys.modules, where it then
+        # outlived the test: a stubbed dirty_paths and a cached _TREE_CLEAN leaked into every
+        # later loader, and a test that arranged NOTHING passed a dirty-tree assertion
+        # (QG F9). The module object each caller gets is reached through `module.P`, so
+        # dropping the global entry here costs nothing.
+        sys.modules.pop("_provenance", None)
     return module
 
 
@@ -39,20 +45,34 @@ def prov():
     return load_script("_provenance")
 
 
+@pytest.fixture(autouse=True)
+def _no_leaked_provenance():
+    """`_provenance` must not survive a test. It is imported by bare name inside every
+    script, so a stubbed `dirty_paths` or a cached `_TREE_CLEAN` left in sys.modules reached
+    every later test and made dirty-tree assertions pass with no arrangement at all (QG F9).
+    """
+    sys.modules.pop("_provenance", None)
+    yield
+    assert "_provenance" not in sys.modules, "a test leaked _provenance into sys.modules"
+
+
 @pytest.fixture
 def script(monkeypatch):
-    """Load a script by name; `_provenance`, which scripts import by bare name, is
-    removed from sys.modules afterwards so no test sees another's copy."""
-    monkeypatch.delitem(sys.modules, "_provenance", raising=False)
+    """Load a script by name, with the tree-state guard neutralised for that script's own
+    `_provenance` instance only."""
 
     def _load(name: str):
         mod = load_script(name)
         # Every producer refuses a dirty tree (A7-2), and the tree IS dirty whenever the
         # suite runs over uncommitted work. These tests are about the scripts' own
-        # behaviour, so they run as if the tree were clean; that the refusal is wired up
-        # at all is asserted separately, per script, in test_scripts.py.
+        # behaviour, so they run as if the tree were clean; that the refusal is wired up at
+        # all is asserted separately, per script, in test_scripts.py.
+        # monkeypatch, not a raw assignment: the module object is shared with anything else
+        # holding a reference, and a raw write outlived the test (QG F9).
         if hasattr(mod, "P"):
-            mod.P.dirty_paths = lambda: []
+            monkeypatch.setattr(mod.P, "dirty_paths", lambda: [])
+            monkeypatch.setattr(mod.P, "_TREE_CLEAN", None)
+            monkeypatch.setattr(mod.P, "_DIRTY", [])
         return mod
 
     return _load

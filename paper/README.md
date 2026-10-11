@@ -73,11 +73,23 @@ each script names the file it is missing and exits 2 rather than guessing.
 naming what is dirty) and records `provenance.tree_clean`. A recorded `git_sha` is a claim
 about *which code produced this file*, and that claim only holds if the tree was the commit:
 once, a file recorded a commit whose tree did not yet contain the fields the file carried,
-because the script was still uncommitted. What a rebuild writes under `evidence/` does not
-count as dirty — that is the product, not the producer, and a full rebuild writes eight files
-in sequence. `--allow-dirty-tree` does not suppress the fact —
-it records `tree_clean: false` and the dirty paths, so a run that was not pinned cannot read
-as one that was.
+because the script was still uncommitted, and `plugin-tests.json` still records a commit that
+does not contain its producer at all.
+
+The exemption is the specific files a producer **writes** — eight producers writing ten paths,
+with `agent_run.py` running twice — because a sequential rebuild would otherwise make every
+producer after the first refuse. It is not the whole directory: `taxonomy.csv` and
+`weave-count.json` are hand-authored *inputs*, not products, so an uncommitted edit to either
+still stops a run. A file that a producer reads from `evidence/` is pinned by its digest
+instead (`agent-run.json` records `science_json_sha256`), because `tree_clean` says nothing
+about a path the check exempts.
+
+`--allow-dirty-tree` does not suppress the fact: it records `tree_clean: false` and the dirty
+paths, and `claims.py` then refuses every claim resting on that file. Untracked filenames are
+reduced to a count in the published list, since a working checkout carries scratch and
+credential files whose names should not ship. **An absent `tree_clean` means not established,
+never clean** — `claims.py` refuses a `measured` or `reconstructed` claim on a file without it
+unless the file is named in `UNPINNED_ALLOWED` with a reason and disclosed in the paper.
 
 The **evidence-location rule** applies to every script that reads the published run: it
 takes `--inputs <absolute path>`; a missing or empty directory is an error (exit 2) that
