@@ -120,6 +120,7 @@
     []
   ],
   "cysteines_first_requested_in_round": 1,
+  "all_cysteines_requested_in_round": 1,
   "c_peptide_first_requested_in_round": 1,
   "control_positions": {
     "c_peptide_positions_from_science_json": [
@@ -158,15 +159,21 @@
       20,
       25
     ],
-    "region_named_by_the_agent": null
+    "named_by_the_agent_extraction": {
+      "round": 5,
+      "heading": "### Control positions that tolerate substitution",
+      "list_lines_scanned": 7,
+      "discarded_not_measured": []
+    }
   },
   "artifact_sha256": "ed9b4e2f5f01f24ab3aa6ba027fd47da55441d5028dc4a09a9b99cd91998d340",
   "artifact_bytes": 29650,
   "artifact_mtime_utc": "2026-09-13T19:23:20+00:00",
+  "science_json_sha256": "8a168ebfc53cbdb81023fddb4dcf552a6a8aef222a1f0e54bc1fcf5f3f13b720",
   "provenance": {
-    "git_sha": "95c992280b07541813e3e35bdeb2a6816d96b4ab",
+    "git_sha": "26da24de11f4470b7f2ddfb72e72cbae4a382d3d",
     "tree_clean": true,
-    "recorded_at": "2026-10-11T04:15:43Z",
+    "recorded_at": "2026-10-11T05:52:54Z",
     "inputs_path": "<parent-project>/projects/aviary-biosim/science/out/discovery",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
