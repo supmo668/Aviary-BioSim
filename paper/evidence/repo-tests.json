@@ -1,5 +1,5 @@
 {
-  "label": "measured (re-run, 2026-10-08)",
+  "label": "measured (re-run, 2026-10-11)",
   "suites": {
     "science/tests": {
       "passed": 328,
@@ -17,12 +17,12 @@
       "exit": 0
     },
     "paper/tests": {
-      "passed": 122,
+      "passed": 137,
       "failed": 0,
       "exit": 0
     }
   },
-  "total_passed": 509,
+  "total_passed": 524,
   "mutants": {
     "killed": 48,
     "live": 48,
@@ -30,11 +30,12 @@
     "exit": 0
   },
   "provenance": {
-    "git_sha": "7ea681620ddaa2581e7cb4e517937da261ae9bc9",
-    "recorded_at": "2026-10-08T23:36:08Z",
+    "git_sha": "d8f480d218e2c4ee51fdb80f7a6f20b308de21fc",
+    "tree_clean": true,
+    "recorded_at": "2026-10-11T04:53:35Z",
     "inputs_path": null,
-    "python": "3.11.15",
-    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "python": "3.14.5",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "versions": {}
   }
 }
