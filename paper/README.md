@@ -73,8 +73,9 @@ each script names the file it is missing and exits 2 rather than guessing.
 naming what is dirty) and records `provenance.tree_clean`. A recorded `git_sha` is a claim
 about *which code produced this file*, and that claim only holds if the tree was the commit:
 once, a file recorded a commit whose tree did not yet contain the fields the file carried,
-because the script was still uncommitted, and `plugin-tests.json` still records a commit that
-does not contain its producer at all.
+because the script was still uncommitted. Enforcing the condition caught a second instance in
+this repository's own evidence: `plugin-tests.json` recorded a commit that did not contain its
+producer at all. It has been rebuilt from the tag it names and now carries `tree_clean`.
 
 The exemption is the specific files a producer **writes** — eight producers writing ten paths,
 with `agent_run.py` running twice — because a sequential rebuild would otherwise make every

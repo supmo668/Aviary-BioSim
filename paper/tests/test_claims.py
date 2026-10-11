@@ -272,14 +272,16 @@ def test_a_claim_cannot_stand_on_evidence_that_never_established_its_pinning(tmp
 
 
 def test_a_named_exception_may_stand_unpinned_with_a_recorded_reason(tmp_path):
-    """The one documented exception is declared, not forgotten: it carries a reason here and
-    a disclosure in the paper, so dropping the disclosure cannot pass silently."""
+    """An exception is DECLARED, not forgotten: each carries a reason, so a file that simply
+    lost its provenance can never be mistaken for one we decided to allow. The standing
+    exceptions are the two hand-authored inputs, which no script produces and which therefore
+    have no producing commit to pin."""
     root = setup(tmp_path,
-        [{"id": "n", "value": 6, "label": "measured", "source": "plugin-tests.json:n", "text": ""}],
-        r"\claimn{}", {"plugin-tests.json": {"label": "measured", "n": 6,
-                                             "provenance": {"git_sha": "0" * 40}}})
+        [{"id": "n", "value": 6, "label": "queried", "source": "weave-count.json:n", "text": ""}],
+        r"\claimn{}", {"weave-count.json": {"label": "queried", "n": 6}})
     assert C.check(root) == []
-    assert "plugin-tests.json" in C.UNPINNED_ALLOWED and C.UNPINNED_ALLOWED["plugin-tests.json"]
+    assert set(C.UNPINNED_ALLOWED) == {"weave-count.json", "taxonomy.csv"}
+    assert all(C.UNPINNED_ALLOWED.values()), "every exception must carry a reason"
 
 
 def test_the_one_commit_invariant_refuses_a_set_rebuilt_from_two_commits(tmp_path):

@@ -44,11 +44,11 @@ claims:
   - {id: closed, value: 6, label: "recovered record", source: "drain1-record-check.json:closed_count", text: "tasks the recovered record lists as closed"}
   - {id: parked, value: 0, label: "recovered record", source: "drain1-record-check.json:parked_count", text: "tasks set aside"}
   # --- the trust core's own tests (A6) and the taxonomy (A5) ---
-  - {id: pluginver, value: "0.64.0", label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:plugin_version", text: "plugin version the suites were re-run at"}
-  - {id: plugincommit, value: "e54bb44", label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:commit", text: "plugin commit of that version"}
-  - {id: plugintests, value: 219, label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:totals.run", text: "plugin suite assertions re-run"}
-  - {id: pluginfail, value: 0, label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:totals.failed", text: "of them failing"}
-  - {id: regtests, value: 60, label: "measured (re-run, 2026-09-26)", source: "plugin-tests.json:suites.register.test.sh.run", text: "worklist-tool assertions"}
+  - {id: pluginver, value: "0.64.0", label: "measured (re-run, 2026-10-11)", source: "plugin-tests.json:plugin_version", text: "plugin version the suites were re-run at"}
+  - {id: plugincommit, value: "e54bb44", label: "measured (re-run, 2026-10-11)", source: "plugin-tests.json:commit", text: "plugin commit of that version"}
+  - {id: plugintests, value: 219, label: "measured (re-run, 2026-10-11)", source: "plugin-tests.json:totals.run", text: "plugin suite assertions re-run"}
+  - {id: pluginfail, value: 0, label: "measured (re-run, 2026-10-11)", source: "plugin-tests.json:totals.failed", text: "of them failing"}
+  - {id: regtests, value: 60, label: "measured (re-run, 2026-10-11)", source: "plugin-tests.json:suites.register.test.sh.run", text: "worklist-tool assertions"}
   - {id: taxrows, value: 22, label: "documented", source: "taxonomy.csv:rows", text: "failure modes in the taxonomy"}
   # --- the repository's own suites and mutation gate (repo-tests.json) ---
   - {id: scitests, value: 328, label: "measured (re-run, 2026-10-11)", source: "repo-tests.json:suites.science/tests.passed", text: "science-suite tests"}

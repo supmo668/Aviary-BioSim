@@ -42,9 +42,6 @@ FAILING_LABEL = re.compile(r"^\s*(NOT\b|MISMATCH\b)", re.I)
 # that is merely forgotten here would build silently, which is the failure the tree_clean
 # field exists to prevent (QG F1).
 UNPINNED_ALLOWED = {
-    "plugin-tests.json":
-        "measured against a separate checkout of the tool's repository that no longer exists; "
-        "its recorded commit does not contain the producing script. Disclosed in Limitations.",
     # Hand-recorded and hand-authored: no script produces these, so there is no producing
     # commit to pin. Their labels (queried / documented) say so.
     "weave-count.json": "hand-recorded from a trace-store query; no producer script.",

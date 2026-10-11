@@ -1,5 +1,5 @@
 {
-  "label": "measured (re-run, 2026-09-26)",
+  "label": "measured (re-run, 2026-10-11)",
   "plugin_version": "0.64.0",
   "commit": "e54bb44",
   "suites": {
@@ -58,14 +58,14 @@
     "failed": 0
   },
   "provenance": {
-    "git_sha": "8c01aa5e43122461b0b37a23a4c134777e95088c",
-    "recorded_at": "2026-09-26T21:30:55Z",
-    "inputs_path": "~/\u2026/aiadlc",
+    "git_sha": "db42d158944b71c2dfe70b4053fef7c10958590f",
+    "tree_clean": true,
+    "recorded_at": "2026-10-11T06:13:30Z",
+    "inputs_path": "~/\u2026/airdlc",
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "versions": {},
     "tag": "v0.64.0",
-    "scratch_worktree": true,
-    "paths_redacted": "absolute paths rewritten in place on 2026-10-03 (QG F06, coordinator ruling #576): <repo>/ for this checkout, <parent-project>/ for its enclosing project, <plugin:NAME VERSION>/ for a plugin cache, ~/\u2026/NAME for any other home path; every other value is as the script wrote it"
+    "scratch_worktree": true
   }
 }
