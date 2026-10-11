@@ -21,6 +21,17 @@ a value disagrees, or a claim that was only *reported* is phrased as *measured*.
 A label is a field inside the evidence file, not prose around it. `claims.py` refuses a claim whose
 label the evidence file does not itself carry, and any file labelled `NOT …` or `MISMATCH …`.
 
+## Running the tests over these scripts
+
+Declared here because an undeclared reagent is taxonomy row T12's own failure shape, and
+the only declaration used to be the `PAPER` list inside `repo_tests.py`: a bare
+`pytest paper/tests` fails six tests on `requests` and `matplotlib`, which reads as a
+broken suite rather than a missing dependency. From the repository root:
+
+```
+uv run --with pytest --with pyyaml --with requests --with matplotlib python -m pytest -q paper/tests
+```
+
 ## The sealed-suite referee
 
 The sealed suite is re-run by the plugin's `referee`, which resolves its command from the project
@@ -57,6 +68,16 @@ agent's measured positions from `agent-run.json` to pick the C-peptide controls,
 `agent_run.py` reads `science.json` back to record which controls the agent chose. A clean
 rebuild therefore runs `agent_run.py`, then `science_rerun.py`, then `agent_run.py` again;
 each script names the file it is missing and exits 2 rather than guessing.
+
+**The tree must be clean.** Every producer refuses to run on a dirty working tree (exit 2,
+naming what is dirty) and records `provenance.tree_clean`. A recorded `git_sha` is a claim
+about *which code produced this file*, and that claim only holds if the tree was the commit:
+once, a file recorded a commit whose tree did not yet contain the fields the file carried,
+because the script was still uncommitted. What a rebuild writes under `evidence/` does not
+count as dirty — that is the product, not the producer, and a full rebuild writes eight files
+in sequence. `--allow-dirty-tree` does not suppress the fact —
+it records `tree_clean: false` and the dirty paths, so a run that was not pinned cannot read
+as one that was.
 
 The **evidence-location rule** applies to every script that reads the published run: it
 takes `--inputs <absolute path>`; a missing or empty directory is an error (exit 2) that

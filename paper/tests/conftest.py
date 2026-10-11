@@ -46,6 +46,13 @@ def script(monkeypatch):
     monkeypatch.delitem(sys.modules, "_provenance", raising=False)
 
     def _load(name: str):
-        return load_script(name)
+        mod = load_script(name)
+        # Every producer refuses a dirty tree (A7-2), and the tree IS dirty whenever the
+        # suite runs over uncommitted work. These tests are about the scripts' own
+        # behaviour, so they run as if the tree were clean; that the refusal is wired up
+        # at all is asserted separately, per script, in test_scripts.py.
+        if hasattr(mod, "P"):
+            mod.P.dirty_paths = lambda: []
+        return mod
 
     return _load

@@ -60,7 +60,11 @@ def main(argv=None) -> int:
     ap.add_argument("--copy-to", default=P.evidence("candidate-record"))
     ap.add_argument("--first", default=D.FIRST)
     ap.add_argument("--last", default=D.LAST)
+    ap.add_argument("--allow-dirty-tree", action="store_true",
+                    help="record tree_clean false instead of refusing (A7-2)")
     a = ap.parse_args(argv)
+    # A7-2: the recorded git_sha only identifies the producing code on a clean tree.
+    P.require_clean_tree(allow_dirty=a.allow_dirty_tree)
 
     record = P.require_inputs(a.record)          # exit 2, naming the path, if missing/empty
     if not Path(a.register).is_file():

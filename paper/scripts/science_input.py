@@ -62,7 +62,7 @@ def fetch_fresh(accession: str) -> dict:
             "release": r.headers.get("x-uniprot-release", ""),
             "release_date": r.headers.get("x-uniprot-release-date", ""),
             "http_last_modified": r.headers.get("last-modified", ""),
-            "entry_version": header.split("SV=")[-1].split()[0] if "SV=" in header else ""}
+            "sequence_version": header.split("SV=")[-1].split()[0] if "SV=" in header else ""}
 
 
 def published_record(inputs: Path) -> dict:
@@ -81,7 +81,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--inputs", required=True, help="ABSOLUTE path to the published run's science/out")
     ap.add_argument("--out", default=P.evidence("science-input.json"))
+    ap.add_argument("--allow-dirty-tree", action="store_true",
+                    help="record tree_clean false instead of refusing (A7-2)")
     a = ap.parse_args(argv)
+    # A7-2: the recorded git_sha only identifies the producing code on a clean tree.
+    P.require_clean_tree(allow_dirty=a.allow_dirty_tree)
     inputs = P.require_inputs(a.inputs)
     rec = published_record(inputs)
     acc = _valid_accession(rec["accession"])            # refuse before any URL is built
@@ -96,7 +100,7 @@ def main(argv=None) -> int:
                       "organism_field": rec.get("organism", "")},
         "fresh": {"length": len(fresh["sequence"]), "sequence_sha256": H(fresh["sequence"]),
                   "release": fresh["release"], "release_date": fresh["release_date"],
-                  "entry_version": fresh["entry_version"],
+                  "sequence_version": fresh["sequence_version"],
                   "http_last_modified": fresh["http_last_modified"]},
         "match": H(published_seq) == H(fresh["sequence"]),
         "provenance": P.block(inputs_path=inputs, modules=("requests",)),

@@ -51,7 +51,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=P.evidence("repo-tests.json"))
     ap.add_argument("--no-mutants", action="store_true")
+    ap.add_argument("--allow-dirty-tree", action="store_true",
+                    help="record tree_clean false instead of refusing (A7-2)")
     a = ap.parse_args(argv)
+    # A7-2: the recorded git_sha only identifies the producing code on a clean tree.
+    P.require_clean_tree(allow_dirty=a.allow_dirty_tree)
     suites = {name: run(cmd) for name, cmd in SUITES.items()}
     mutants = None
     if not a.no_mutants:

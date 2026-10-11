@@ -119,7 +119,11 @@ def main(argv=None) -> int:
     ap.add_argument("--agent-run", default=P.evidence("agent-run.json"))
     ap.add_argument("--out", default=P.evidence("science.json"))
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--allow-dirty-tree", action="store_true",
+                    help="record tree_clean false instead of refusing (A7-2)")
     a = ap.parse_args(argv)
+    # A7-2: the recorded git_sha only identifies the producing code on a clean tree.
+    P.require_clean_tree(allow_dirty=a.allow_dirty_tree)
     if "HF_HOME" not in os.environ or "paper/.hf-cache" not in os.environ["HF_HOME"]:
         print("ERROR: set HF_HOME to <checkout>/paper/.hf-cache (isolated, gitignored)", file=sys.stderr)
         return 2

@@ -68,6 +68,91 @@ def test_committed_evidence_carries_no_home_directory_path():
     assert offenders == []
 
 
+def test_a_dirty_tree_is_refused_so_the_recorded_sha_identifies_the_producing_code(prov, capsys):
+    """A7-2. `git_sha` is a claim about WHICH CODE ran, and it only holds if the tree was
+    clean when it ran: science.json recorded a sha whose tree did not yet contain the
+    fields the file carries, because the script was still uncommitted. Refuse, and name
+    what was dirty."""
+    prov.dirty_paths = lambda: ["paper/scripts/science_rerun.py", "paper/evidence/x.json"]
+    with pytest.raises(SystemExit) as e:
+        prov.require_clean_tree()
+    assert e.value.code == 2
+    assert "paper/scripts/science_rerun.py" in capsys.readouterr().err
+
+
+def test_the_evidence_a_rebuild_writes_does_not_count_as_a_dirty_tree(prov, monkeypatch):
+    """`tree_clean` is a claim about the CODE that produced the file, which is what A7-2
+    found unsupported. A full rebuild writes eight evidence files in sequence, so the
+    first producer's own output would otherwise make every later one refuse. Generated
+    evidence is the product, not the producer; a changed SCRIPT still counts."""
+    monkeypatch.setattr(prov.subprocess, "check_output",
+                        lambda *a, **k: " M paper/evidence/science-input.json\n?? paper/evidence/x.json\n")
+    assert prov.dirty_paths() == []
+    monkeypatch.setattr(prov.subprocess, "check_output",
+                        lambda *a, **k: " M paper/evidence/science.json\n M paper/scripts/agent_run.py\n")
+    assert prov.dirty_paths() == ["paper/scripts/agent_run.py"]
+
+
+def test_a_clean_tree_passes_and_the_block_says_so(prov):
+    prov.dirty_paths = lambda: []
+    assert prov.require_clean_tree() is True
+    assert prov.block(inputs_path=None)["tree_clean"] is True
+
+
+def test_an_explicitly_allowed_dirty_tree_is_recorded_as_dirty_not_hidden(prov):
+    """The escape hatch may not quietly produce evidence that LOOKS clean: the block has
+    to carry tree_clean false and the paths, so a reader sees the run was not pinned."""
+    prov.dirty_paths = lambda: ["paper/scripts/science_rerun.py"]
+    assert prov.require_clean_tree(allow_dirty=True) is False
+    blk = prov.block(inputs_path=None)
+    assert blk["tree_clean"] is False
+    assert blk["dirty_paths"] == ["paper/scripts/science_rerun.py"]
+
+
+def test_the_block_reports_the_tree_state_from_before_the_run_wrote_anything(prov):
+    """Scripts write into the repository as they run (evidence files, record copies), so a
+    state sampled at block() time would read dirty for an honest clean run. The state
+    recorded is the one require_clean_tree() observed at the start."""
+    prov.dirty_paths = lambda: []
+    prov.require_clean_tree()
+    prov.dirty_paths = lambda: ["paper/evidence/just-written.json"]
+    assert prov.block(inputs_path=None)["tree_clean"] is True
+
+
+# Each producer with the arguments argparse demands, so parse_args SUCCEEDS and the run
+# reaches the tree check. Supplying none made the test pass for the wrong reason: argparse
+# exited 2 on a missing required argument and its usage line, which now advertises
+# `[--allow-dirty-tree]`, contained the word the assertion looked for.
+PRODUCERS = [
+    ("record_referee", ["--referee", "/nonexistent/referee"]),
+    ("drain1_from_git", []),
+    ("drain1_record_check", ["--record", "/nonexistent/r.v2r", "--register", "/nonexistent/register"]),
+    ("science_input", ["--inputs", "/nonexistent/in"]),
+    ("science_rerun", ["--inputs", "/nonexistent/in"]),
+    ("agent_run", ["--inputs", "/nonexistent/in"]),
+    ("plugin_tests", ["--plugin-repo", "/nonexistent/repo"]),
+    ("repo_tests", []),
+]
+
+
+@pytest.mark.parametrize("name,argv", PRODUCERS, ids=[p[0] for p in PRODUCERS])
+def test_every_producer_refuses_to_write_evidence_from_a_dirty_tree(name, argv, monkeypatch, capsys):
+    """A7-2, wired up: the refusal belongs to every script that writes an evidence file,
+    not only to _provenance. Loaded WITHOUT the conftest clean-tree patch on purpose —
+    this is the one test that must see the real guard. Every path passed is absent, so
+    the only thing that can produce this exact refusal is the tree check."""
+    from conftest import load_script
+    monkeypatch.delitem(__import__("sys").modules, "_provenance", raising=False)
+    mod = load_script(name)
+    mod.P.dirty_paths = lambda: ["paper/scripts/sentinel_dirty.py"]
+    with pytest.raises(SystemExit) as e:
+        mod.main(argv)
+    assert e.value.code == 2
+    err = capsys.readouterr().err
+    assert "the working tree is dirty" in err
+    assert "paper/scripts/sentinel_dirty.py" in err
+
+
 def test_require_inputs_errors_on_missing_dir_and_names_the_path(prov, tmp_path, capsys):
     missing = tmp_path / "not-there"
     with pytest.raises(SystemExit) as e:
@@ -466,7 +551,7 @@ def test_science_input_compares_by_hash_and_records_the_identifier_by_ruling(scr
     inputs = _published_inputs(tmp_path, INVENTED_ACC)
     seen = []
     monkeypatch.setattr(S, "fetch_fresh", lambda a: (seen.append(a), {"sequence": "MAAAC", "release": "2026_04",
-                        "release_date": "x", "http_last_modified": "y", "entry_version": "2"})[1])
+                        "release_date": "x", "http_last_modified": "y", "sequence_version": "2"})[1])
     out = tmp_path / "o.json"
     assert S.main(["--inputs", str(inputs), "--out", str(out)]) == 0
     d = json.loads(out.read_text())
@@ -481,7 +566,7 @@ def test_science_input_reports_a_mismatch(script, tmp_path, monkeypatch, capsys)
     S = script("science_input")
     inputs = _published_inputs(tmp_path, INVENTED_ACC)
     monkeypatch.setattr(S, "fetch_fresh", lambda a: {"sequence": "MAAAD", "release": "", "release_date": "",
-                                                     "http_last_modified": "", "entry_version": ""})
+                                                     "http_last_modified": "", "sequence_version": ""})
     out = tmp_path / "o.json"
     # QG Q6: a mismatch is labelled so in the file (claims.py then refuses to build on it)
     # and exits non-zero, like every other runner — not "measured" with exit 0.
@@ -529,6 +614,82 @@ def test_agent_run_counts_and_copies_no_content(script, tmp_path):
     assert j["control_positions"].startswith("pending")
     for secret in ("secret reasoning", "secret conclusion", "audit_trail", "invented objective"):
         assert secret not in text
+
+
+def _invented_artifact_with_controls():
+    """An INVENTED artifact shaped like the real one: a first round that requests the
+    constrained positions and two region positions TOGETHER, and a final write-up whose
+    own heading names control positions, two of which lie outside the region."""
+    return {
+        "objective": "invented objective", "model": "invented/model",
+        "rounds": [
+            {"round": 1, "reasoning": "r1",
+             "requested": ['score_variant({"accession":"X","position":31,"mutant":"A"})',
+                           'score_variant({"accession":"X","position":43,"mutant":"A"})',
+                           'score_variant({"accession":"X","position":70,"mutant":"A"})',
+                           'score_variant({"accession":"X","position":83,"mutant":"A"})'],
+             "results": ["r"] * 4, "completion_tokens": 10},
+            {"round": 2, "reasoning": "r2",
+             "requested": ['score_variant({"accession":"X","position":62,"mutant":"A"})'],
+             "results": ["r"], "completion_tokens": 5},
+            {"round": 3, "reasoning": (
+                "### Least tolerant\n- C31A **-13.9**\n- C43A **-16.1**\n"
+                "### Control positions that tolerate substitution\n"
+                "- F25A **+3.1**\n- Q62A **+1.5**\n- D20A **+1.4**\n- P79A **+1.1**\n"
+                "- P72A **+0.2**\n- G70A **+0.2**\n- E83A **-0.1**\n"
+                "## What this implies\nprose that must not be copied\n"),
+             "measurements": []},
+        ],
+        "conclusion": "secret conclusion",
+        "audit_trail": ["score_variant({'accession': 'X', 'position': 31, 'mutant': 'A'}) -> ok"],
+    }
+
+
+def test_agent_run_records_the_controls_the_agent_itself_named(script, tmp_path):
+    """A7-1. The paper said the agent probed a region as a control. The agent never named
+    the region; it named seven positions under its own 'Control positions' heading, two of
+    them outside the region. The evidence has to carry the agent's own list so the text can
+    report it instead of interpreting it — positions only, never the prose."""
+    A = script("agent_run")
+    d = tmp_path / "discovery"
+    d.mkdir()
+    (d / "discovery.json").write_text(json.dumps(_invented_artifact_with_controls()))
+    science = tmp_path / "science.json"
+    science.write_text(json.dumps({"headline": {"c_peptide_region": [57, 87],
+                                                "c_peptide_controls": {"62": 1.5, "70": 0.2,
+                                                                       "72": 0.2, "79": 1.1, "83": -0.1},
+                                                "cysteine_positions": [31, 43]}}))
+    out = tmp_path / "agent-run.json"
+    assert A.main(["--inputs", str(d), "--out", str(out), "--science", str(science)]) == 0
+    text = out.read_text()
+    c = json.loads(text)["control_positions"]
+    assert c["named_by_the_agent"] == [20, 25, 62, 70, 72, 79, 83]
+    assert c["named_by_the_agent_count"] == 7
+    assert c["named_by_the_agent_in_c_peptide"] == [62, 70, 72, 79, 83]
+    assert c["named_by_the_agent_in_c_peptide_count"] == 5
+    assert c["named_by_the_agent_outside_c_peptide"] == [20, 25]
+    assert "prose that must not be copied" not in text and "secret conclusion" not in text
+
+
+def test_agent_run_records_that_the_constrained_positions_were_requested_in_round_one(script, tmp_path):
+    """A7-1. 'Having found the cysteines, it probed the C-peptide' describes a sequence the
+    artifact does not contain: the first round asks for both at once. Record the round each
+    was first requested in, so the text cannot assert an order the evidence contradicts."""
+    A = script("agent_run")
+    d = tmp_path / "discovery"
+    d.mkdir()
+    (d / "discovery.json").write_text(json.dumps(_invented_artifact_with_controls()))
+    science = tmp_path / "science.json"
+    science.write_text(json.dumps({"headline": {"c_peptide_region": [57, 87],
+                                                "c_peptide_controls": {"62": 1.5},
+                                                "cysteine_positions": [31, 43]}}))
+    out = tmp_path / "agent-run.json"
+    assert A.main(["--inputs", str(d), "--out", str(out), "--science", str(science)]) == 0
+    j = json.loads(out.read_text())
+    assert j["requested_positions_per_round"][0] == [31, 43, 70, 83]
+    assert j["cysteines_first_requested_in_round"] == 1
+    # the region was probed in the SAME round, not after a finding
+    assert j["c_peptide_first_requested_in_round"] == 1
 
 
 def test_agent_run_errors_when_the_artifact_is_absent_naming_the_path(script, tmp_path, capsys):

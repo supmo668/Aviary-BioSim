@@ -45,7 +45,11 @@ def main(argv=None) -> int:
     ap.add_argument("--tag", default="v0.64.0")
     ap.add_argument("--suites", nargs="*", default=DEFAULT_SUITES)
     ap.add_argument("--out", default=P.evidence("plugin-tests.json"))
+    ap.add_argument("--allow-dirty-tree", action="store_true",
+                    help="record tree_clean false instead of refusing (A7-2)")
     a = ap.parse_args(argv)
+    # A7-2: the recorded git_sha only identifies the producing code on a clean tree.
+    P.require_clean_tree(allow_dirty=a.allow_dirty_tree)
     repo = P.require_inputs(a.plugin_repo)
     # <tag>^{commit}: an annotated tag's own id is the tag object, and the claim this feeds
     # says "plugin commit". An unknown tag is a named error, exit 2, not a traceback (QG F13).

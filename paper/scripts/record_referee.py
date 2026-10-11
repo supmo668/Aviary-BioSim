@@ -59,7 +59,11 @@ def main(argv=None) -> int:
     ap.add_argument("--commit", default="2e00aa3")
     ap.add_argument("--out", default=P.evidence("drain1-rerun.json"))
     ap.add_argument("--sign", action="store_true")
+    ap.add_argument("--allow-dirty-tree", action="store_true",
+                    help="record tree_clean false instead of refusing (A7-2)")
     a = ap.parse_args(argv)
+    # A7-2: the recorded git_sha only identifies the producing code on a clean tree.
+    P.require_clean_tree(allow_dirty=a.allow_dirty_tree)
     if not Path(a.referee).is_file():
         # Named error, exit 2 — not a FileNotFoundError traceback out of subprocess (QG F13).
         print(f"ERROR: --referee {a.referee} does not exist", file=sys.stderr)
