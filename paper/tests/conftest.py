@@ -45,6 +45,21 @@ def prov():
     return load_script("_provenance")
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _never_write_bytecode_into_the_repository():
+    """This suite exec-loads scripts by path, and one of them lives inside a DEPOSIT
+    artifact directory (`paper/figures/make_figures.py`). Importing it writes a `.pyc`
+    beside it, and that `.pyc` embeds the machine's username and full worktree path in
+    `co_filename` — which is how a PII leak reached the declared publication payload, and
+    how it came back after being deleted. It regenerates on any run without `-B`, so the
+    guard belongs here rather than in a one-off cleanup.
+    """
+    saved = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    yield
+    sys.dont_write_bytecode = saved
+
+
 @pytest.fixture(autouse=True)
 def _no_leaked_provenance():
     """`_provenance` must not survive a test. It is imported by bare name inside every
