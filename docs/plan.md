@@ -1245,7 +1245,7 @@ def emit_span(name: str, **attrs) -> None:
     try:
         import weave
 
-        weave.init(os.environ.get("WANDB_PROJECT", "3m-m/Aviary-BioSim"))
+        weave.init(os.environ.get("WANDB_PROJECT", "<your-wandb-entity>/Aviary-BioSim"))
         weave.publish(payload, name=name)
     except Exception as exc:  # noqa: BLE001 — telemetry is never load-bearing
         if not _SPAN_WARNED:

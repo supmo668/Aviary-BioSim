@@ -144,13 +144,14 @@ def test_a_heading_or_blank_line_ends_a_sentence(tmp_path):
 
 
 def test_a_string_claim_is_escaped_for_tex_in_macro_and_table(tmp_path):
-    # A release name like 2026_03 is a string claim; unescaped, its underscore is a TeX error.
+    # A database release name is a string claim; unescaped, its underscore is a TeX error.
+    # The value here is invented: the real input's release may not appear in a test (F33).
     root = setup(tmp_path,
-        [{"id": "rel", "value": "2026_03", "label": "measured", "source": "e.json:r", "text": "t"}],
-        r"Release \claimrel{}.", {"e.json": {"r": "2026_03"}})
+        [{"id": "rel", "value": "2099_99", "label": "measured", "source": "e.json:r", "text": "t"}],
+        r"Release \claimrel{}.", {"e.json": {"r": "2099_99"}})
     assert C.check(root) == []
-    assert r"\newcommand{\claimrel}{2026\_03}" in (root / "claims.tex").read_text()
-    assert r"& 2026\_03 &" in (root / "claims-table.tex").read_text()
+    assert r"\newcommand{\claimrel}{2099\_99}" in (root / "claims.tex").read_text()
+    assert r"& 2099\_99 &" in (root / "claims-table.tex").read_text()
 
 
 def test_a_long_string_claim_can_wrap_in_the_appendix_table(tmp_path):
@@ -158,8 +159,8 @@ def test_a_long_string_claim_can_wrap_in_the_appendix_table(tmp_path):
     digest = "0123456789abcdef" * 4                      # invented; never a real input's digest
     root = setup(tmp_path,
         [{"id": "sha", "value": digest, "label": "measured", "source": "e.json:s", "text": "t"},
-         {"id": "rel", "value": "2026_03", "label": "measured", "source": "e.json:r", "text": "t"}],
-        None, {"e.json": {"s": digest, "r": "2026_03"}})
+         {"id": "rel", "value": "2099_99", "label": "measured", "source": "e.json:r", "text": "t"}],
+        None, {"e.json": {"s": digest, "r": "2099_99"}})
     assert C.check(root) == []
     table = (root / "claims-table.tex").read_text()
     assert r"\begin{longtable}{@{}lp{" in table, "the value column must be a wrapping p column"

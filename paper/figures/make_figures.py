@@ -13,10 +13,23 @@ plot title or annotation that is not also a claim macro in the text.
 import argparse
 import csv
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
+# These figures ship in the deposit, and Matplotlib stamps each PDF's /CreationDate with the
+# LOCAL wall-clock time and the machine's UTC offset — which published the author's timezone
+# to the second (deposit audit). SOURCE_DATE_EPOCH is Matplotlib's documented hook for a
+# reproducible date; it must be set before the backend is imported to be in effect at write
+# time. The value is the commit date of the tree being drawn, so the stamp still means
+# something and is identical for anyone who rebuilds at that commit.
+os.environ.setdefault(
+    "SOURCE_DATE_EPOCH",
+    subprocess.check_output(["git", "log", "-1", "--format=%ct"], text=True,
+                            cwd=Path(__file__).resolve().parents[2]).strip(),
+)
 
 import matplotlib
 matplotlib.use("Agg")

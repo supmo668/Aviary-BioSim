@@ -80,7 +80,7 @@ it either has what it needs at stage 0 or it does not start.
 client = openai.OpenAI(
     base_url="https://api.inference.wandb.ai/v1",
     api_key=os.environ["WANDB_API_KEY"],      # Infisical: biofm/dev
-    project="3m-m/Aviary-BioSim",
+    project="<your-wandb-entity>/Aviary-BioSim",
 )
 MODEL = "deepseek-ai/DeepSeek-V4-Pro-0813"
 ```
@@ -292,4 +292,4 @@ asserting the parked list and the green-commit invariant.
 - A headless `--detach` runtime — the register is already the state file, so this is a later
   addition rather than a rewrite.
 - The aviary drug-discovery environment itself. `/v2r-loop`'s first real target, and its
-  own spec. Target repo: `3m-m/Aviary-BioSim`.
+  own spec. Target repo: `<your-wandb-entity>/Aviary-BioSim`.

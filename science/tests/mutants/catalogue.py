@@ -80,7 +80,7 @@ MUTANTS = [
     dict(id="esm-url-hardcoded", pass_="2", target="science/esm_tool.py", check=ESM,
          why="the URL is derived from the accession, not a constant",
          find='f"https://rest.uniprot.org/uniprotkb/{accession}.fasta"',
-         replace='"https://rest.uniprot.org/uniprotkb/P01308.fasta"'),
+         replace='"https://rest.uniprot.org/uniprotkb/Q9ZZZ9.fasta"'),
     dict(id="esm-no-cache-write", pass_="2", target="science/esm_tool.py", check=ESM,
          why="a fetched record is cached",
          find="    cached.write_text(json.dumps(rec, indent=2))\n", replace=""),

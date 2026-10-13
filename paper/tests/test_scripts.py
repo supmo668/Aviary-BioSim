@@ -6,6 +6,9 @@ Rule 3: a missing or empty --inputs directory is an ERROR (exit 2) that NAMES th
 checked. Never a finding of "unrecoverable" against a tree that never had the files.
 """
 import json
+import pathlib
+import re
+import subprocess
 
 import pytest
 
@@ -59,19 +62,85 @@ def test_provenance_block_publishes_no_home_or_checkout_path(prov):
     assert home not in dumped and parent not in dumped
 
 
-def test_committed_evidence_carries_no_home_directory_path():
-    """The files as committed, not only the writers: every evidence file is checked for the
-    machine's home directory and for the common home prefixes."""
-    from pathlib import Path
-    home = str(Path.home().resolve())
-    evidence = Path(__file__).resolve().parents[1] / "evidence"
+PAPER_DIR = pathlib.Path(__file__).resolve().parents[1]
+HOME_PATTERNS = ("/Users/", "/home/", "/root/", "C:\\Users\\")
+EMAIL = re.compile(rb"[\w.+-]+@[\w-]+\.[\w.-]+")
+PDF_DATE = re.compile(rb"/CreationDate\s*\((D:[^)]*)\)")
+
+
+def _manifest_artifact_paths():
+    """The paths publish.yml actually ships. Reading them from the manifest rather than
+    hardcoding is the point: widen the deposit and the scan widens with it."""
+    import yaml
+    manifest = yaml.safe_load((PAPER_DIR / "publish.yml").read_text())
+    return [PAPER_DIR / a["path"] for a in manifest["artifacts"]]
+
+
+def _payload_files():
+    out = []
+    for p in _manifest_artifact_paths():
+        out += [f for f in sorted(p.rglob("*")) if f.is_file()] if p.is_dir() else [p]
+    return out
+
+
+def test_the_deposit_payload_carries_no_home_path_or_email():
+    """The DEPOSIT, not just evidence/. The old scan walked `evidence` for four suffixes while
+    the manifest ships four paths and seven file types, so `claims.yaml`, `main.pdf` and all of
+    `figures/` went unscanned — and that is exactly where the one real leak sat (a `.pyc` under
+    figures/ carrying the username). Binary files are read as bytes, because a PDF's text is
+    glyph-encoded inside compressed streams: a naive text grep reports clean on content that
+    IS there. Author email is permitted in main.pdf only (the deliberate byline)."""
+    home = str(pathlib.Path.home().resolve()).encode()
     offenders = []
-    for f in sorted(evidence.rglob("*")):
-        if f.is_file() and f.suffix in (".json", ".csv", ".yaml", ".txt"):
-            text = f.read_text(errors="replace")
-            if home in text or "/Users/" in text or "/home/" in text:
-                offenders.append(str(f.relative_to(evidence)))
-    assert offenders == []
+    for f in _payload_files():
+        b = f.read_bytes()
+        rel = f.relative_to(PAPER_DIR)
+        if home in b or any(pat.encode() in b for pat in HOME_PATTERNS):
+            offenders.append(f"{rel}: home/absolute path")
+        if f.name != "main.pdf" and EMAIL.search(b):
+            offenders.append(f"{rel}: email address")
+    assert offenders == [], offenders
+
+
+def test_no_untracked_file_rides_along_in_the_deposit_payload():
+    """The leak that got through was untracked AND gitignored, so `git ls-files`, review and
+    every other test were blind to it while it sat inside a declared artifact directory."""
+    tracked = set(subprocess.check_output(
+        ["git", "ls-files", "-z"], text=True, cwd=PAPER_DIR.parent).split("\0"))
+    strays = [str(f.relative_to(PAPER_DIR.parent)) for f in _payload_files()
+              if str(f.relative_to(PAPER_DIR.parent)) not in tracked]
+    assert strays == [], strays
+
+
+def test_every_pdf_in_the_payload_has_a_utc_creation_date():
+    """Matplotlib stamped the figures with the local wall-clock time and the machine's UTC
+    offset, publishing the author's timezone to the second. main.pdf was already normalised."""
+    bad = []
+    for f in _payload_files():
+        if f.suffix != ".pdf":
+            continue
+        for m in PDF_DATE.finditer(f.read_bytes()):
+            d = m.group(1).decode()
+            if not (d.endswith("Z") or "-00'00'" in d or "+00'00'" in d):
+                bad.append(f"{f.relative_to(PAPER_DIR)}: {d}")
+    assert bad == [], bad
+
+
+def test_the_input_identifier_appears_in_no_test_or_fixture():
+    """F33: the input's identifier, release and digest live in the methods and evidence/ ONLY —
+    'never in tests, fixtures or messages'. The ruling was breached at ~67 sites across six
+    test files; this pins it. The real values are read from the evidence file rather than
+    written here, so the test itself does not become the breach it forbids."""
+    import json as _json
+    repo = PAPER_DIR.parent
+    inp = _json.loads((PAPER_DIR / "evidence" / "science-input.json").read_text())
+    secrets = {inp["identifier"], inp["fresh"]["release"], inp["fresh"]["sequence_sha256"]}
+    searched = [p for d in ("science/tests", "paper/tests", ".claude")
+                for p in (repo / d).rglob("*.py") if "__pycache__" not in p.parts]
+    assert searched, "found no test files to scan"
+    offenders = [f"{p.relative_to(repo)}: {k[:3]}…"
+                 for p in searched for k in secrets if k in p.read_text(errors="replace")]
+    assert offenders == [], offenders
 
 
 def test_a_dirty_tree_is_refused_so_the_recorded_sha_identifies_the_producing_code(prov, capsys):
@@ -1262,8 +1331,37 @@ def test_publish_manifest_is_complete_and_nothing_deposits():
     for a in m["artifacts"]:
         assert not a["path"].startswith("/") and ".." not in a["path"]
         assert (paper / a["path"]).exists(), a["path"]
-    assert all(v.get("enabled") is False for v in m["venues"].values())
+    # NARROWED, deliberately (principal ruling 2026-10-13): a SANDBOX deposit is permitted so
+    # the pipeline can be proven end to end, as the spec requires before any live deposit. The
+    # invariant that actually matters is unchanged and still enforced by a test — no venue may
+    # deposit LIVE. A live deposit is irreversible and carries a DOI; it stays gated here.
+    live = [name for name, v in m["venues"].items()
+            if v.get("enabled") is True and v.get("sandbox") is not True]
+    assert live == [], f"live deposit enabled in the manifest for: {live}"
+    for name, v in m["venues"].items():
+        if v.get("enabled") is True:
+            assert v.get("sandbox") is True, f"{name} is enabled but not marked sandbox"
     assert m["manual"]["arxiv"]["prepared_only"] is True
+
+
+def test_the_manifest_carries_the_metadata_a_repository_needs_for_discovery():
+    """A deposit nobody can find is a deposit that did not happen. Zenodo indexes these
+    fields, so they are declared in the manifest and read by the pipeline rather than
+    hardcoded in a workflow node (principal requirement, 2026-10-13)."""
+    import yaml
+    paper = _Path(__file__).resolve().parents[1]
+    m = yaml.safe_load((paper / "publish.yml").read_text())
+    z = m["venues"]["zenodo"]
+    assert z["upload_type"] == "publication" and z["publication_type"] == "preprint"
+    assert m["keywords"] and len(m["keywords"]) >= 4
+    assert m["language"] == "eng"
+    # a domain category, so the record lands in the right discipline facets
+    subjects = m["subjects"]
+    assert subjects and all({"term", "identifier", "scheme"} <= set(s) for s in subjects)
+    # and a machine-readable link back to the code the paper is about
+    rel = {r["relation"]: r for r in m["related_identifiers"]}
+    assert "isSupplementTo" in rel, "the deposit must point at the repository it documents"
+    assert rel["isSupplementTo"]["identifier"].startswith("https://github.com/")
 
 
 # --- QG Q1/Q12: the scripts must not depend on the working directory -------------------

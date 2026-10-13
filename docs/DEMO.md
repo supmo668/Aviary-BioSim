@@ -7,7 +7,7 @@ Record in this order. Everything below is a real screen; nothing is a slide exce
 cd ~/github/personal/bioFM/projects/aviary-biosim
 export V2R_TRACE=1
 export WANDB_API_KEY=$(grep '^WANDB_API_KEY=' ../../.env | cut -d= -f2-)
-export WANDB_PROJECT=3m-m/Aviary-BioSim
+export WANDB_PROJECT=<your-wandb-entity>/Aviary-BioSim
 uv run --with pyyaml demo/gate_demo.py >/dev/null     # warm the cache — nothing installs on camera
 ```
 Terminal at ~18 pt, cleared. Deck open at slide 1. Weave project open in a second tab.
@@ -43,7 +43,7 @@ Two different things, two different shapes:
 cd /Users/mo/github/personal/bioFM/projects/aviary-biosim
 export V2R_TRACE=1
 export WANDB_API_KEY=$(grep '^WANDB_API_KEY=' ../../.env | cut -d= -f2-)
-export WANDB_PROJECT=3m-m/Aviary-BioSim
+export WANDB_PROJECT=<your-wandb-entity>/Aviary-BioSim
 
 # window 1 — terminal, font bumped to ~18pt, cleared
 # window 2 — dashboard
