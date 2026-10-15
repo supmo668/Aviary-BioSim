@@ -682,7 +682,7 @@ Expected: prints the four headline numbers and `match: all True`. On any `False`
 
 ### Task 6 (A4): The 66-measurement run — counts from the published artifact and the trace store
 
-**Found 2026-09-26 (read-only lookup, authorised at #272 start by #291):** the artifact exists at `<main>/science/out/discovery/discovery.json` (29,650 bytes, mtime 2026-09-13 12:23, sha256 prefix `ed9b4e2f5f01f24a`): 66 audit-trail entries, 5 rounds, model `deepseek-ai/DeepSeek-V4-Pro-0813`. The Weave project `3m-m/Aviary-BioSim` holds 36 traces / 4 roots, of which **1 root** is `run_discovery`. So A4's answer is: **found**, both artifact and trace.
+**Found 2026-09-26 (read-only lookup, authorised at #272 start by #291):** the artifact exists at `<main>/science/out/discovery/discovery.json` (29,650 bytes, mtime 2026-09-13 12:23, sha256 prefix `ed9b4e2f5f01f24a`): 66 audit-trail entries, 5 rounds, model `deepseek-ai/DeepSeek-V4-Pro-0813`. The Weave project `<your-wandb-entity>/Aviary-BioSim` holds 36 traces / 4 roots, of which **1 root** is `run_discovery`. So A4's answer is: **found**, both artifact and trace.
 
 **Files:**
 - Create: `paper/scripts/agent_run.py`
@@ -692,7 +692,7 @@ Expected: prints the four headline numbers and `match: all True`. On any `False`
 
 - [ ] **Step 2: Implement** — `--inputs <abs>/science/out/discovery`; `P.require_inputs`; read the JSON; write `{"label": "reported (artifact counted, <date>)", "measurements": len(audit_trail), "rounds": len(rounds), "completion_tokens_per_round": [...], "completion_tokens_total": sum, "model": d["model"], "control_positions": sorted positions in audit entries matching the C-peptide positions from science.json, "artifact_sha256": ..., "artifact_mtime": ..., "provenance": P.block(...)}`.
 
-- [ ] **Step 3: Record the trace count** — `paper/evidence/weave-count.json`: `{"label": "queried (<date>)", "project": "3m-m/Aviary-BioSim", "query": "count_weave_traces_tool op_name_contains=run_discovery", "total_count": <n>, "root_traces_count": <n>, "project_total": 36, "project_roots": 4, "recorded_at": ...}` — re-query on the day, do not copy today's numbers.
+- [ ] **Step 3: Record the trace count** — `paper/evidence/weave-count.json`: `{"label": "queried (<date>)", "project": "<your-wandb-entity>/Aviary-BioSim", "query": "count_weave_traces_tool op_name_contains=run_discovery", "total_count": <n>, "root_traces_count": <n>, "project_total": 36, "project_roots": 4, "recorded_at": ...}` — re-query on the day, do not copy today's numbers.
 
 - [ ] **Step 4: Run + commit** — `paper: A4 — the discovery run counted from its artifact and its trace`.
 
