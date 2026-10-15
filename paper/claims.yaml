@@ -28,6 +28,11 @@ claims:
   - {id: rounds, value: 5, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:rounds", text: "rounds"}
   - {id: tokens, value: 15115, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:completion_tokens_total", text: "completion tokens across the rounds that recorded a count"}
   - {id: notokens, value: 1, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:rounds_without_a_token_count", text: "rounds that recorded no token count"}
+  # A7-15 (principal's ruling, 2026-10-15): name the inference endpoint. The MODEL is a field in
+  # the artifact and is bound here. The PROVIDER is not a field in any evidence file, so §5 names
+  # it in prose and cites the code paths that configure it; it is not claimed as evidence.
+  # `table: false` keeps a long model string out of the appendix table.
+  - {id: model, table: false, value: "deepseek-ai/DeepSeek-V4-Pro-0813", label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:model", text: "model the agent run recorded"}
   - {id: ctrlnamed, value: 7, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:control_positions.named_by_the_agent_count", text: "positions the agent itself listed as tolerant controls"}
   - {id: ctrlnamedcpep, value: 5, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:control_positions.named_by_the_agent_in_c_peptide_count", text: "of those falling in the C-peptide region as the scan annotates it"}
   - {id: cysallround, value: 1, label: "reported (artifact counted, 2026-10-11)", source: "agent-run.json:all_cysteines_requested_in_round", text: "round in which the agent requested every one of the six cysteines"}

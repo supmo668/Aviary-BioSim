@@ -156,7 +156,9 @@ LinkedIn  linkedin.com/in/matthew-mo
 
 ## One honesty note about the venue
 
-This is **CoreWeave Hacks**, and our GPU work ran on **Apple MPS locally** plus **W&B Inference** for serverless LLM calls — not on CoreWeave hardware. There is no CoreWeave track listed, so nothing here overclaims. If a judge asks where the GPU was, the answer is: ESM-2 650M on local MPS in 7 seconds, and W&B Inference for everything else, chosen specifically so no GPU sat on the critical path of an autonomous run.
+This is **CoreWeave Hacks**, and our GPU work ran on **Apple MPS locally** plus **W&B Inference** for serverless LLM calls. If a judge asks where the GPU was, the answer is: ESM-2 650M on local MPS in 7 seconds, and W&B Inference for everything else, chosen specifically so no GPU sat on the critical path of an autonomous run.
+
+**Correction, 2026-10-15.** This note previously ended that first sentence with "not on CoreWeave hardware." That was wrong, and the correction is left visible rather than the sentence quietly deleted. CoreWeave documents its serverless inference as delivered through W&B Inference and running on CoreWeave GPU infrastructure ([docs](https://docs.coreweave.com/products/inference/serverless)), so the LLM calls were very probably executed on the host's own machines. The defensible statement is the narrower one: **the venue supplied no compute for this work** — no allocation, no credit, no hardware. W&B Inference was used as a public paid service on its ordinary terms. The paper's limitations section (§5, *Compute and venue*) now says it that way.
 
 ---
 
