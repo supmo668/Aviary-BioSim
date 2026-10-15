@@ -1,4 +1,8 @@
-# paper/publish.yml — per-project publish manifest (PUBLICATION_PIPELINE_SPEC.md §12.1).
+# paper/publish.yml — per-project publish manifest.
+# The pipeline that consumes this file is documented in ../orchestration/n8n/README.md, and its
+# decision logic is ../orchestration/n8n/nodes/pipeline.mjs. Both ship with the repository. An
+# earlier header cited a specification that exists only in a private repository: a deposited
+# artifact must not cite a document its readers cannot reach.
 # Prepared, nothing enabled: every venue is enabled: false until the principal's explicit go.
 topic: v2r-biosim-whitepaper            # required, no default: names the asset folder
 title: "The build loop as a lab method: an agentic worklist with independent tests, and a protein-model experiment run under it"

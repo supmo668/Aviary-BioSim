@@ -1446,7 +1446,7 @@ def test_every_recipe_command_in_the_evidence_readme_runs_from_the_repo_root():
     """QG Q12: the README's recipe column named scripts relative to paper/ while their
     defaults and HF_HOME assumed the repository root, so no single cwd ran them all."""
     import re
-    readme = (_repo() / "paper" / "README.md").read_text()
+    readme = (_repo() / "paper" / "evidence" / "README.md").read_text()
     table = readme[readme.index("## Files"):readme.index("The **evidence-location rule**")]
     cited = re.findall(r"(?<![\w/])((?:paper/)?scripts/[\w./-]+\.(?:py|sh))", table)
     assert cited, "the recipe table cites no scripts"

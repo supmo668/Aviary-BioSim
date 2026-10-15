@@ -379,10 +379,10 @@ def test_every_label_kind_in_use_is_defined_in_the_paper_and_the_readme():
     import yaml as _y
     kinds = {_kind(c["label"]) for c in _y.safe_load((_paper() / "claims.yaml").read_text())["claims"]}
     tex = (_paper() / "main.tex").read_text()
-    readme = (_paper() / "README.md").read_text()
+    readme = (_paper() / "evidence" / "README.md").read_text()
     for k in kinds:
         assert f"\\emph{{{k}}}" in tex, f"main.tex does not define the label {k!r}"
-        assert f"**{k}**" in readme, f"paper/README.md does not define the label {k!r}"
+        assert f"**{k}**" in readme, f"paper/evidence/README.md does not define the label {k!r}"
     words = {5: "five", 6: "six", 7: "seven"}
     assert f"one of {words[len(kinds)]} labels" in tex
 
@@ -404,7 +404,7 @@ def test_every_c_peptide_control_in_the_evidence_is_cited():
 def test_the_readme_gives_the_referee_configuration_the_paper_points_to():
     """QG Q14: main.tex sends readers to the README for the configuration key and the
     referee command; it had neither."""
-    readme = (_paper() / "README.md").read_text()
+    readme = (_paper() / "evidence" / "README.md").read_text()
     rr = (_paper() / "scripts" / "record_referee.py").read_text()
     cmd = re.search(r'REFEREE_COMMAND = "([^"]+)"', rr).group(1)
     assert "tests.referee_command" in readme
@@ -423,3 +423,32 @@ def test_a_long_evidence_path_can_wrap_in_the_appendix_table(tmp_path):
     assert cell.count(r"\allowbreak{}") >= 5
     flat = cell.replace(r"\allowbreak{}", "").replace(r"\mbox{-}", "-")
     assert "repo-tests.json:suites..claude/skills/v2r-loop/scripts/tests.passed" in flat
+
+
+def test_the_evidence_readme_lists_every_file_in_the_directory_and_no_others():
+    """The appendix promises that the evidence README lists, for each evidence file, the task
+    that produced it and the exact command. A promise like that decays silently: a new
+    evidence file is added, nobody updates the table, and the paper keeps asserting a listing
+    that is now incomplete. So the listing is checked against the directory in both
+    directions.
+
+    Both directions matter. A missing row means the paper over-promises. An extra row means
+    the README documents a file a reader cannot find, which is the same defect as citing a
+    document that does not ship -- the reason this README was moved into `evidence/` in the
+    first place.
+    """
+    ev = _paper() / "evidence"
+    readme = (ev / "README.md").read_text()
+    table = readme[readme.index("| file | task |"):]
+    listed = set(re.findall(r"^\| `([^`]+)` \|", table, re.M))
+
+    on_disk = {e.name + ("/" if e.is_dir() else "") for e in ev.iterdir()
+               if e.name != "README.md"}
+    # A `.provenance.json` sidecar is part of the CSV row it accompanies, not a row of its own.
+    on_disk = {n for n in on_disk if not n.endswith(".provenance.json")}
+
+    assert listed == on_disk, (
+        f"evidence README and directory disagree -- "
+        f"listed but absent: {sorted(listed - on_disk)}; "
+        f"present but unlisted: {sorted(on_disk - listed)}"
+    )
