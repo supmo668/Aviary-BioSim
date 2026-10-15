@@ -57,13 +57,30 @@ a project needs to be known, which is what makes the pipeline generic rather tha
   it must not report the deposit as failed. A failed Zenodo call stops the run, because
   continuing would publish an incomplete record and call it a success.
 
-## Known gap
+## The decision logic is tested — and the node bodies are COPIES of it
 
-**The Code nodes have no automated tests.** They are JavaScript living in a remote instance, and
-nothing in this repository exercises them. Their logic was validated once, by hand, against live
-GitHub data at `ref whitepaper` — 20 tracked files plus the source snapshot resolved, and every
-required metadata field parsed. That is a manual check, not a regression test, and it will not
-catch the next edit. Re-export this file after any change so the diff is at least visible.
+`nodes/pipeline.mjs` holds the logic that decides what reaches a public, DOI-bearing deposit and
+when a deposit is refused. `nodes/pipeline.test.mjs` exercises it — 25 tests, run by
+`node --test` and wired into `paper/scripts/repo_tests.py` so one command covers the repo.
+
+Most of those tests are **refusals**, because a sandbox deposit can only ever prove the happy
+path. A duplicate record, a wrong `mode`, a locked bucket, a declared artifact that is not
+tracked, a manifest missing a field the repository indexes — none of those are reachable from a
+successful run, and all of them decide whether a wrong deposit is *prevented* or merely hoped
+against. Five mutations were applied and all five were caught, including taking every tree entry
+instead of only blobs (which would re-admit gitignored material) and splitting a flow map on the
+first colon (which truncates the domain-category URL at `https`).
+
+### THE SYNC RULE
+
+n8n has no filesystem access to this repository, so a Code node **cannot import**
+`pipeline.mjs`. The node bodies are therefore **copies**. `pipeline.mjs` is the **source of
+truth**: edit there, run the tests, then push the body into the node.
+
+**Residual risk, stated rather than hidden:** someone editing a node in the n8n UI diverges from
+this file, and with no n8n API key nothing here can read the instance back to notice. Re-export
+the workflow after any UI edit. A test asserts this rule is written down; no test can verify the
+remote instance from here.
 
 ## Credential
 

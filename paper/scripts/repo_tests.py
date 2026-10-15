@@ -32,18 +32,35 @@ SUITES = {
     # pytest received it, exited 4, and the runner recorded no count — which is the right
     # behaviour for the runner and the wrong invocation for the suite.
     "paper/tests": PAPER + ["paper/tests"],
+    # The publication pipeline's decision logic. It is JavaScript because it runs in n8n
+    # Code nodes, so it needs node rather than pytest -- but it decides what reaches a
+    # public DOI, which makes it exactly the code that must not be the untested kind.
+    "orchestration/n8n/nodes": ["node", "--test", "orchestration/n8n/nodes/pipeline.test.mjs"],
 }
-PYTEST_SUMMARY = re.compile(r"(\d+) passed")
-FAILED = re.compile(r"(\d+) failed")
+# Two runners, two output dialects. pytest says "23 passed"; node's test runner says
+# "pass 23". Matching only pytest's form made node's suite parse as passed=None, which the
+# green check reads as NOT green — a suite that ran clean would be reported as a failure.
+# A counter that cannot read its own runner is the same shape as a count nobody earned.
+# `\bpass (\d+)` cannot false-match pytest's "163 passed": there, "pass" is followed by
+# "ed", not by a space and digits. Anchoring on the line start was tried and does not work —
+# node prefixes its summary with a non-ASCII glyph that `\W` declines to match.
+PYTEST_SUMMARY = re.compile(r"(\d+) passed|\bpass (\d+)\b", re.M)
+FAILED = re.compile(r"(\d+) failed|\bfail (\d+)\b", re.M)
 MUTANT_SUMMARY = re.compile(r"(\d+)/(\d+) live mutants killed; (\d+) retired")
+
+
+def _count(pattern: "re.Pattern", out: str):
+    """The last count the output reports, from whichever dialect matched."""
+    hits = [g for m in pattern.finditer(out) for g in m.groups() if g is not None]
+    return int(hits[-1]) if hits else None
 
 
 def run(cmd: list[str]) -> dict:
     r = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, timeout=3600)
     out = r.stdout + r.stderr
-    passed = PYTEST_SUMMARY.findall(out)
-    failed = FAILED.findall(out)
-    return {"passed": int(passed[-1]) if passed else None, "failed": int(failed[-1]) if failed else 0,
+    failed = _count(FAILED, out)
+    return {"passed": _count(PYTEST_SUMMARY, out),
+            "failed": failed if failed is not None else 0,
             "exit": r.returncode}
 
 

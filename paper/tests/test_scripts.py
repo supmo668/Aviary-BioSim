@@ -1195,12 +1195,19 @@ class _Proc:
 
 
 def _canned_repo_tests(monkeypatch, R, suite_out: str, suite_rc: int, mutant_out: str, mutant_rc: int):
-    """Every `uv run` the script makes answers with canned pytest / sweep output (the mutant
-    command is told apart by its run_mutants.py argument); git and platform calls go through."""
+    """Every suite command the script makes answers with canned output (the mutant command is
+    told apart by its run_mutants.py argument); git and platform calls go through.
+
+    Both runners are intercepted. The suites are not all pytest: the publication pipeline's
+    decision logic is JavaScript, because it runs in n8n Code nodes, so its suite is
+    `node --test`. Stubbing only `uv` let that one run FOR REAL inside the unit test, which
+    made the canned per-suite count wrong and the test fail for a reason that had nothing to
+    do with what it was checking."""
     real = R.subprocess.run
+    RUNNERS = ("uv", "node")
 
     def fake_run(cmd, **kw):
-        if cmd and cmd[0] != "uv":
+        if not cmd or cmd[0] not in RUNNERS:
             return real(cmd, **kw)
         if any("run_mutants.py" in c for c in cmd):
             return _Proc(mutant_out, mutant_rc)
