@@ -1494,3 +1494,41 @@ def test_science_rerun_labels_measured_only_when_every_comparison_matched(script
     assert label.startswith("measured (re-run, 2026-10-01)") is measured
     assert label.startswith("MISMATCH") is (not measured)
     assert rc == (0 if measured else 1)
+
+
+@pytest.mark.parametrize("name", [p[0] for p in PRODUCERS] + ["_provenance"])
+def test_no_producer_writes_bytecode_carrying_this_machines_path(name):
+    """Importing a sibling module writes a `.pyc` whose `co_filename` is the absolute path
+    of the importing machine — the author's home directory and worktree name. Those files
+    are gitignored, so code review, `git ls-files` and every payload scan are blind to
+    them; one reached a declared artifact directory and regenerated itself after deletion.
+
+    Running the producers reproduced it again, in `paper/scripts/__pycache__`. That copy sat
+    outside every declared payload path, so nothing would have published it — but the reason
+    it was safe was a property of the manifest, not of the producer, and the manifest is the
+    thing most likely to grow. So the producers disable bytecode themselves.
+
+    `sys.dont_write_bytecode` must be set BEFORE the sibling import, which is what this test
+    pins: the assignment's position, not merely its presence.
+    """
+    src = (PAPER_DIR / "scripts" / f"{name}.py").read_text()
+    lines = src.splitlines()
+
+    def first(pred):
+        return next((i for i, ln in enumerate(lines) if pred(ln)), None)
+
+    flag = first(lambda ln: ln.strip() == "sys.dont_write_bytecode = True")
+    if name == "_provenance":
+        # The shared module imports nothing from its own directory, so it writes no
+        # sibling bytecode and needs no flag. Pinned so that if it ever grows a sibling
+        # import, this parametrisation starts failing instead of silently passing.
+        assert first(lambda ln: ln.startswith("import _provenance")) is None
+        return
+
+    assert flag is not None, f"{name}.py does not set sys.dont_write_bytecode"
+    imp = first(lambda ln: ln.startswith(("import _provenance", "from _provenance")))
+    assert imp is not None, f"{name}.py no longer imports _provenance; update this test"
+    assert flag < imp, (
+        f"{name}.py sets sys.dont_write_bytecode at line {flag + 1}, AFTER importing "
+        f"_provenance at line {imp + 1}; the .pyc is already written by then"
+    )

@@ -15,6 +15,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+# No bytecode. Importing a sibling writes a .pyc whose co_filename is this machine's
+# absolute path, and that file is gitignored, so review and every payload scan are blind
+# to it. One such file reached a declared artifact directory once.
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).parent))
 import _provenance as P  # noqa: E402
 
