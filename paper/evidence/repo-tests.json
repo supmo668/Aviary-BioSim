@@ -17,7 +17,7 @@
       "exit": 0
     },
     "paper/tests": {
-      "passed": 163,
+      "passed": 173,
       "failed": 0,
       "exit": 0
     },
@@ -27,7 +27,7 @@
       "exit": 0
     }
   },
-  "total_passed": 576,
+  "total_passed": 586,
   "mutants": {
     "killed": 48,
     "live": 48,
@@ -35,9 +35,9 @@
     "exit": 0
   },
   "provenance": {
-    "git_sha": "3a77260f6b7e96ea7890a43d15abec9031fb72de",
+    "git_sha": "cf33ee34f186305c89033c676566b3d25449dabd",
     "tree_clean": true,
-    "recorded_at": "2026-10-15T08:35:16Z",
+    "recorded_at": "2026-10-15T13:52:48Z",
     "inputs_path": null,
     "python": "3.14.5",
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
