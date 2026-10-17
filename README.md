@@ -59,7 +59,7 @@ The gate now ignores exit codes entirely. It parses pytest's junit-xml and requi
 ## See it
 
 ```bash
-uv run --with pyyaml dashboard/seed_demo_run.py .
+uv run --with pyyaml dashboard/seed_demo_run.py .        # writes .v2r-demo/, a FIXTURE; point the dashboard's path box at it
 uv run --with marimo --with pyyaml --with pandas --with altair --with pyarrow \
   marimo run dashboard/v2r_dashboard.py
 ```

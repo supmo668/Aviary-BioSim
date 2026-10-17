@@ -1,0 +1,18 @@
+drain: 1
+register_sha: sha256:b9f6b78ac4131715d80eddbd78c491c57f7c292748767d2ff4b233a8a78dc652
+instinct_pin: null
+seed: 1337
+ceilings:
+  max_drains: 3
+  max_attempts: 3
+  max_wall_clock_s: 21600
+  max_spend_usd: 25
+closed:
+- U-001
+- U-002
+- U-003
+- U-004
+- U-005
+- U-006
+parked: []
+outcome: completed

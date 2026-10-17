@@ -1,8 +1,8 @@
 # /v2r-loop — requirement-to-function build-out
 
 **Status:** design approved 2026-09-12
-**Glossary:** [`docs/v2r-loop/CONTEXT.md`](../../v2r-loop/CONTEXT.md) — terms in **bold** below are defined there
-**Decisions:** [`docs/v2r-loop/adr/`](../../v2r-loop/adr/)
+**Glossary:** [`docs/CONTEXT.md`](CONTEXT.md) — terms in **bold** below are defined there
+**Decisions:** [`docs/adr/`](adr/)
 
 ## Goal
 
@@ -80,7 +80,7 @@ it either has what it needs at stage 0 or it does not start.
 client = openai.OpenAI(
     base_url="https://api.inference.wandb.ai/v1",
     api_key=os.environ["WANDB_API_KEY"],      # Infisical: biofm/dev
-    project="3m-m/Aviary-BioSim",
+    project="<your-wandb-entity>/Aviary-BioSim",
 )
 MODEL = "deepseek-ai/DeepSeek-V4-Pro-0813"
 ```
@@ -217,6 +217,9 @@ units:
     statement: "SpendTracker.record accumulates per-call cost"
     stub: skeleton/spend_tracker.py::SpendTracker.record
     state: parked            # open | closed | parked
+                             # Divergence note (docs-only, 2026-09-26): the implementation also
+                             # holds a transient `claimed` state between claim and close/park —
+                             # see docs/hacp/design.md and docs/adr/0001-*. Recorded, not redesigned.
     attempts: 3
     evidence: parked/U-014.pytest.out
     park_branch: park/U-014
@@ -289,4 +292,4 @@ asserting the parked list and the green-commit invariant.
 - A headless `--detach` runtime — the register is already the state file, so this is a later
   addition rather than a rewrite.
 - The aviary drug-discovery environment itself. `/v2r-loop`'s first real target, and its
-  own spec. Target repo: `3m-m/Aviary-BioSim`.
+  own spec. Target repo: `<your-wandb-entity>/Aviary-BioSim`.

@@ -156,7 +156,11 @@ LinkedIn  linkedin.com/in/matthew-mo
 
 ## One honesty note about the venue
 
-This is **CoreWeave Hacks**, and our GPU work ran on **Apple MPS locally** plus **W&B Inference** for serverless LLM calls — not on CoreWeave hardware. There is no CoreWeave track listed, so nothing here overclaims. If a judge asks where the GPU was, the answer is: ESM-2 650M on local MPS in 7 seconds, and W&B Inference for everything else, chosen specifically so no GPU sat on the critical path of an autonomous run.
+This is **CoreWeave Hacks**, and our GPU work ran on **Apple MPS locally** plus **W&B Inference** for serverless LLM calls. If a judge asks where the GPU was, the answer is: ESM-2 650M on local MPS in 7 seconds, and W&B Inference for everything else, chosen specifically so no GPU sat on the critical path of an autonomous run.
+
+**Correction, 2026-10-15.** This note previously ended that first sentence with "not on CoreWeave hardware." That was wrong, and the correction is left visible rather than the sentence quietly deleted. CoreWeave documents its serverless inference as delivered through W&B Inference and running on CoreWeave GPU infrastructure ([docs](https://docs.coreweave.com/products/inference/serverless)), so the LLM calls were very probably executed on the host's own machines. The defensible statement is the narrower one: **the venue supplied no hardware and made no allocation for this work.**
+
+**Second correction, same day.** The first correction went on to say "no allocation, no credit, no hardware" and "used as a public paid service on its ordinary terms." The credit half is also unevidenced, and the same vendor documentation is why: access to that endpoint *requires* Serverless Inference credits, which come with the free, Pro and Academic plans as well as by purchase. Whether this work's calls were paid for, ran on a plan's free credits, or used granted credits is not recorded anywhere in this repository, so neither sentence should assert it. Corrected rather than softened — "no special arrangement" would read as a claim while evidencing nothing. The paper's limitations section (§5, *Compute and venue*) states the gap instead of filling it.
 
 ---
 

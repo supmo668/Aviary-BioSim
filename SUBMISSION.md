@@ -1,7 +1,7 @@
 # AGI House submission — BioSim
 
 **Team:** BioSim
-**Member:** Mangyin Mo — [linkedin.com/in/matthew-mo](https://www.linkedin.com/in/matthew-mo) · X [@mattmo_668](https://x.com/mattmo_668)
+**Member:** Mang-yin Mo — [linkedin.com/in/matthew-mo](https://www.linkedin.com/in/matthew-mo) · X [@mattmo_668](https://x.com/mattmo_668)
 **Repo:** https://github.com/supmo668/Aviary-BioSim (public)
 **Tracks:** Best Use of Weave · Best Use of marimo · Best Loop Design
 
@@ -12,7 +12,7 @@
 | Pre-registered study | https://claude.ai/code/artifact/df564d0d-8a96-41e0-9107-047b33d0c5e9 |
 | Interpretability report | https://claude.ai/code/artifact/1514a892-2eaa-4cce-9385-8bd17303d9aa |
 | marimo dashboard | https://claude.ai/code/artifact/a5dd195c-e3f5-4d6b-a41d-4ce2f1531c0b |
-| Weave traces | `3m-m/Aviary-BioSim` |
+| Weave traces | `<your-wandb-entity>/Aviary-BioSim` |
 
 ---
 
@@ -99,7 +99,7 @@ uv run --with pytest --with pyyaml --with fhaviary --with openai --with weave --
 
 uv run --with pyyaml demo/gate_demo.py                       # the gate refusing, in 10 s
 
-uv run --with pyyaml dashboard/seed_demo_run.py .
+uv run --with pyyaml dashboard/seed_demo_run.py .        # writes .v2r-demo/, a FIXTURE; point the dashboard's path box at it
 uv run --with marimo --with pyyaml --with pandas --with altair --with pyarrow \
   marimo run dashboard/v2r_dashboard.py
 

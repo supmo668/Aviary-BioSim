@@ -37,7 +37,7 @@ from biosim_env import BioSimEnv  # noqa: E402
 from spend_tracker import BudgetExceeded  # noqa: E402
 
 MODEL = os.environ.get("WANDB_INFERENCE_MODEL", "deepseek-ai/DeepSeek-V4-Pro-0813")
-PROJECT = os.environ.get("WANDB_PROJECT", "3m-m/Aviary-BioSim")
+PROJECT = os.environ.get("WANDB_PROJECT", "Aviary-BioSim")
 OUT = Path(__file__).parent / "out" / "discovery"
 
 

@@ -1,0 +1,12 @@
+{
+  "git_sha": "26da24de11f4470b7f2ddfb72e72cbae4a382d3d",
+  "tree_clean": true,
+  "recorded_at": "2026-10-11T05:52:33Z",
+  "inputs_path": null,
+  "python": "3.14.5",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "versions": {},
+  "rows": 6,
+  "range": "28af3c4^..2e00aa3",
+  "label": "reconstructed"
+}

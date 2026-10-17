@@ -28,7 +28,7 @@ def _():
 def _(Path, mo):
     v2r_path = mo.ui.text(
         value=str(Path.cwd() / ".v2r"),
-        label="Run directory",
+        label="Run directory (.v2r is the live loop; the demo fixture is .v2r-demo)",
         full_width=True,
     )
     v2r_path

@@ -13,3 +13,15 @@ config/monitor-pids.json
 workstreams/
 .aiadlc-agent
 .aiadlc-coordinator
+
+# white paper — local caches and LaTeX build products; evidence and PDFs are tracked
+.v2r-demo/
+paper/.hf-cache/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.bbl
+paper/*.blg
+paper/.tools/

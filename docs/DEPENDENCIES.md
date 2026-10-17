@@ -63,7 +63,7 @@ telemetry, inference and visibility, never correctness.
 |---|---|---|
 | `V2R_TRACE` | **must be exactly `1`** for any span to be emitted | unset — no telemetry |
 | `WANDB_API_KEY` | W&B auth, for both Weave and Inference | unset |
-| `WANDB_PROJECT` | entity/project for spans | `3m-m/Aviary-BioSim` |
+| `WANDB_PROJECT` | entity/project for spans | `<your-wandb-entity>/Aviary-BioSim` |
 
 `V2R_TRACE` exists deliberately. An ambient `WANDB_API_KEY` from an unrelated
 project must never cause this tool to publish build-unit statements and test
@@ -73,7 +73,7 @@ requires an explicit opt-in.
 ```bash
 export V2R_TRACE=1
 export WANDB_API_KEY=...          # wandb.ai/authorize
-export WANDB_PROJECT=3m-m/Aviary-BioSim
+export WANDB_PROJECT=<your-wandb-entity>/Aviary-BioSim
 
 uv run --with pyyaml --with weave \
   .claude/skills/v2r-loop/scripts/register.py close U-001
@@ -101,7 +101,7 @@ claude mcp add --transport http wandb https://mcp.withwandb.com/mcp \
 client = openai.OpenAI(
     base_url="https://api.inference.wandb.ai/v1",
     api_key=os.environ["WANDB_API_KEY"],
-    project="3m-m/Aviary-BioSim",
+    project="<your-wandb-entity>/Aviary-BioSim",
 )
 MODEL = "deepseek-ai/DeepSeek-V4-Pro-0813"
 ```

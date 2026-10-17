@@ -1,0 +1,24 @@
+% The loop as a diagram. Carries no data; numbers here are layout only.
+\begin{tikzpicture}[
+  node distance=5mm and 7mm,
+  box/.style={draw, rounded corners=2pt, align=center, font=\small, minimum height=8mm, inner sep=3pt},
+  seal/.style={box, fill=black!6},
+  arr/.style={-{Latex[length=2mm]}, thick}]
+  \node[box] (vision) {vision};
+  \node[box, right=of vision] (spec) {spec: standing\\requirements};
+  \node[box, right=of spec] (worklist) {worklist:\\one task at a time};
+  \node[seal, above right=of worklist, xshift=4mm] (test) {independent test\\(sealed; author never\\sees the code)};
+  \node[box, below right=of worklist, xshift=4mm] (impl) {implementation\\(implementer never\\sees the test)};
+  \node[seal, right=of worklist, xshift=42mm] (gate) {gate: closes a task\\only on an OBSERVED pass};
+  \node[box, below=of gate] (record) {run record + traces\\(the notebook)};
+  \node[box, left=of record, xshift=-9mm] (lessons) {lessons, adopted only\\between passes};
+  \draw[arr] (vision) -- (spec);
+  \draw[arr] (spec) -- (worklist);
+  \draw[arr] (worklist) -- (test);
+  \draw[arr] (worklist) -- (impl);
+  \draw[arr] (test) -- (gate);
+  \draw[arr] (impl) -- (gate);
+  \draw[arr] (gate) -- (record);
+  \draw[arr] (record) -- (lessons);
+  \draw[arr] (lessons) -| (worklist);
+\end{tikzpicture}

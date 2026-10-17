@@ -1,0 +1,182 @@
+{
+  "label": "reported (artifact counted, 2026-10-11)",
+  "measurements": 66,
+  "rounds": 5,
+  "requests_per_round": [
+    26,
+    12,
+    16,
+    12,
+    0
+  ],
+  "completion_tokens_per_round": [
+    6905,
+    6304,
+    1087,
+    819,
+    null
+  ],
+  "completion_tokens_total": 15115,
+  "rounds_without_a_token_count": 1,
+  "model": "deepseek-ai/DeepSeek-V4-Pro-0813",
+  "positions_measured": [
+    20,
+    21,
+    25,
+    30,
+    31,
+    32,
+    35,
+    36,
+    40,
+    41,
+    42,
+    43,
+    44,
+    47,
+    48,
+    49,
+    50,
+    62,
+    70,
+    72,
+    79,
+    83,
+    90,
+    91,
+    92,
+    95,
+    96,
+    99,
+    100,
+    101,
+    102,
+    103,
+    105,
+    109
+  ],
+  "distinct_positions": 34,
+  "requested_positions_per_round": [
+    [
+      31,
+      32,
+      40,
+      41,
+      42,
+      43,
+      44,
+      47,
+      48,
+      70,
+      83,
+      90,
+      91,
+      92,
+      95,
+      96,
+      100,
+      103,
+      105,
+      109
+    ],
+    [
+      25,
+      30,
+      35,
+      36,
+      49,
+      50,
+      62,
+      72,
+      79,
+      99,
+      101,
+      102
+    ],
+    [
+      20,
+      21,
+      30,
+      31,
+      35,
+      43,
+      48,
+      49,
+      70,
+      95,
+      96,
+      100,
+      105,
+      109
+    ],
+    [
+      31,
+      43,
+      95,
+      96,
+      100,
+      109
+    ],
+    []
+  ],
+  "cysteines_first_requested_in_round": 1,
+  "all_cysteines_requested_in_round": 1,
+  "c_peptide_first_requested_in_round": 1,
+  "control_positions": {
+    "c_peptide_positions_from_science_json": [
+      62,
+      70,
+      72,
+      79,
+      83
+    ],
+    "measured_by_the_agent": [
+      62,
+      70,
+      72,
+      79,
+      83
+    ],
+    "named_by_the_agent": [
+      20,
+      25,
+      62,
+      70,
+      72,
+      79,
+      83
+    ],
+    "named_by_the_agent_count": 7,
+    "named_by_the_agent_in_c_peptide": [
+      62,
+      70,
+      72,
+      79,
+      83
+    ],
+    "named_by_the_agent_in_c_peptide_count": 5,
+    "named_by_the_agent_outside_c_peptide": [
+      20,
+      25
+    ],
+    "named_by_the_agent_extraction": {
+      "round": 5,
+      "heading": "### Control positions that tolerate substitution",
+      "list_lines_scanned": 7,
+      "discarded_not_measured": []
+    }
+  },
+  "artifact_sha256": "ed9b4e2f5f01f24ab3aa6ba027fd47da55441d5028dc4a09a9b99cd91998d340",
+  "artifact_bytes": 29650,
+  "artifact_mtime_utc": "2026-09-13T19:23:20+00:00",
+  "science_json_sha256": "8a168ebfc53cbdb81023fddb4dcf552a6a8aef222a1f0e54bc1fcf5f3f13b720",
+  "provenance": {
+    "git_sha": "26da24de11f4470b7f2ddfb72e72cbae4a382d3d",
+    "tree_clean": true,
+    "recorded_at": "2026-10-11T05:52:54Z",
+    "inputs_path": "<parent-project>/projects/aviary-biosim/science/out/discovery",
+    "python": "3.14.5",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "versions": {}
+  }
+}
