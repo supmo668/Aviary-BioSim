@@ -1,8 +1,8 @@
 ---
 name: v2r-implementer-prompt-is-an-uncontrolled-variable
-confidence: 0.800
+confidence: 0.900
 created: 2026-09-13T18:49:54Z
-last_reinforced: 2026-09-13T18:49:54Z
+last_reinforced: 2026-09-13T19:53:39Z
 ttl_days: 30
 triggers: [.claude/skills/v2r-loop/SKILL.md, .v2r/register.yaml]
 tags: [v2r-loop, replay, methodology]

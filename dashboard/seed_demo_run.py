@@ -3,16 +3,25 @@
 # requires-python = ">=3.12"
 # dependencies = ["pyyaml"]
 # ///
-"""Seed a realistic multi-drain .v2r/ so the dashboard has a story to tell.
+"""Seed a realistic multi-drain FIXTURE so the dashboard has a story to tell.
 
 Shows the shape a real run has: a first drain that closes most units, a second
 that recovers some of the parked ones under a fresh instinct pin, and a third
 that closes nothing — the loop's own termination condition.
+
+It writes `.v2r-demo/`, never `.v2r/`. The live directory is evidence of a pass that
+happened; a fixture written there is indistinguishable from a real record to every
+consumer, and this script once overwrote pass 1's own record that way. Point the
+dashboard's path box at `.v2r-demo` to see the fixture.
 """
 import sys
 from pathlib import Path
 
 import yaml
+
+LIVE_DIR = ".v2r"          # the loop's real run state — this script must never write it
+DEFAULT_TARGET = ".v2r-demo"
+FIXTURE_MARK = "dashboard/seed_demo_run.py (FIXTURE — not a run that happened)"
 
 UNITS = [
     ("U-001", "R1", "Environment.reset returns (observations, tools)", 1, "closed"),
@@ -48,8 +57,43 @@ DRAINS = [
 ]
 
 
-def main(root: Path) -> int:
-    v2r = root / ".v2r"
+def _is_live_path(p: Path) -> bool:
+    """True when `p`, resolved, IS a live run-state directory or lies under one — any
+    `.v2r` component, anywhere in the path, not only ROOT's own (QG F05: `ROOT=.v2r
+    --target .` and an absolute --target naming another checkout's `.v2r` both passed a
+    check that only compared against ROOT/.v2r).
+
+    Compared case-folded: on a case-insensitive filesystem (macOS APFS by default) `.V2R`
+    is `.v2r`. Over-refusing a genuinely distinct `.V2R` on a case-sensitive one is the
+    safe direction."""
+    return any(part.casefold() == LIVE_DIR for part in p.resolve().parts)
+
+
+# Everything this script writes, relative to the target. Each is checked for a symlink
+# before any write: open("w") and mkdir(exist_ok=True) follow links, so a planted
+# `.v2r-demo/register.yaml -> ../.v2r/register.yaml` redirected the fixture into the
+# live directory with rc 0 (QG F05).
+WRITTEN = ["register.yaml", *(f"run-record-{d}.yaml" for d, *_ in DRAINS),
+           "parked", "parked/U-020.out", "parked/U-023.out"]
+
+
+def _refuse(msg: str) -> int:
+    print(f"refusing to write fixture data: {msg}; use the default {DEFAULT_TARGET}/ "
+          f"or pass another --target", file=sys.stderr)
+    return 2
+
+
+def main(root: Path, target: str = DEFAULT_TARGET) -> int:
+    v2r = root / target
+    if _is_live_path(root) or _is_live_path(v2r):
+        # Refuse whatever is or is not inside: an empty live directory is still the
+        # live directory, and the next real pass would inherit the fixture.
+        return _refuse(f"{v2r} is, or lies inside, a live run-state directory ({LIVE_DIR})")
+    if not target or v2r.resolve() == root.resolve():
+        return _refuse(f"--target {target!r} is ROOT itself")
+    links = [rel for rel in WRITTEN if (v2r / rel).is_symlink()]
+    if links:
+        return _refuse(f"{v2r} already holds symlink(s) where this script writes: {', '.join(links)}")
     v2r.mkdir(parents=True, exist_ok=True)
     ceilings = {"max_drains": 3, "max_attempts": 3, "max_wall_clock_s": 21600, "max_spend_usd": 25}
 
@@ -60,13 +104,15 @@ def main(root: Path) -> int:
             "sealed_test": f"tests/sealed/v2r/test_{uid.lower().replace('-', '')}.py",
             "sealed_test_sha": None, "state": state, "attempts": attempts,
             "pre_claim_sha": None,
-            "evidence": f".v2r/parked/{uid}.out" if state == "parked" else None,
+            # relative to the run dir's parent, as the dashboard resolves it — so it names
+            # the fixture's own parked/ directory, never the live one
+            "evidence": f"{v2r.name}/parked/{uid}.out" if state == "parked" else None,
             "park_branch": f"park/{uid}" if state == "parked" else None,
         }
         for uid, req, stmt, attempts, state in UNITS
     ]
     yaml.safe_dump(
-        {"version": 1,
+        {"produced_by": FIXTURE_MARK, "version": 1,
          "run": {"drain": 3, "seed": 1337, "instinct_pin": DRAINS[-1][1], "ceilings": ceilings},
          "units": units},
         (v2r / "register.yaml").open("w"), sort_keys=False)
@@ -74,7 +120,8 @@ def main(root: Path) -> int:
     closed_ids = [u["id"] for u in units if u["state"] == "closed"]
     for drain, pin, n_closed, parked, outcome in DRAINS:
         yaml.safe_dump(
-            {"drain": drain, "register_sha": f"sha256:{'%064x' % (drain * 7919)}",
+            {"produced_by": FIXTURE_MARK,
+             "drain": drain, "register_sha": f"sha256:{'%064x' % (drain * 7919)}",
              "instinct_pin": pin, "seed": 1337, "ceilings": ceilings,
              "closed": closed_ids[:n_closed], "parked": parked, "outcome": outcome},
             (v2r / f"run-record-{drain}.yaml").open("w"), sort_keys=False)
@@ -93,4 +140,10 @@ def main(root: Path) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(Path(sys.argv[1] if len(sys.argv) > 1 else ".")))
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("root", nargs="?", default=".")
+    ap.add_argument("--target", default=DEFAULT_TARGET,
+                    help=f"directory under ROOT to write (default {DEFAULT_TARGET}); {LIVE_DIR} is refused")
+    a = ap.parse_args()
+    sys.exit(main(Path(a.root), target=a.target))

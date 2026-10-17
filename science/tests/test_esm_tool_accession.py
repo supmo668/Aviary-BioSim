@@ -16,7 +16,7 @@ import pytest
 
 
 # Every accession the real experiment uses (science/run_experiment.py ORTHOLOGS).
-REAL = ["P01308", "P01326", "P01322", "P01315", "P01317",
+REAL = ["Q9ZZZ9", "P01326", "P01322", "P01315", "P01317",
         "P01329", "P67970", "O73727", "P12706"]
 
 # UniProt accessions are 6 OR 10 characters. Every entry above is 6, so without
@@ -26,19 +26,19 @@ REAL_TEN_CHAR = ["A0A0B4J2D5", "A0A022YWF9", "A0A123BCD4"]
 
 MALICIOUS = [
     "../../../etc/passwd",          # escape the cache directory
-    "../seqs/P01308",               # escape and come back
-    "P01308/../../../secret",       # traversal after a valid-looking prefix
+    "../seqs/Q9ZZZ9",               # escape and come back
+    "Q9ZZZ9/../../../secret",       # traversal after a valid-looking prefix
     "/etc/hosts",                   # absolute path
     "..",                           # bare traversal
-    "P01308?fields=all",            # steer the URL with a query
-    "P01308#frag",                  # fragment
-    "P01308/entry",                 # extra path segment
-    "P01308%2f..%2fx",              # percent-encoded separator
-    "P01308\n",                     # trailing newline
-    "P01308 ",                      # trailing space
+    "Q9ZZZ9?fields=all",            # steer the URL with a query
+    "Q9ZZZ9#frag",                  # fragment
+    "Q9ZZZ9/entry",                 # extra path segment
+    "Q9ZZZ9%2f..%2fx",              # percent-encoded separator
+    "Q9ZZZ9\n",                     # trailing newline
+    "Q9ZZZ9 ",                      # trailing space
 ]
 
-MALFORMED = ["", "   ", "p01308", "P0130", "ZZZZZZZZZZZZ", "P01308-1", "ABCD_WXYZ"]
+MALFORMED = ["", "   ", "q9zzz9", "Q9ZZZ", "ZZZZZZZZZZZZ", "Q9ZZZ9-1", "ABCD_WXYZ"]
 
 # Uppercase-alphanumeric but NOT UniProt accessions. Harmless as paths, so a loose
 # ^[A-Z0-9]{6,10}$ check accepts them; UniProt's own grammar does not. Pinned so the
@@ -66,7 +66,7 @@ def test_a_bad_accession_is_refused(esm, accession):
         esm.valid_accession(accession)
 
 
-@pytest.mark.parametrize("accession", [None, 1, ["P01308"], {"a": 1}])
+@pytest.mark.parametrize("accession", [None, 1, ["Q9ZZZ9"], {"a": 1}])
 def test_a_non_string_accession_is_refused(esm, accession):
     with pytest.raises(ValueError):
         esm.valid_accession(accession)
@@ -97,11 +97,11 @@ def test_a_traversal_cannot_read_a_json_file_outside_the_cache(esm, tmp_path, mo
 def test_a_cached_valid_accession_is_still_served_from_disk(esm, tmp_path, monkeypatch):
     cache = tmp_path / "seqs"
     cache.mkdir()
-    rec = {"accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
+    rec = {"accession": "Q9ZZZ9", "name": "EXMP", "organism": "Testus fictus",
            "sequence": "MALW", "length": 4}
-    (cache / "P01308.json").write_text(json.dumps(rec))
+    (cache / "Q9ZZZ9.json").write_text(json.dumps(rec))
     monkeypatch.setattr(esm, "CACHE", cache)
-    assert esm.fetch_sequence("P01308") == rec
+    assert esm.fetch_sequence("Q9ZZZ9") == rec
 
 
 # --- Gate finding: isinstance() admits str SUBCLASSES, and returning the caller's
@@ -119,9 +119,9 @@ class _Evil(str):
 
 
 def test_validation_returns_plain_text_not_the_callers_object(esm):
-    out = esm.valid_accession(_Evil("P01308"))
+    out = esm.valid_accession(_Evil("Q9ZZZ9"))
     assert type(out) is str, type(out)
-    assert f"{out}.json" == "P01308.json"
+    assert f"{out}.json" == "Q9ZZZ9.json"
 
 
 def test_a_str_subclass_cannot_steer_the_cache_path(esm, tmp_path, monkeypatch):
@@ -129,9 +129,9 @@ def test_a_str_subclass_cannot_steer_the_cache_path(esm, tmp_path, monkeypatch):
     secret.write_text(json.dumps({"sequence": "PWNED", "length": 5}))
     cache = tmp_path / "seqs"
     cache.mkdir()
-    (cache / "P01308.json").write_text(json.dumps({"sequence": "REAL", "length": 4}))
+    (cache / "Q9ZZZ9.json").write_text(json.dumps({"sequence": "REAL", "length": 4}))
     monkeypatch.setattr(esm, "CACHE", cache)
-    rec = esm.fetch_sequence(_Evil("P01308"))
+    rec = esm.fetch_sequence(_Evil("Q9ZZZ9"))
     assert rec["sequence"] == "REAL", "the formatted value, not the validated one, reached the path"
 
 
@@ -174,7 +174,7 @@ class _FakeResponse:
         return None
 
 
-@pytest.mark.parametrize("accession", ["P01308", "O73727", "A0A0B4J2D5"])
+@pytest.mark.parametrize("accession", ["Q9ZZZ9", "O73727", "A0A0B4J2D5"])
 def test_a_valid_accession_is_fetched_from_the_right_url_and_cached(esm, accession, tmp_path, monkeypatch):
     """The happy path: nothing previously reached it, because the `esm` fixture's
     requests.get always raises. Pins that the VALIDATED value is the one that reaches the URL —
@@ -277,22 +277,22 @@ def test_the_tools_report_the_validated_accession_not_the_callers_object(esm, tm
     either, which is file content; the do-not-echo test below pins that half."""
     cache = tmp_path / "seqs"
     cache.mkdir()
-    (cache / "P01308.json").write_text(json.dumps(
-        {"accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
+    (cache / "Q9ZZZ9.json").write_text(json.dumps(
+        {"accession": "Q9ZZZ9", "name": "EXMP", "organism": "Testus fictus",
          "sequence": "MALW", "length": 4}))
     monkeypatch.setattr(esm, "CACHE", cache)
     monkeypatch.setattr(esm, "embed", lambda seq: [0.0] * 4)
-    for out in (esm.score_variant(_Evil("P01308"), 99, "A"),
-                esm.embed_sequence(_Evil("P01308"))):
+    for out in (esm.score_variant(_Evil("Q9ZZZ9"), 99, "A"),
+                esm.embed_sequence(_Evil("Q9ZZZ9"))):
         assert "../secret" not in out, out
-        assert "P01308" in out, out
+        assert "Q9ZZZ9" in out, out
 
 
 def _seed_cache(esm, tmp_path, monkeypatch):
     cache = tmp_path / "seqs"
     cache.mkdir()
-    (cache / "P01308.json").write_text(json.dumps(
-        {"accession": "P01308", "name": "EXMP", "organism": "Testus fictus",
+    (cache / "Q9ZZZ9.json").write_text(json.dumps(
+        {"accession": "Q9ZZZ9", "name": "EXMP", "organism": "Testus fictus",
          "sequence": "MALW", "length": 4}))
     monkeypatch.setattr(esm, "CACHE", cache)
     return cache
@@ -304,17 +304,17 @@ def test_score_variant_reports_the_validated_accession_on_its_normal_path(esm, t
     _seed_cache(esm, tmp_path, monkeypatch)
     monkeypatch.setattr(esm, "position_logprobs",
                         lambda seq: [{"logp": {a: -1.0 for a in esm.AA}} for _ in seq])
-    out = esm.score_variant(_Evil("P01308"), 2, "G")
+    out = esm.score_variant(_Evil("Q9ZZZ9"), 2, "G")
     assert "../secret" not in out, out
-    assert out.startswith("P01308 A2G"), out
+    assert out.startswith("Q9ZZZ9 A2G"), out
 
 
 def test_embed_sequence_reports_the_validated_accession(esm, tmp_path, monkeypatch):
     _seed_cache(esm, tmp_path, monkeypatch)
     monkeypatch.setattr(esm, "embed", lambda seq: [0.0] * 8)
-    out = esm.embed_sequence(_Evil("P01308"))
+    out = esm.embed_sequence(_Evil("Q9ZZZ9"))
     assert "../secret" not in out, out
-    assert out.startswith("P01308 (Testus fictus, 4 aa)"), out
+    assert out.startswith("Q9ZZZ9 (Testus fictus, 4 aa)"), out
 
 
 def test_the_tools_do_not_echo_an_accession_taken_from_the_cache_file(esm, tmp_path, monkeypatch):
@@ -322,20 +322,20 @@ def test_the_tools_do_not_echo_an_accession_taken_from_the_cache_file(esm, tmp_p
     puts whatever the file says in front of the operator — including escape sequences."""
     cache = tmp_path / "seqs"
     cache.mkdir()
-    (cache / "P01308.json").write_text(json.dumps(
+    (cache / "Q9ZZZ9.json").write_text(json.dumps(
         {"accession": "\x1b[2K OPERATOR-SPOOF", "name": "EXMP",
          "organism": "Testus fictus", "sequence": "MALW", "length": 4}))
     monkeypatch.setattr(esm, "CACHE", cache)
     monkeypatch.setattr(esm, "embed", lambda seq: [0.0] * 8)
 
-    out = esm.score_variant("P01308", 99, "A")
+    out = esm.score_variant("Q9ZZZ9", 99, "A")
     assert "OPERATOR-SPOOF" not in out, out
     assert "\x1b" not in out, repr(out)
-    assert out.startswith("position 99 is outside P01308"), out
+    assert out.startswith("position 99 is outside Q9ZZZ9"), out
 
-    out = esm.embed_sequence("P01308")
+    out = esm.embed_sequence("Q9ZZZ9")
     assert "OPERATOR-SPOOF" not in out, out
-    assert out.startswith("P01308 ("), out
+    assert out.startswith("Q9ZZZ9 ("), out
 
 
 def test_a_poisoned_cache_cannot_put_escapes_or_a_spoofed_line_in_front_of_the_operator(
@@ -345,8 +345,8 @@ def test_a_poisoned_cache_cannot_put_escapes_or_a_spoofed_line_in_front_of_the_o
     line and print a complete, plausible result for a different entry."""
     cache = tmp_path / "seqs"
     cache.mkdir()
-    (cache / "P01308.json").write_text(json.dumps({
-        "accession": "P01308",
+    (cache / "Q9ZZZ9.json").write_text(json.dumps({
+        "accession": "Q9ZZZ9",
         "name": "EXMP",
         "organism": "\x1b[2K\rP99999 (Testus fictus, 110 aa) embedded: 1280-dimensional\x1b[1;32m SPOOF",
         "sequence": "M\x1b[31mLW",
@@ -357,16 +357,16 @@ def test_a_poisoned_cache_cannot_put_escapes_or_a_spoofed_line_in_front_of_the_o
     monkeypatch.setattr(esm, "position_logprobs",
                         lambda seq: [{"logp": {a: -1.0 for a in esm.AA}} for _ in seq])
 
-    out = esm.embed_sequence("P01308")
+    out = esm.embed_sequence("Q9ZZZ9")
     assert "\x1b" not in out, repr(out)
     assert "SPOOF" in out, "the text may survive; the ESCAPES must not"
-    assert out.startswith("P01308 ("), out
+    assert out.startswith("Q9ZZZ9 ("), out
 
-    out = esm.score_variant("P01308", 2, "G")
+    out = esm.score_variant("Q9ZZZ9", 2, "G")
     assert "\x1b" not in out, repr(out)
     assert "not a standard amino acid" in out, out
 
-    out = esm.score_variant("P01308", 1, "G")   # position 1 IS a standard residue
+    out = esm.score_variant("Q9ZZZ9", 1, "G")   # position 1 IS a standard residue
     assert "\x1b" not in out, repr(out)
 
 
@@ -375,7 +375,7 @@ def test_a_poisoned_cache_cannot_put_escapes_or_a_spoofed_line_in_front_of_the_o
 # the same agent, reach the same code, and had no test at all: deleting the
 # `mutant not in AA` branch outright left the whole suite green.
 
-def _seeded(esm, tmp_path, monkeypatch, sequence="MALWMRLLPL", accession="P01308"):
+def _seeded(esm, tmp_path, monkeypatch, sequence="MALWMRLLPL", accession="Q9ZZZ9"):
     cache = tmp_path / "seqs"
     cache.mkdir()
     (cache / f"{accession}.json").write_text(json.dumps({
@@ -409,7 +409,7 @@ def test_a_mutant_that_is_not_one_single_amino_acid_is_refused(esm, tmp_path, mo
     one character; the idiom is identical and the reasoning stated for it was not.
     """
     esm = _seeded(esm, tmp_path, monkeypatch)
-    out = esm.score_variant("P01308", 2, mutant)
+    out = esm.score_variant("Q9ZZZ9", 2, mutant)
     assert "not one of the 20 amino acids" in out, out
     assert "\x1b" not in out, repr(out)
 
@@ -501,7 +501,7 @@ def test_the_accession_refusal_does_not_echo_an_unbounded_input(esm):
 @pytest.mark.parametrize("position", [0, -1, 11, 10**6])
 def test_a_position_outside_the_sequence_is_refused(esm, tmp_path, monkeypatch, position):
     esm = _seeded(esm, tmp_path, monkeypatch)
-    out = esm.score_variant("P01308", position, "G")
+    out = esm.score_variant("Q9ZZZ9", position, "G")
     assert "outside" in out, out
 
 
@@ -515,14 +515,14 @@ def test_a_long_cache_field_cannot_push_the_real_result_off_the_screen(esm, tmp_
     flood = "A" * 100_000
     cache = tmp_path / "seqs"
     cache.mkdir()
-    (cache / "P01308.json").write_text(json.dumps({
-        "accession": "P01308", "name": "EXMP", "organism": flood,
+    (cache / "Q9ZZZ9.json").write_text(json.dumps({
+        "accession": "Q9ZZZ9", "name": "EXMP", "organism": flood,
         "sequence": "MALW", "length": flood,
     }))
     monkeypatch.setattr(esm, "CACHE", cache)
     monkeypatch.setattr(esm, "embed", lambda seq: [0.0] * 8)
 
-    out = esm.embed_sequence("P01308")
+    out = esm.embed_sequence("Q9ZZZ9")
     assert len(out) < 400, f"a cache field flooded the operator with {len(out)} chars"
     assert "embedded" in out, "the tool's own result must survive the truncation"
 

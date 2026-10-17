@@ -62,7 +62,7 @@ def test_the_fake_tool_is_visible_only_while_a_fixture_holds_it(esm_stub, stub_c
 
 def test_the_heavy_stubs_are_visible_only_while_the_esm_fixture_holds_them(esm, stub_contract):
     assert sorted(stub_contract.stubbed()) == ["requests", "torch", "transformers"]
-    assert esm.valid_accession("P01308") == "P01308"
+    assert esm.valid_accession("Q9ZZZ9") == "Q9ZZZ9"
 
 
 # --- the wiring the rest of the suite trusts ------------------------------------

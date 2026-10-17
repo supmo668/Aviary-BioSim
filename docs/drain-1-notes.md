@@ -82,10 +82,10 @@ the former. Note also that the six closes are six **versions of one object** nam
 Reading them requires the object API instead:
 
 ```python
-c = weave.init("3m-m/Aviary-BioSim")
+c = weave.init("<your-wandb-entity>/Aviary-BioSim")
 for o in c._objects():
     if o.object_id == "unit.close":
-        weave.ref(f"weave:///3m-m/Aviary-BioSim/object/unit.close:{o.digest}").get()
+        weave.ref(f"weave:///<your-wandb-entity>/Aviary-BioSim/object/unit.close:{o.digest}").get()
 ```
 
 So a drain can be perfectly instrumented and still be unreadable by its own documented

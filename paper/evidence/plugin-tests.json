@@ -1,0 +1,71 @@
+{
+  "label": "measured (re-run, 2026-10-11)",
+  "plugin_version": "0.64.0",
+  "commit": "e54bb44",
+  "suites": {
+    "register.test.sh": {
+      "run": 60,
+      "failed": 0,
+      "exit": 0,
+      "summary_found": true,
+      "passed": 60
+    },
+    "referee-accountability.test.sh": {
+      "run": 33,
+      "failed": 0,
+      "exit": 0,
+      "summary_found": true,
+      "passed": 33
+    },
+    "referee-command-permodule.test.sh": {
+      "run": 11,
+      "failed": 0,
+      "exit": 0,
+      "summary_found": true,
+      "passed": 11
+    },
+    "referee-injection.test.sh": {
+      "run": 18,
+      "failed": 0,
+      "exit": 0,
+      "summary_found": true,
+      "passed": 18
+    },
+    "referee-skip.test.sh": {
+      "run": 32,
+      "failed": 0,
+      "exit": 0,
+      "summary_found": true,
+      "passed": 32
+    },
+    "spend.test.sh": {
+      "run": 23,
+      "failed": 0,
+      "exit": 0,
+      "summary_found": true,
+      "passed": 23
+    },
+    "v2r-loop.test.sh": {
+      "run": 42,
+      "failed": 0,
+      "exit": 0,
+      "summary_found": true,
+      "passed": 42
+    }
+  },
+  "totals": {
+    "run": 219,
+    "failed": 0
+  },
+  "provenance": {
+    "git_sha": "db42d158944b71c2dfe70b4053fef7c10958590f",
+    "tree_clean": true,
+    "recorded_at": "2026-10-11T06:13:30Z",
+    "inputs_path": "~/\u2026/airdlc",
+    "python": "3.14.5",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "versions": {},
+    "tag": "v0.64.0",
+    "scratch_worktree": true
+  }
+}
