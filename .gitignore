@@ -10,7 +10,13 @@ science/out/
 .claude/logs/
 .claude/usr/
 config/monitor-pids.json
-workstreams/
+# Workstream internals stay private. EXCEPT the v2s-bio documents, which are tracked so
+# approvals pin to COMMITS rather than content hashes of untracked files (CTO #766, ruling (a)).
+# qgr/ stays ignored: three receipts carry an absolute home path in a hash-covered field.
+/workstreams/*
+!/workstreams/v2s-bio/
+/workstreams/v2s-bio/*
+!/workstreams/v2s-bio/*.md
 .aiadlc-agent
 .aiadlc-coordinator
 
@@ -25,3 +31,6 @@ paper/*.fdb_latexmk
 paper/*.bbl
 paper/*.blg
 paper/.tools/
+
+# ISCP phase-state is local session state, not a published artifact.
+.claude/workstreams/
