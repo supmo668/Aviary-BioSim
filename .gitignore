@@ -28,7 +28,11 @@ paper/*.log
 paper/*.out
 paper/*.fls
 paper/*.fdb_latexmk
-paper/*.bbl
+# NOT ignored: paper/*.bbl. It is a build intermediate for a local compile and a REQUIRED
+# SOURCE FILE for arXiv, which does not run BibTeX. Without a tracked .bbl the submission
+# still compiles, still announces, and renders every citation as [?] — permanently, with
+# nothing in the compile log to warn you. Do not re-add it to this list.
+# paper/*.bbl  <- deliberately absent
 paper/*.blg
 paper/.tools/
 

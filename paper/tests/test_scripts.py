@@ -1532,3 +1532,65 @@ def test_no_producer_writes_bytecode_carrying_this_machines_path(name):
         f"{name}.py sets sys.dont_write_bytecode at line {flag + 1}, AFTER importing "
         f"_provenance at line {imp + 1}; the .pyc is already written by then"
     )
+
+
+# --- arXiv submission integrity -------------------------------------------------
+# arXiv does NOT run BibTeX. A submission using \bibliography must carry its generated
+# .bbl in the source bundle, or it still compiles, still announces, and renders every
+# citation as [?] — permanently, with nothing in the compile log to warn you. The .bbl
+# is therefore a SOURCE file here, not an intermediate, and `.gitignore` says so.
+#
+# These checks catch the staleness a tracked generated file invites: a citation added to
+# main.tex without regenerating the .bbl. They do NOT verify that an entry's *rendered
+# text* still matches refs.bib — only a real BibTeX run proves that, and it is not run
+# here. That gap is stated rather than implied.
+
+
+def _paper_dir():
+    return pathlib.Path(__file__).resolve().parents[1]
+
+
+def _cite_keys_in_main_tex():
+    tex = (_paper_dir() / "main.tex").read_text()
+    keys = set()
+    for group in re.findall(r"\\cite[tp]?\{([^}]*)\}", tex):
+        keys.update(k.strip() for k in group.split(",") if k.strip())
+    return keys
+
+
+def _bibitem_keys_in_bbl():
+    bbl = _paper_dir() / "main.bbl"
+    assert bbl.is_file(), (
+        "paper/main.bbl is missing. arXiv does not run BibTeX, so a submission without "
+        "it renders every citation as [?]. Regenerate with: tectonic -X compile main.tex "
+        "--keep-intermediates --outdir <dir>, then copy main.bbl into paper/."
+    )
+    return set(re.findall(r"\\bibitem\{([^}]*)\}", bbl.read_text()))
+
+
+def test_the_tracked_bbl_is_not_ignored_because_arxiv_needs_it_as_a_source_file():
+    ignored = subprocess.run(
+        ["git", "check-ignore", "-q", "paper/main.bbl"],
+        cwd=_paper_dir().parent,
+        capture_output=True,
+    ).returncode == 0
+    assert not ignored, (
+        "paper/main.bbl is git-ignored again. It is a REQUIRED arXiv source file, not a "
+        "build intermediate. See the comment at that line in .gitignore."
+    )
+
+
+def test_every_citation_in_the_paper_has_a_bibitem_in_the_tracked_bbl():
+    missing = sorted(_cite_keys_in_main_tex() - _bibitem_keys_in_bbl())
+    assert not missing, (
+        f"main.tex cites {missing} but the tracked main.bbl has no \\bibitem for them. "
+        "The .bbl is stale — regenerate it. On arXiv these would render as [?]."
+    )
+
+
+def test_the_tracked_bbl_carries_no_bibitem_the_paper_does_not_cite():
+    extra = sorted(_bibitem_keys_in_bbl() - _cite_keys_in_main_tex())
+    assert not extra, (
+        f"main.bbl carries {extra} which main.tex no longer cites — the .bbl was built "
+        "from a different version of the paper. Regenerate it."
+    )

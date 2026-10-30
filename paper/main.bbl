@@ -1,0 +1,65 @@
+\begin{thebibliography}{1}
+
+\bibitem{coreweave2026serverless}
+{CoreWeave}.
+\newblock Serverless inference.
+\newblock \url{https://docs.coreweave.com/products/inference/serverless}, 2026.
+\newblock Documents serverless inference as delivered through W\&B Inference
+  and running on CoreWeave GPU infrastructure; accessed 2026-10-15.
+
+\bibitem{demillo1978mutation}
+Richard~A. DeMillo, Richard~J. Lipton, and Frederick~G. Sayward.
+\newblock Hints on test data selection: Help for the practicing programmer.
+\newblock {\em Computer}, 11(4):34--41, 1978.
+
+\bibitem{kapoor2023leakage}
+Sayash Kapoor and Arvind Narayanan.
+\newblock Leakage and the reproducibility crisis in machine-learning-based
+  science.
+\newblock {\em Patterns}, 4(9):100804, 2023.
+
+\bibitem{lin2023esm}
+Zeming Lin, Halil Akin, Roshan Rao, Brian Hie, Zhongkai Zhu, Wenting Lu, Nikita
+  Smetanin, Robert Verkuil, Ori Kabeli, Yaniv Shmueli, Allan dos Santos~Costa,
+  Maryam Fazel-Zarandi, Tom Sercu, Salvatore Candido, and Alexander Rives.
+\newblock Evolutionary-scale prediction of atomic-level protein structure with
+  a language model.
+\newblock {\em Science}, 379(6637):1123--1130, 2023.
+
+\bibitem{meier2021zeroshot}
+Joshua Meier, Roshan Rao, Robert Verkuil, Jason Liu, Tom Sercu, and Alex Rives.
+\newblock Language models enable zero-shot prediction of the effects of
+  mutations on protein function.
+\newblock In {\em Advances in Neural Information Processing Systems},
+  volume~34, 2021.
+
+\bibitem{narayanan2024aviary}
+Siddharth Narayanan, James~D. Braza, Ryan-Rhys Griffiths, Manu Ponnapati,
+  Albert Bou, Jon Laurent, Ori Kabeli, Geemi Wellawatte, Sam Cox, Samuel~G.
+  Rodriques, and Andrew~D. White.
+\newblock Aviary: training language agents on challenging scientific tasks,
+  2024.
+
+\bibitem{stoy2007insulin}
+Julie St{\o}y, Emma~L. Edghill, Sarah~E. Flanagan, Honggang Ye, Veronica~P.
+  Paz, Anna Pluzhnikov, Jennifer~E. Below, M.~Geoffrey Hayes, Nancy~J. Cox,
+  Gregory~M. Lipkind, Rebecca~B. Lipton, Siri Atma~W. Greeley, Ann-Marie Patch,
+  Sian Ellard, Donald~F. Steiner, Andrew~T. Hattersley, Louis~H. Philipson, and
+  Graeme~I. Bell.
+\newblock Insulin gene mutations as a cause of permanent neonatal diabetes.
+\newblock {\em Proceedings of the National Academy of Sciences},
+  104(38):15040--15044, 2007.
+
+\bibitem{uniprot2023}
+{The UniProt Consortium}.
+\newblock {UniProt}: the universal protein knowledgebase in 2023.
+\newblock {\em Nucleic Acids Research}, 51(D1):D523--D531, 2023.
+
+\bibitem{wang1999akita}
+Jie Wang, Tatsuya Takeuchi, Sadaaki Tanaka, Sang-Kyu Kubo, Tatsunari Kayo,
+  Dongcai Lu, Kouichi Takata, Akio Koizumi, and Tetsuro Izumi.
+\newblock A mutation in the insulin 2 gene induces diabetes with severe
+  pancreatic $\beta$-cell dysfunction in the {Mody} mouse.
+\newblock {\em Journal of Clinical Investigation}, 103(1):27--37, 1999.
+
+\end{thebibliography}
