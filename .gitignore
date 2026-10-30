@@ -17,6 +17,13 @@ config/monitor-pids.json
 !/workstreams/v2s-bio/
 /workstreams/v2s-bio/*
 !/workstreams/v2s-bio/*.md
+# plan/ needs its own re-include: git cannot re-include a file whose PARENT DIRECTORY
+# is excluded, so `!/workstreams/v2s-bio/**/*.md` does NOT reach plan/build-plan.md.
+# Measured by the CTO in a throwaway repo (#785). Each class named explicitly rather
+# than wildcarded, so this cannot silently widen a public surface later.
+!/workstreams/v2s-bio/plan/
+/workstreams/v2s-bio/plan/*
+!/workstreams/v2s-bio/plan/*.md
 .aiadlc-agent
 .aiadlc-coordinator
 

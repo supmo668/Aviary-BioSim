@@ -1,0 +1,79 @@
+name: paper — arXiv engine check
+
+# Closes the one gap the local toolchain cannot: tectonic is XeTeX-based, arXiv runs
+# pdflatex. The .bbl is engine-agnostic (BibTeX makes it from .aux + .bib), but "compiles
+# under the engine arXiv will use" is only provable by running that engine.
+#
+# Packaging (preflight / bundle / metadata) is NOT duplicated here — it stays centralized
+# in bioFM and runs against the submodule checkout at submission time (CTO #785).
+
+on:
+  push:
+    paths: ['paper/**', '.github/workflows/paper-arxiv-check.yml']
+  pull_request:
+    paths: ['paper/**', '.github/workflows/paper-arxiv-check.yml']
+  workflow_dispatch:
+
+jobs:
+  compile-as-arxiv-will:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `-pdf` is LOAD-BEARING. Passing `args` OVERRIDES the action's defaults, and without
+      # it latexmk runs DVI mode via `latex` and never produces a PDF — a green run that
+      # proves nothing. This cost four CI runs elsewhere in the fleet before an assertion
+      # caught it, which is why the assertions below are not optional.
+      - name: Compile with pdflatex, the engine arXiv uses
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: main.tex
+          working_directory: paper
+          args: "-pdf -interaction=nonstopmode -halt-on-error -file-line-error"
+
+      - name: Assert the artifacts, do not infer them from a green compile
+        working-directory: paper
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+
+          [ -s main.pdf ] || fail "main.pdf missing or empty. If the compile was green, the
+            engine likely ran in DVI mode — check that -pdf survived in args."
+          echo "main.pdf $(wc -c < main.pdf) bytes"
+
+          # arXiv does not run BibTeX. A tracked .bbl is the only thing standing between
+          # this submission and every citation rendering as [?], permanently.
+          [ -s main.bbl ] || fail "main.bbl missing or empty — arXiv would render every
+            citation as [?]."
+          echo "main.bbl $(wc -c < main.bbl) bytes, $(grep -c '\\bibitem' main.bbl) bibitems"
+
+          # The log is where [?] actually announces itself. A compile can succeed with
+          # undefined citations and say nothing on stdout.
+          if grep -qE 'Citation .* undefined|Reference .* undefined' main.log; then
+            grep -nE 'Citation .* undefined|Reference .* undefined' main.log | head -20
+            fail "undefined citations or references — the .bbl is missing or stale."
+          fi
+          echo "no undefined citations or references in main.log"
+
+      - name: Figures resolve inside the bundle
+        working-directory: paper
+        run: |
+          set -euo pipefail
+          grep -oE '\\includegraphics(\[[^]]*\])?\{[^}]*\}' main.tex \
+            | sed 's/.*{//;s/}//' > /tmp/figs.txt
+          echo "referenced figures:"; sed 's/^/  /' /tmp/figs.txt
+          while read -r f; do
+            case "$f" in
+              /*|~*) echo "::error::absolute figure path: $f"; exit 1 ;;
+              *../*) echo "::error::figure path escapes the bundle: $f"; exit 1 ;;
+            esac
+            [ -f "$f" ] || { echo "::error::figure not in bundle: $f"; exit 1; }
+          done < /tmp/figs.txt
+          echo "all figures present, relative, and inside the bundle"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-pdf
+          path: |
+            paper/main.pdf
+            paper/main.bbl
