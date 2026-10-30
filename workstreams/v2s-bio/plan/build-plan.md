@@ -1,7 +1,7 @@
 ---
 workstream: v2s-bio
 artifact: build plan
-builds_on: AND.md (approved 867df41c, revised b659e05f) · PVR.md (CTO-signed 8d1bcc27, R1–R24)
+builds_on: AND.md (approved per approvals row 22; revised in 604b416, filled in 6acf8a3) · PVR.md (CTO-signed per approvals row 21, R1–R24)
 status: DRAFT — not grilled, not plan-gate signed
 date: 2026-10-30
 ---
