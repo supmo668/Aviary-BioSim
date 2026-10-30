@@ -1,7 +1,7 @@
 # A&D — `/v2s:bio` (vision to science)
 
 **Workstream:** `v2s-bio` · **Phase:** and
-**Status:** **APPROVED.** Principal approval recorded 2026-10-28 against `867df41c` — aviary approvals row 22. **This line is the only change since that hash.**  *(Pointer form per CTO dispatch #751: the signature lives in the approval log, the document carries only a pointer — recording it inline would change the hash the approval names.)*
+**Status:** **APPROVED, then REVISED.** Principal approval recorded 2026-10-28 against `867df41c` (aviary approvals row 22). Revised 2026-10-30 under the principal's own decision at row 25 (`/grill-with-res`: A-10 replaced, AD-8 closed to Brier, R18 tier values corrected, `fhaviary` pinned, R22 audit-log constraint added). Content hash after revision `b659e05f`; **this line is the only change since that hash.** *(Pointer form per CTO #751.)*
 **Builds on:** [`PVR.md`](PVR.md) — **24** standing requirements R1–R24, CTO-signed at `8d1bcc27`
 **Decisions:** [`approvals.md`](approvals.md) — rows marked *(A-n)* below
 
@@ -23,12 +23,12 @@ Choices nobody decided. Each is rejectable; none blocks plan-validity, all must 
 |---|---|---|
 | AD-1 | **The PVR needs an amendment.** D2 implies a standing requirement the approved PVR does not contain: *no exploratory measurement may reach a verdict, and every claim derived from exploratory data carries that label.* Raised rather than added quietly — it is requirement-level, so it belongs to the principal, not to me *(A-13)* | Without it the split is a design convention rather than an enforced property, and the attack D2 closes reopens at the first refactor |
 | AD-2 | **D3 — seals.** Predicate and plan seals reuse v2r-loop's `test-seal` hook pattern: writable until `sealed_at` is set, immutable after, enforced by hook rather than convention *(A-14)* | A different isolation mechanism means R1 and R2 need their own enforcement, and the airdlc hard dependency buys less |
-| AD-3 | **D4 — measurement records.** ClawBio's `reproducibility/` bundle is the canonical shape, and non-ClawBio producers (`BioSimEnv`, ESM-2) emit *the same shape* rather than a second format *(A-14)* | Two record formats means two provenance checks and two ways for R7 to be satisfied, which is one too many |
+| ~~AD-3~~ | **REVISED 2026-10-30 after `/grill-with-res` *(A-25)*.** ClawBio's `reproducibility/` bundle is **not** canonical: its README scopes it to *"many skills"* / *"where provided"*, `run_skill()` writes no bundle, `pharmgx-reporter` emits `commands.sh` alone, and `repro-enforcer` is `spec-only`/`planned`. **v2s owns the measurement-record schema**, promoted from `paper/evidence/science.json` (`model_id, revision, weights_sha256, device, seed, provenance`); ClawBio's `commands.sh` and its audit span are fields inside it | The approved text would have had `/plan` decompose R7 against a format that cannot carry R7's span id or model and tool pins |
 | AD-4 | **D5 — world model.** Append-only, content-addressed ledger; one version per write-back; every claim carries provenance in `{literature, measurement, assumption}` *(A-14)* | A mutable store makes R11's replay property unprovable |
 | AD-5 | **D6 — triage verdict.** One record carrying `verdict`, `tool`, `preferred`, `preferred_available`, `depth`, `citations` *(A-14)* | — |
 | AD-6 | The bounded test library ships with `threshold`, `paired_difference`, `rank_correlation` and `proportion` in v1; anything else yields `OPEN_INFEASIBLE` | A larger v1 library widens the surface the sealed analyst can express, and widens what must be tested |
 | AD-7 | **The experimenter is shown targets only.** A hypothesis is now a prediction, so its statement carries an expectation — and R2 hands that statement to the experimenter. Expectation and credence stay with the predicate and the world model *(A-16)* | Without the split the experimenter learns the threshold and can bias an under-specified plan toward an outcome, partly reopening D2 |
-| AD-8 | **Calibration uses a proper scoring rule** (Brier or log), never accuracy *(A-17)* | Scored on accuracy alone, a model that knows it is scored hedges every credence to 0.5 and the track record becomes decorative |
+| AD-8 | **Calibration uses the Brier score** — settled by `/grill-with-res` 2026-10-30: both Brier and log are strictly proper, but log is unbounded and infinite at p=0, so a single zero-credence prediction that resolves true destroys the record; Brier is bounded and symmetric *(A-17, A-26; scoringrules theory, arXiv 2105.12065)* | Scored on accuracy alone, a model that knows it is scored hedges every credence to 0.5 and the track record becomes decorative |
 
 ---
 
@@ -116,11 +116,11 @@ What it buys, beyond the name: hypothesis generation becomes *"the model predict
 | `plan-spec` | Parse + validate a confirmatory measurement plan; seal it | `test-seal` hook | R1 R20 |
 | `seal-hook` | Makes `sealed_at` one-way for both predicates and plans | airdlc hooks | R1 R2 |
 | `dispatch-builder` | Pure function rendering the experimenter's payload. Predicate-blind by construction | — | R2 |
-| `measurement-store` | Append-only. Every record is a ClawBio-shaped reproducibility bundle carrying `confirmatory`, `plan_step_id`, span id, model and tool pins | ClawBio (soft) | R7 R11 R22 |
+| `measurement-store` | Append-only. Every record is a **v2s-owned** schema (from `science.json`: `model_id, revision, weights_sha256, device, seed, provenance`) plus `confirmatory`, `plan_step_id`, span id; ClawBio's `commands.sh` and audit span are embedded fields when present *(A-25)* | ClawBio (soft) | R7 R11 R22 |
 | `triage` | Novelty + feasibility. Undermind preferred, declared fallback, records `depth` | Undermind (soft), consensus/pubmed/biorxiv | R5 R6 R18 |
 | `world-model` | Content-addressed ledger of claims **plus sealed predictions and a calibration record**. Refuses a provenance-free claim; scores with a proper rule *(A-17)* | — | R11 |
 | `hypothesis-gen` | Derives hypotheses from the model's predictions and its uncertainty. Emits a **targets-only** statement for the experimenter *(A-16)* | `world-model` | R2 R20 |
-| `tool-probe` | Capability probe; reads ClawBio `catalog.json` maturity tiers | ClawBio (soft) | R18 R23 |
+| `tool-probe` | Capability probe; reads ClawBio `catalog.json` field `maturity_tier` ∈ `{cli-registered, tested, ci-validated, spec-only, scripted}` and `status` ∈ `{planned, mvp}` — **`bench-validated` does not exist** (108/108 checked) | ClawBio (soft) | R18 R23 |
 | `egress-guard` | Declared-egress list; scans outbound payloads with the R14 grammar | — | R14 R22 |
 | `spend-meter` | Harness-side ledger the agent cannot write | airdlc `spend` | R9 |
 | `reporter` | Draft, decision record, review surface. Labels exploratory, unexecuted and fallback-derived values | weave | R7 R8 R10 R15 R19 R21 |
@@ -183,7 +183,9 @@ Each requirement's behavioral contract is its PVR test criteria, carried through
 - **R4** — the register performs *static* proof (predicate names ≥1 measurement) **and** *dynamic* proof (`n_resolved == n_planned`). Either failing is HALT. A fixture in which an empty evaluation would report REFUTED must fail the suite.
 - **R6** — `depth ∈ {abstract, full_text}` is derived from which Undermind call produced the evidence (`read_pdfs` ⇒ `full_text`), never asserted by a model.
 - **R11** — replay is the test: applying the same results to vN−1 must reproduce vN byte-for-byte under content addressing.
-- **R18** — `OPEN_INFEASIBLE` has three distinct causes, each named in the verdict: tool absent, tool present but `spec-only`, test absent from the library.
+- **R18** — `OPEN_INFEASIBLE` has three distinct causes, each named in the verdict: tool absent, tool present but `maturity_tier: spec-only` or `status: planned`, test absent from the library. The catalog's real values are the five above; the PVR's `bench-validated` was a misreading and is corrected here.
+- **R22** — ClawBio's audit log (`~/.clawbio/audit.jsonl`) writes `input.value` / `output.value` exactly as the caller passed them and honours `OPENINFERENCE_HIDE_INPUTS` / `OPENINFERENCE_HIDE_OUTPUTS`. The plan sets both and passes relative paths, or a log v2s does not own violates R22.
+- **Pins** — `fhaviary>=0.37.0,<0.38` (PyPI 2026-09-15, Python ≥3.11); both `science/*.py` scripts are currently unpinned. R16 gives `airdlc` a version floor; Aviary gets one too. API reference is `docs.edisonscientific.com/aviary` (self-describes as FutureHouse, `pip install fhaviary`, links `Future-House/aviary`); no rename is established, so the PVR's `futurehouse.org` citation stands.
 
 ---
 
