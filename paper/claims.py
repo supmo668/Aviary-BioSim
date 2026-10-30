@@ -181,7 +181,14 @@ def fmt(v):
     if isinstance(v, int):
         return f"{v:,}"
     if isinstance(v, float):
-        return f"{v:,.2f}".replace("-", "\u2212")
+        # A true minus, not a hyphen — but reached through math mode, not through U+2212.
+        # U+2212 compiles under tectonic (XeTeX, Unicode-native) and is FATAL under
+        # pdflatex, which is the engine arXiv runs: "Unicode character − (U+2212) not
+        # set up for use with LaTeX", no output PDF. \ensuremath{-} gives the same glyph
+        # and spacing under both, and is safe in text, in a caption and inside math,
+        # which $-$ is not. A local engine more permissive than the target engine
+        # produces green builds that fail at the venue (CTO #799).
+        return f"{v:,.2f}".replace("-", r"\ensuremath{-}")
     return _tex(v)                        # a string claim (an identifier, a release) is TeX text
 
 
