@@ -10,7 +10,20 @@ science/out/
 .claude/logs/
 .claude/usr/
 config/monitor-pids.json
-workstreams/
+# Workstream internals stay private. EXCEPT the v2s-bio documents, which are tracked so
+# approvals pin to COMMITS rather than content hashes of untracked files (CTO #766, ruling (a)).
+# qgr/ stays ignored: three receipts carry an absolute home path in a hash-covered field.
+/workstreams/*
+!/workstreams/v2s-bio/
+/workstreams/v2s-bio/*
+!/workstreams/v2s-bio/*.md
+# plan/ needs its own re-include: git cannot re-include a file whose PARENT DIRECTORY
+# is excluded, so `!/workstreams/v2s-bio/**/*.md` does NOT reach plan/build-plan.md.
+# Measured by the CTO in a throwaway repo (#785). Each class named explicitly rather
+# than wildcarded, so this cannot silently widen a public surface later.
+!/workstreams/v2s-bio/plan/
+/workstreams/v2s-bio/plan/*
+!/workstreams/v2s-bio/plan/*.md
 .aiadlc-agent
 .aiadlc-coordinator
 
@@ -22,6 +35,13 @@ paper/*.log
 paper/*.out
 paper/*.fls
 paper/*.fdb_latexmk
-paper/*.bbl
+# NOT ignored: paper/*.bbl. It is a build intermediate for a local compile and a REQUIRED
+# SOURCE FILE for arXiv, which does not run BibTeX. Without a tracked .bbl the submission
+# still compiles, still announces, and renders every citation as [?] — permanently, with
+# nothing in the compile log to warn you. Do not re-add it to this list.
+# paper/*.bbl  <- deliberately absent
 paper/*.blg
 paper/.tools/
+
+# ISCP phase-state is local session state, not a published artifact.
+.claude/workstreams/
