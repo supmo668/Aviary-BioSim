@@ -1,7 +1,7 @@
 # A&D — `/v2s:bio` (vision to science)
 
 **Workstream:** `v2s-bio` · **Phase:** and
-**Status:** **APPROVED, then REVISED.** Principal approval recorded 2026-10-28 against `867df41c` (aviary approvals row 22). Revised 2026-10-30 under the principal's own decision at row 25 (`/grill-with-res`: A-10 replaced, AD-8 closed to Brier, R18 tier values corrected, `fhaviary` pinned, R22 audit-log constraint added). Content hash after revision `b659e05f`; **this line is the only change since that hash.** *(Pointer form per CTO #751.)*
+**Status:** **APPROVED, then REVISED.** Principal approval recorded 2026-10-28 against `867df41c` (aviary approvals row 22). Revised 2026-10-30 under the principal's own decision at row 25 (`/grill-with-res`: A-10 replaced, AD-8 closed to Brier, R18 tier values corrected, `fhaviary` pinned, R22 audit-log constraint added). The revision landed in commit `604b416`; the `triage` row and R6 were then filled in from the Undermind surface measured in-session, in commit `6acf8a3` (agent, no decision authority — approvals row 28). **Pin to those commits, not to a content hash:** the documents are tracked and pushed as of `5ff412e`, and the hash `b659e05f` this line previously carried is not reproducible from any committed state — it named an intermediate that was never committed. *(Pointer form per CTO #751.)*
 **Builds on:** [`PVR.md`](PVR.md) — **24** standing requirements R1–R24, CTO-signed at `8d1bcc27`
 **Decisions:** [`approvals.md`](approvals.md) — rows marked *(A-n)* below
 
